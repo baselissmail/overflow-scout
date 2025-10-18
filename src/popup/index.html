@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overflow Scout</title>
+  <link rel="stylesheet" href="./popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="title">
+        <span class="icon">🔍</span>
+        Overflow Scout
+      </h1>
+      <p class="subtitle">Text overflow stress testing</p>
+    </header>
+
+    <main class="main">
+      <section class="status-section">
+        <div class="status-card">
+          <div class="status-label">Mode</div>
+          <div class="status-value" id="mode-status">Idle</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">Tested</div>
+          <div class="status-value" id="tested-count">0</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">Broken</div>
+          <div class="status-value status-error" id="broken-count">0</div>
+        </div>
+      </section>
+
+      <section class="actions-section">
+        <div class="info-message">
+          <p>
+            <strong>Phase 0 Complete!</strong><br>
+            Extension is loaded and ready.
+          </p>
+          <p class="phase-info">
+            Phase 1 will add: Right-click → Test with long text
+          </p>
+        </div>
+        
+        <button class="btn btn-primary" id="test-connection" disabled>
+          Test Connection
+        </button>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span class="version">v0.1.0 • Phase 0</span>
+    </footer>
+  </div>
+
+  <script type="module" src="./popup.ts"></script>
+</body>
+</html>
