@@ -76,7 +76,7 @@ export interface BatchTestResult {
 }
 
 /**
- * Phase 7: Settings and modes
+ * Phase 7-9: Settings and modes
  */
 export enum TestMode {
   DEFAULT = 'default',
@@ -87,9 +87,24 @@ export enum TestMode {
   MIXED = 'mixed',
 }
 
+export enum InjectionMode {
+  GHOST = 'ghost',         // Non-destructive CSS overlay (default for batch)
+  INLINE = 'inline',       // Replace actual text (single element)
+  CLONE = 'clone',         // Measure with clone only (no visual change)
+}
+
+export enum BatchMode {
+  VIEWPORT = 'viewport',   // Only test viewport elements
+  SAMPLED = 'sampled',     // Test sample of elements
+  ALL = 'all',            // Test everything
+}
+
 export interface Settings {
   mode: TestMode;
+  injectionMode: InjectionMode;
+  batchMode: BatchMode;
   targetSelector?: string;
+  samplePercentage?: number;
 }
 
 export interface PopupStats {
