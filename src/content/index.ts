@@ -24,6 +24,8 @@ import { processInBatches } from '@/lib/batchProcessor';
 import { findSimilarElements, groupAllElementsByType, filterTextableElements, getBestGroup } from '@/lib/elementGrouper';
 import { StateManager } from '@/lib/stateManager';
 import { updateSessionBanner, removeSessionBanner } from '@/lib/sessionBanner';
+import { logShadowDOMStructure } from '@/lib/shadowDomHelper';
+import { spaObserver } from '@/lib/spaObserver';
 
 /**
  * Cache structure for storing original element state
@@ -66,7 +68,11 @@ class OverflowScoutContent {
     this.setupMessageHandlers();
     this.setupClickTracking();
     this.setupDOMObserver();
+    this.setupSPAObserver();
     this.notifyBackgroundReady();
+    
+    // Phase 6: Log Shadow DOM info
+    logShadowDOMStructure();
     
     this.initialized = true;
   }
@@ -144,11 +150,41 @@ class OverflowScoutContent {
 
   /**
    * Phase 6: Set up MutationObserver for SPA re-render handling
-   * Currently a placeholder
    */
   private setupDOMObserver(): void {
-    // Will be implemented in Phase 6
-    Logger.debug('DOM observer ready (passive mode)');
+    // Placeholder for future enhancements
+  }
+
+  /**
+   * Phase 6: Set up SPA observer to handle dynamic content
+   */
+  private setupSPAObserver(): void {
+    spaObserver.start();
+    
+    // React to content changes
+    spaObserver.onContentChange(() => {
+      Logger.debug('SPA content changed, checking for lost highlights');
+      this.revalidateHighlights();
+    });
+  }
+
+  /**
+   * Phase 6: Revalidate highlights after SPA navigation
+   */
+  private revalidateHighlights(): void {
+    const states = this.stateManager.getAllStates();
+    
+    for (const state of states) {
+      // Check if element still exists in DOM
+      if (!document.body.contains(state.element)) {
+        Logger.warn('Element removed from DOM:', state.elementId);
+        this.stateManager.removeState(state.elementId);
+        this.elementCache.delete(state.elementId);
+      }
+    }
+    
+    // Update banner with current count
+    this.updateBanner();
   }
 
   /**
@@ -284,7 +320,7 @@ class OverflowScoutContent {
   }
 
   /**
-   * Find the actual text-bearing element (not wrapper divs)
+   * Phase 6: Find the actual text-bearing element (including ARIA attributes)
    */
   private findTextHost(element: HTMLElement): HTMLElement | null {
     // Handle form inputs
@@ -305,12 +341,48 @@ class OverflowScoutContent {
       return element;
     }
 
-    // Handle elements with aria-label or placeholder
-    if (element.getAttribute('aria-label') || element.getAttribute('placeholder')) {
+    // Phase 6: Enhanced ARIA attribute support
+    if (this.hasARIAText(element)) {
       return element;
     }
 
     return null;
+  }
+
+  /**
+   * Phase 6: Check if element has ARIA text (when visible text absent)
+   */
+  private hasARIAText(element: HTMLElement): boolean {
+    // Check aria-label
+    if (element.getAttribute('aria-label')) {
+      return true;
+    }
+
+    // Check title attribute
+    if (element.getAttribute('title')) {
+      return true;
+    }
+
+    // Check alt attribute (for images)
+    if (element.getAttribute('alt')) {
+      return true;
+    }
+
+    // Check aria-labelledby
+    const labelledBy = element.getAttribute('aria-labelledby');
+    if (labelledBy) {
+      const labelElement = document.getElementById(labelledBy);
+      if (labelElement && labelElement.textContent) {
+        return true;
+      }
+    }
+
+    // Check placeholder
+    if (element.getAttribute('placeholder')) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -427,7 +499,7 @@ class OverflowScoutContent {
   }
 
   /**
-   * Set text on an element based on its type
+   * Phase 6: Set text on an element based on its type (enhanced for ARIA)
    */
   private setElementText(element: HTMLElement, type: ElementType, text: string): void {
     if (type === ElementType.INPUT || type === ElementType.TEXTAREA) {
@@ -436,6 +508,12 @@ class OverflowScoutContent {
       (element as HTMLInputElement).placeholder = text;
     } else if (type === ElementType.ARIA_LABEL) {
       element.setAttribute('aria-label', text);
+    } else if (element.hasAttribute('title')) {
+      // Phase 6: Support title attribute
+      element.setAttribute('title', text);
+    } else if (element.hasAttribute('alt')) {
+      // Phase 6: Support alt attribute
+      element.setAttribute('alt', text);
     } else {
       element.textContent = text;
     }
@@ -741,7 +819,8 @@ class OverflowScoutContent {
   }
 
   // Future phase methods:
-  // Phase 6: handleShadowDOM() - support web components
+  // Phase 7: Popup UI - controls and statistics
+  // Phase 8: Polish and edge cases
 }
 
 // Initialize content script when DOM is ready

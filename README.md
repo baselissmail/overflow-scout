@@ -4,16 +4,16 @@
 
 A Chrome extension for UI engineers and QA testers that finds overflow failures instantly and systematically before they reach production.
 
-## 🚀 Current Status: Phase 5 Complete
+## 🚀 Current Status: Phase 6 Complete
 
-**State & Revert All** ✅
-- Central state manager for all modifications
-- One-click "Revert All" restoration
-- Session banner indicating test mode
-- Real-time stats (tested vs broken)
-- Safe, instantaneous full restoration
-- Session tracking with timestamps
-- Automatic cleanup on completion
+**Advanced Support** ✅
+- Shadow DOM traversal (open shadow roots)
+- SPA re-render handling (MutationObserver)
+- Enhanced ARIA support (aria-label, title, alt)
+- Web Component compatibility
+- Dynamic content detection
+- Lost highlight recovery
+- ARIA-only text testing
 
 ## 📋 Development Phases
 
@@ -23,7 +23,7 @@ A Chrome extension for UI engineers and QA testers that finds overflow failures 
 - ✅ **Phase 3** - Overflow Detection & Highlighting
 - ✅ **Phase 4** - Batch Testing "Test All Similar"
 - ✅ **Phase 5** - State & Revert All
-- 🔜 **Phase 6** - Advanced Support (Shadow DOM, SPAs)
+- ✅ **Phase 6** - Advanced Support (Shadow DOM, SPAs)
 - 🔜 **Phase 7** - Popup UI & Controls
 - 🔜 **Phase 8** - Polish, Edge Cases, Stability
 - 🔜 **Phase 9** - Packaging & Marketing
