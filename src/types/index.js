@@ -20,18 +20,27 @@ export var MessageType;
     MessageType["GET_STATE"] = "GET_STATE";
 })(MessageType || (MessageType = {}));
 /**
- * Element type for text injection
+ * Element type for text injection (Phase 2: Enhanced)
  */
 export var ElementType;
 (function (ElementType) {
     ElementType["TEXT"] = "text";
     ElementType["INPUT"] = "input";
+    ElementType["INPUT_EMAIL"] = "input_email";
+    ElementType["INPUT_SEARCH"] = "input_search";
+    ElementType["INPUT_TEL"] = "input_tel";
+    ElementType["INPUT_URL"] = "input_url";
     ElementType["TEXTAREA"] = "textarea";
     ElementType["CONTENTEDITABLE"] = "contenteditable";
     ElementType["PLACEHOLDER"] = "placeholder";
     ElementType["ARIA_LABEL"] = "aria_label";
     ElementType["BUTTON"] = "button";
+    ElementType["BUTTON_SUBMIT"] = "button_submit";
+    ElementType["LINK"] = "link";
     ElementType["HEADING"] = "heading";
+    ElementType["LABEL"] = "label";
+    ElementType["NOTIFICATION"] = "notification";
+    ElementType["BREADCRUMB"] = "breadcrumb";
 })(ElementType || (ElementType = {}));
 /**
  * Logger utility for consistent logging across extension

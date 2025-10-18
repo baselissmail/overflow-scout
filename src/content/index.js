@@ -10,6 +10,7 @@
  * This script runs in the context of web pages
  */
 import { MessageType, Logger, ElementType } from '@/types';
+import { TEXT_PATTERNS, COMPONENT_PATTERNS, TextPatternType, getRandomPattern, getTextByLength, } from '@/lib/textPatterns';
 class OverflowScoutContent {
     constructor() {
         this.initialized = false;
@@ -112,22 +113,25 @@ class OverflowScoutContent {
             Logger.warn('Could not find text host element');
             return { success: false, message: 'Element cannot contain text' };
         }
-        const elementId = this.getElementId(textHost);
         const elementType = this.detectElementType(textHost);
-        const testString = this.generateTestString(elementType);
-        // Cache original value before injection
+        // Cache BEFORE getting test string (preserves true original on re-inject)
         const original = this.cacheOriginalValue(textHost, elementType);
+        // Generate test string based on element type AND original length
+        const testString = this.generateTestString(elementType, original);
         // Inject the test string
         this.setElementText(textHost, elementType, testString);
+        const elementId = this.getElementId(textHost);
         Logger.info('Injected text:', {
             elementId,
             type: elementType,
+            originalLength: original.length,
+            injectedLength: testString.length,
             original: original.substring(0, 50),
             injected: testString.substring(0, 50),
         });
         return {
             success: true,
-            message: `Injected ${testString.length} characters`,
+            message: `Injected ${testString.length} chars (was ${original.length})`,
         };
     }
     /**
@@ -172,11 +176,24 @@ class OverflowScoutContent {
         return null;
     }
     /**
-     * Detect the type of element for appropriate text handling
+     * Phase 2: Enhanced element type detection with context
      */
     detectElementType(element) {
+        const role = element.getAttribute('role');
+        const ariaLabel = element.getAttribute('aria-label');
+        const className = element.className;
+        // Input field type detection
         if (element instanceof HTMLInputElement) {
-            return element.placeholder ? ElementType.PLACEHOLDER : ElementType.INPUT;
+            const inputType = element.type.toLowerCase();
+            if (element.placeholder)
+                return ElementType.PLACEHOLDER;
+            switch (inputType) {
+                case 'email': return ElementType.INPUT_EMAIL;
+                case 'search': return ElementType.INPUT_SEARCH;
+                case 'tel': return ElementType.INPUT_TEL;
+                case 'url': return ElementType.INPUT_URL;
+                default: return ElementType.INPUT;
+            }
         }
         if (element instanceof HTMLTextAreaElement) {
             return ElementType.TEXTAREA;
@@ -184,22 +201,53 @@ class OverflowScoutContent {
         if (element.isContentEditable) {
             return ElementType.CONTENTEDITABLE;
         }
-        if (element.getAttribute('aria-label')) {
-            return ElementType.ARIA_LABEL;
+        // Link detection
+        if (element.tagName === 'A') {
+            return ElementType.LINK;
         }
+        // Button detection with submit variant
+        if (element.tagName === 'BUTTON' || role === 'button') {
+            const type = element.type;
+            return type === 'submit' ? ElementType.BUTTON_SUBMIT : ElementType.BUTTON;
+        }
+        // Label detection
+        if (element.tagName === 'LABEL') {
+            return ElementType.LABEL;
+        }
+        // Heading detection
         if (/^H[1-6]$/.test(element.tagName)) {
             return ElementType.HEADING;
         }
-        if (element.tagName === 'BUTTON') {
-            return ElementType.BUTTON;
+        // Notification/alert detection
+        if (role === 'alert' ||
+            role === 'status' ||
+            /\b(alert|notification|toast|snackbar)\b/i.test(className)) {
+            return ElementType.NOTIFICATION;
+        }
+        // Breadcrumb detection
+        if (role === 'navigation' &&
+            /\b(breadcrumb|breadcrumbs)\b/i.test(className || ariaLabel || '')) {
+            return ElementType.BREADCRUMB;
+        }
+        // ARIA label as fallback
+        if (ariaLabel) {
+            return ElementType.ARIA_LABEL;
         }
         return ElementType.TEXT;
     }
     /**
      * Cache the original value before modification
+     * IMPORTANT: Only cache if not already cached (preserve true original)
      */
     cacheOriginalValue(element, type) {
         const elementId = this.getElementId(element);
+        // Check if already cached - if so, return existing original
+        const existingCache = this.elementCache.get(elementId);
+        if (existingCache) {
+            Logger.debug('Element already cached, preserving original:', elementId);
+            return existingCache.originalValue;
+        }
+        // First time caching - get the current value as original
         let originalValue = '';
         if (type === ElementType.INPUT || type === ElementType.TEXTAREA) {
             originalValue = element.value;
@@ -238,21 +286,82 @@ class OverflowScoutContent {
         }
     }
     /**
-     * Generate a long test string based on element type
-     * Phase 2 will make this more sophisticated
+     * Phase 2: Smart text generation with pattern library
+     * Returns varied, realistic, context-appropriate test strings
+     * Now considers original text length to ensure test is LONGER
      */
-    generateTestString(type) {
-        const baseStrings = {
-            [ElementType.BUTTON]: 'Internationalization and Localization',
-            [ElementType.HEADING]: 'Übersetzung und Internationalisierung von Benutzeroberflächen',
-            [ElementType.INPUT]: 'This is a very long input value that will test overflow behavior in input fields',
-            [ElementType.TEXTAREA]: 'This is an extremely long textarea content that spans multiple lines and tests how the interface handles overflow in multiline text areas with very long content that might cause layout issues',
-            [ElementType.PLACEHOLDER]: 'Enter your extremely long international address here',
-            [ElementType.TEXT]: 'This is a substantially long text string designed to test overflow, text wrapping, ellipsis, and clipping behavior in user interface elements',
-            [ElementType.ARIA_LABEL]: 'Very long accessibility label for screen readers',
-            [ElementType.CONTENTEDITABLE]: 'Editable content with an unreasonably long string',
-        };
-        return baseStrings[type] || baseStrings[ElementType.TEXT];
+    generateTestString(type, originalText = '') {
+        // Component-specific patterns
+        switch (type) {
+            case ElementType.BUTTON:
+            case ElementType.BUTTON_SUBMIT:
+                return getRandomPattern(COMPONENT_PATTERNS.button);
+            case ElementType.LINK:
+                return getRandomPattern(COMPONENT_PATTERNS.link);
+            case ElementType.LABEL:
+                return getRandomPattern(COMPONENT_PATTERNS.label);
+            case ElementType.PLACEHOLDER:
+                return getRandomPattern(COMPONENT_PATTERNS.placeholder);
+            case ElementType.HEADING:
+                // For headings, use i18n patterns (good for testing)
+                return getRandomPattern(COMPONENT_PATTERNS.heading);
+            case ElementType.NOTIFICATION:
+                return getRandomPattern(COMPONENT_PATTERNS.notification);
+            case ElementType.BREADCRUMB:
+                return getRandomPattern(COMPONENT_PATTERNS.breadcrumb);
+            // Input type-specific patterns
+            case ElementType.INPUT_EMAIL:
+                return 'extremely.long.email.address.for.testing@international-company-domain-name.com';
+            case ElementType.INPUT_URL:
+                return 'https://www.extremely-long-international-domain-name-for-overflow-testing.com/path/to/resource';
+            case ElementType.INPUT_SEARCH:
+                return 'searching for extremely specific international product with very long descriptive name';
+            case ElementType.INPUT_TEL:
+                return '+1 (555) 123-4567 ext. 89012';
+            case ElementType.INPUT:
+                return getTextByLength(TEXT_PATTERNS[TextPatternType.DEFAULT], 'long');
+            case ElementType.TEXTAREA:
+                return this.getMultiPatternText();
+            case ElementType.CONTENTEDITABLE:
+                return getTextByLength(TEXT_PATTERNS[TextPatternType.UGC_COMMENT], 'long');
+            case ElementType.ARIA_LABEL:
+                return getTextByLength(TEXT_PATTERNS[TextPatternType.FORMAL], 'long');
+            // Default text patterns - smart selection based on original length
+            case ElementType.TEXT:
+            default:
+                return this.selectTextPattern(originalText);
+        }
+    }
+    /**
+     * Select pattern type based on original length
+     * Use i18n for short original text, English for already-long text
+     */
+    selectTextPattern(originalText) {
+        const originalLength = originalText.trim().length;
+        // If original is already long (>50 chars), test with even longer English
+        if (originalLength > 50) {
+            return getTextByLength(TEXT_PATTERNS[TextPatternType.UGC_COMMENT], 'long');
+        }
+        // For short original text, rotate through i18n patterns
+        const patterns = [
+            TEXT_PATTERNS[TextPatternType.DEFAULT],
+            TEXT_PATTERNS[TextPatternType.I18N_GERMAN],
+            TEXT_PATTERNS[TextPatternType.I18N_ARABIC],
+            TEXT_PATTERNS[TextPatternType.I18N_CJK],
+        ];
+        const randomIndex = Math.floor(Math.random() * patterns.length);
+        return getTextByLength(patterns[randomIndex], 'long');
+    }
+    /**
+     * Generate multi-language text for textareas
+     */
+    getMultiPatternText() {
+        return [
+            getTextByLength(TEXT_PATTERNS[TextPatternType.DEFAULT], 'medium'),
+            getTextByLength(TEXT_PATTERNS[TextPatternType.I18N_GERMAN], 'medium'),
+            getTextByLength(TEXT_PATTERNS[TextPatternType.I18N_ARABIC], 'medium'),
+            getTextByLength(TEXT_PATTERNS[TextPatternType.I18N_CJK], 'medium'),
+        ].join('\n\n');
     }
 }
 // Initialize content script when DOM is ready

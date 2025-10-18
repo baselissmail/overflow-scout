@@ -56,17 +56,39 @@ export interface RevertTextPayload {
 }
 
 /**
- * Element type for text injection
+ * Element type for text injection (Phase 2: Enhanced)
  */
 export enum ElementType {
   TEXT = 'text',
   INPUT = 'input',
+  INPUT_EMAIL = 'input_email',
+  INPUT_SEARCH = 'input_search',
+  INPUT_TEL = 'input_tel',
+  INPUT_URL = 'input_url',
   TEXTAREA = 'textarea',
   CONTENTEDITABLE = 'contenteditable',
   PLACEHOLDER = 'placeholder',
   ARIA_LABEL = 'aria_label',
   BUTTON = 'button',
+  BUTTON_SUBMIT = 'button_submit',
+  LINK = 'link',
   HEADING = 'heading',
+  LABEL = 'label',
+  NOTIFICATION = 'notification',
+  BREADCRUMB = 'breadcrumb',
+}
+
+/**
+ * Context metadata for smarter text generation
+ */
+export interface ElementContext {
+  type: ElementType;
+  role?: string;
+  ariaLabel?: string;
+  className?: string;
+  placeholder?: string;
+  inputType?: string;
+  tagName?: string;
 }
 
 /**

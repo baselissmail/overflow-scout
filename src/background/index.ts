@@ -96,7 +96,13 @@ class BackgroundService {
       await chrome.tabs.sendMessage(tabId, message);
       Logger.debug('Message sent to tab:', tabId, message.type);
     } catch (error) {
-      Logger.error('Failed to send message to tab:', error);
+      // Content script not ready or not on compatible page
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Receiving end does not exist')) {
+        Logger.warn('Content script not loaded on this page. Try refreshing the page.');
+      } else {
+        Logger.error('Failed to send message to tab:', error);
+      }
     }
   }
 
