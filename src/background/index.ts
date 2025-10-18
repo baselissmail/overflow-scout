@@ -24,7 +24,6 @@ class BackgroundService {
 
   /**
    * Phase 1: Context menu setup
-   * Currently creates a placeholder menu structure
    */
   private setupContextMenus(): void {
     chrome.runtime.onInstalled.addListener(() => {
@@ -37,9 +36,17 @@ class BackgroundService {
       chrome.contextMenus.create({
         id: 'test-long-text',
         parentId: 'overflow-scout-main',
-        title: 'Test with long text (Phase 1)',
+        title: 'Test with long text',
         contexts: ['all'],
-        enabled: false, // Will be enabled in Phase 1
+        enabled: true,
+      });
+
+      chrome.contextMenus.create({
+        id: 'revert-text',
+        parentId: 'overflow-scout-main',
+        title: 'Revert to original',
+        contexts: ['all'],
+        enabled: true,
       });
 
       Logger.info('Context menus created');
@@ -61,13 +68,35 @@ class BackgroundService {
       return;
     }
 
-    // Phase 1 will implement actual handlers
     switch (info.menuItemId) {
       case 'test-long-text':
-        Logger.info('Test long text requested (not yet implemented)');
+        this.sendMessageToTab(tab.id, {
+          type: MessageType.INJECT_TEXT,
+          payload: {},
+        });
         break;
+
+      case 'revert-text':
+        this.sendMessageToTab(tab.id, {
+          type: MessageType.REVERT_TEXT,
+          payload: {},
+        });
+        break;
+
       default:
         Logger.debug('Unknown menu item:', info.menuItemId);
+    }
+  }
+
+  private async sendMessageToTab(
+    tabId: number,
+    message: Message
+  ): Promise<void> {
+    try {
+      await chrome.tabs.sendMessage(tabId, message);
+      Logger.debug('Message sent to tab:', tabId, message.type);
+    } catch (error) {
+      Logger.error('Failed to send message to tab:', error);
     }
   }
 

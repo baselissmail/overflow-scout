@@ -7,9 +7,11 @@ export enum MessageType {
   PING = 'PING',
   PONG = 'PONG',
   
-  // Phase 1 - Single Element Injection (future)
+  // Phase 1 - Single Element Injection
   INJECT_TEXT = 'INJECT_TEXT',
   REVERT_TEXT = 'REVERT_TEXT',
+  INJECT_SUCCESS = 'INJECT_SUCCESS',
+  REVERT_SUCCESS = 'REVERT_SUCCESS',
   
   // Phase 3 - Detection (future)
   DETECT_OVERFLOW = 'DETECT_OVERFLOW',
@@ -33,6 +35,38 @@ export interface PingMessage extends Message<void> {
 
 export interface PongMessage extends Message<{ timestamp: number }> {
   type: MessageType.PONG;
+}
+
+/**
+ * Phase 1: Text injection payloads
+ */
+export interface InjectTextPayload {
+  elementPath?: string;
+  testString?: string;
+}
+
+export interface InjectSuccessPayload {
+  elementId: string;
+  originalText: string;
+  injectedText: string;
+}
+
+export interface RevertTextPayload {
+  elementId?: string;
+}
+
+/**
+ * Element type for text injection
+ */
+export enum ElementType {
+  TEXT = 'text',
+  INPUT = 'input',
+  TEXTAREA = 'textarea',
+  CONTENTEDITABLE = 'contenteditable',
+  PLACEHOLDER = 'placeholder',
+  ARIA_LABEL = 'aria_label',
+  BUTTON = 'button',
+  HEADING = 'heading',
 }
 
 /**

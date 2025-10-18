@@ -6,9 +6,11 @@ export var MessageType;
     // Phase 0 - Foundation
     MessageType["PING"] = "PING";
     MessageType["PONG"] = "PONG";
-    // Phase 1 - Single Element Injection (future)
+    // Phase 1 - Single Element Injection
     MessageType["INJECT_TEXT"] = "INJECT_TEXT";
     MessageType["REVERT_TEXT"] = "REVERT_TEXT";
+    MessageType["INJECT_SUCCESS"] = "INJECT_SUCCESS";
+    MessageType["REVERT_SUCCESS"] = "REVERT_SUCCESS";
     // Phase 3 - Detection (future)
     MessageType["DETECT_OVERFLOW"] = "DETECT_OVERFLOW";
     // Phase 4 - Batch Testing (future)
@@ -17,6 +19,20 @@ export var MessageType;
     MessageType["REVERT_ALL"] = "REVERT_ALL";
     MessageType["GET_STATE"] = "GET_STATE";
 })(MessageType || (MessageType = {}));
+/**
+ * Element type for text injection
+ */
+export var ElementType;
+(function (ElementType) {
+    ElementType["TEXT"] = "text";
+    ElementType["INPUT"] = "input";
+    ElementType["TEXTAREA"] = "textarea";
+    ElementType["CONTENTEDITABLE"] = "contenteditable";
+    ElementType["PLACEHOLDER"] = "placeholder";
+    ElementType["ARIA_LABEL"] = "aria_label";
+    ElementType["BUTTON"] = "button";
+    ElementType["HEADING"] = "heading";
+})(ElementType || (ElementType = {}));
 /**
  * Logger utility for consistent logging across extension
  */
