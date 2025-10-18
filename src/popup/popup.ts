@@ -68,7 +68,7 @@ class PopupController {
   private async loadSettings(): Promise<void> {
     try {
       const result = await chrome.storage.local.get(['mode']);
-      const mode = result.mode || TestMode.MIXED;
+      const mode = result.mode || TestMode.DEFAULT; // Phase 7: Default to English
       
       if (this.modeSelector) {
         this.modeSelector.value = mode;

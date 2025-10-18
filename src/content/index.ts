@@ -10,12 +10,10 @@
  * This script runs in the context of web pages
  */
 
-import { MessageType, Logger, ElementType, type Message, type OverflowDetection, type BatchTestResult } from '@/types';
+import { MessageType, Logger, ElementType, type Message, type OverflowDetection, type BatchTestResult, TestMode } from '@/types';
 import {
   TEXT_PATTERNS,
-  COMPONENT_PATTERNS,
   TextPatternType,
-  getRandomPattern,
   getTextByLength,
 } from '@/lib/textPatterns';
 import { detectOverflow, getOverflowSeverity } from '@/lib/overflowDetector';
@@ -43,6 +41,7 @@ class OverflowScoutContent {
   private elementCache = new Map<string, ElementCache>();
   private elementIdCounter = 0;
   private stateManager = new StateManager();
+  private currentMode = TextPatternType.DEFAULT; // Phase 7: Default to English
 
   constructor() {
     this.init();
@@ -63,12 +62,19 @@ class OverflowScoutContent {
   private init(): void {
     if (this.initialized) return;
 
+    // Phase 7: Don't run on extension pages (popup, options, etc.)
+    if (window.location.protocol === 'chrome-extension:') {
+      Logger.info('Skipping initialization on extension page');
+      return;
+    }
+
     Logger.info('Content script initialized on', window.location.href);
     
     this.setupMessageHandlers();
     this.setupClickTracking();
     this.setupDOMObserver();
     this.setupSPAObserver();
+    this.loadSettings();
     this.notifyBackgroundReady();
     
     // Phase 6: Log Shadow DOM info
@@ -141,6 +147,9 @@ class OverflowScoutContent {
 
       case MessageType.GET_STATE:
         return this.getState();
+
+      case MessageType.SET_MODE:
+        return this.setMode(message.payload);
 
       default:
         Logger.warn('Unknown message type in content:', message.type);
@@ -520,35 +529,24 @@ class OverflowScoutContent {
   }
 
   /**
-   * Phase 2: Smart text generation with pattern library
+   * Phase 7: Smart text generation with pattern library
    * Returns varied, realistic, context-appropriate test strings
-   * Now considers original text length to ensure test is LONGER
+   * Now respects mode selection and ensures test is LONGER
    */
   private generateTestString(type: ElementType, originalText: string = ''): string {
-    // Component-specific patterns
+    // Phase 7: For component-specific types, use current mode instead of random
+    // This ensures mode selection is respected everywhere
     switch (type) {
       case ElementType.BUTTON:
       case ElementType.BUTTON_SUBMIT:
-        return getRandomPattern(COMPONENT_PATTERNS.button);
-
       case ElementType.LINK:
-        return getRandomPattern(COMPONENT_PATTERNS.link);
-
       case ElementType.LABEL:
-        return getRandomPattern(COMPONENT_PATTERNS.label);
-
       case ElementType.PLACEHOLDER:
-        return getRandomPattern(COMPONENT_PATTERNS.placeholder);
-
       case ElementType.HEADING:
-        // For headings, use i18n patterns (good for testing)
-        return getRandomPattern(COMPONENT_PATTERNS.heading);
-
       case ElementType.NOTIFICATION:
-        return getRandomPattern(COMPONENT_PATTERNS.notification);
-
       case ElementType.BREADCRUMB:
-        return getRandomPattern(COMPONENT_PATTERNS.breadcrumb);
+        // Use current mode for all UI components
+        return getTextByLength(TEXT_PATTERNS[this.currentMode], 'medium');
 
       // Input type-specific patterns
       case ElementType.INPUT_EMAIL:
@@ -564,18 +562,13 @@ class OverflowScoutContent {
         return '+1 (555) 123-4567 ext. 89012';
 
       case ElementType.INPUT:
-        return getTextByLength(TEXT_PATTERNS[TextPatternType.DEFAULT], 'long');
-
       case ElementType.TEXTAREA:
-        return this.getMultiPatternText();
-
       case ElementType.CONTENTEDITABLE:
-        return getTextByLength(TEXT_PATTERNS[TextPatternType.UGC_COMMENT], 'long');
-
       case ElementType.ARIA_LABEL:
-        return getTextByLength(TEXT_PATTERNS[TextPatternType.FORMAL], 'long');
+        // Use current mode for text inputs
+        return getTextByLength(TEXT_PATTERNS[this.currentMode], 'long');
 
-      // Default text patterns - smart selection based on original length
+      // Default text patterns - use current mode
       case ElementType.TEXT:
       default:
         return this.selectTextPattern(originalText);
@@ -583,40 +576,20 @@ class OverflowScoutContent {
   }
 
   /**
-   * Select pattern type based on original length
-   * Use i18n for short original text, English for already-long text
+   * Phase 7: Select pattern type based on mode and original length
    */
   private selectTextPattern(originalText: string): string {
     const originalLength = originalText.trim().length;
 
-    // If original is already long (>50 chars), test with even longer English
+    // If original is already long (>50 chars), test with even longer text
     if (originalLength > 50) {
-      return getTextByLength(TEXT_PATTERNS[TextPatternType.UGC_COMMENT], 'long');
+      return getTextByLength(TEXT_PATTERNS[this.currentMode], 'long');
     }
 
-    // For short original text, rotate through i18n patterns
-    const patterns = [
-      TEXT_PATTERNS[TextPatternType.DEFAULT],
-      TEXT_PATTERNS[TextPatternType.I18N_GERMAN],
-      TEXT_PATTERNS[TextPatternType.I18N_ARABIC],
-      TEXT_PATTERNS[TextPatternType.I18N_CJK],
-    ];
-
-    const randomIndex = Math.floor(Math.random() * patterns.length);
-    return getTextByLength(patterns[randomIndex], 'long');
+    // Use current mode
+    return getTextByLength(TEXT_PATTERNS[this.currentMode], 'long');
   }
 
-  /**
-   * Generate multi-language text for textareas
-   */
-  private getMultiPatternText(): string {
-    return [
-      getTextByLength(TEXT_PATTERNS[TextPatternType.DEFAULT], 'medium'),
-      getTextByLength(TEXT_PATTERNS[TextPatternType.I18N_GERMAN], 'medium'),
-      getTextByLength(TEXT_PATTERNS[TextPatternType.I18N_ARABIC], 'medium'),
-      getTextByLength(TEXT_PATTERNS[TextPatternType.I18N_CJK], 'medium'),
-    ].join('\n\n');
-  }
 
   /**
    * Phase 4: Test all elements similar to the clicked one
@@ -818,8 +791,77 @@ class OverflowScoutContent {
     }
   }
 
+  /**
+   * Phase 7: Load settings from storage
+   */
+  private async loadSettings(): Promise<void> {
+    try {
+      const result = await chrome.storage.local.get(['mode']);
+      const mode = result.mode || TestMode.DEFAULT;
+      this.setModeFromTestMode(mode);
+      Logger.info('Loaded mode:', mode);
+    } catch (error) {
+      Logger.error('Failed to load settings:', error);
+    }
+  }
+
+  /**
+   * Phase 7: Set mode from popup
+   */
+  private setMode(payload: any): { success: boolean } {
+    if (!payload || !payload.mode) {
+      return { success: false };
+    }
+
+    this.setModeFromTestMode(payload.mode);
+    Logger.info('Mode changed to:', payload.mode);
+    
+    return { success: true };
+  }
+
+  /**
+   * Phase 7: Convert TestMode to TextPatternType
+   */
+  private setModeFromTestMode(mode: TestMode): void {
+    switch (mode) {
+      case TestMode.DEFAULT:
+        this.currentMode = TextPatternType.DEFAULT;
+        break;
+      case TestMode.GERMAN:
+        this.currentMode = TextPatternType.I18N_GERMAN;
+        break;
+      case TestMode.ARABIC:
+        this.currentMode = TextPatternType.I18N_ARABIC;
+        break;
+      case TestMode.CJK:
+        this.currentMode = TextPatternType.I18N_CJK;
+        break;
+      case TestMode.UGC:
+        this.currentMode = TextPatternType.UGC_COMMENT;
+        break;
+      case TestMode.MIXED:
+      default:
+        // For mixed mode, keep random selection behavior
+        this.currentMode = this.getRandomMode();
+        break;
+    }
+  }
+
+  /**
+   * Phase 7: Get random mode for mixed testing
+   */
+  private getRandomMode(): TextPatternType {
+    const modes = [
+      TextPatternType.DEFAULT,
+      TextPatternType.I18N_GERMAN,
+      TextPatternType.I18N_ARABIC,
+      TextPatternType.I18N_CJK,
+      TextPatternType.UGC_COMMENT,
+    ];
+    return modes[Math.floor(Math.random() * modes.length)];
+  }
+
   // Future phase methods:
-  // Phase 7: Popup UI - controls and statistics
   // Phase 8: Polish and edge cases
 }
 
