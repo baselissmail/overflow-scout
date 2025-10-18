@@ -31,6 +31,7 @@ import { spaObserver } from '@/lib/spaObserver';
 interface ElementCache {
   element: HTMLElement;
   originalValue: string;
+  originalHTML?: string;  // Phase 7: Store original HTML structure
   elementType: ElementType;
   overflowDetection?: OverflowDetection;
 }
@@ -293,7 +294,7 @@ class OverflowScoutContent {
   }
 
   /**
-   * Phase 1-3: Revert element and remove highlight
+   * Phase 7: Revert element to original state (fully restored)
    */
   private revertText(): { success: boolean; message?: string } {
     if (!this.lastClickedElement) {
@@ -307,8 +308,8 @@ class OverflowScoutContent {
 
     const cache = this.elementCache.get(elementId)!;
     
-    // Revert text
-    this.setElementText(this.lastClickedElement, cache.elementType, cache.originalValue);
+    // Phase 7: Fully restore original state
+    this.revertElementToOriginal(this.lastClickedElement, cache);
     
     // Phase 3-5: Remove highlight and cleanup
     removeHighlight(this.lastClickedElement);
@@ -319,6 +320,7 @@ class OverflowScoutContent {
     // Clean up
     this.elementCache.delete(elementId);
     this.lastClickedElement.removeAttribute('data-overflow-scout-id');
+    this.lastClickedElement.removeAttribute('data-overflow-scout-highlighted');
     
     // Update banner
     this.updateBanner();
@@ -329,10 +331,35 @@ class OverflowScoutContent {
   }
 
   /**
-   * Phase 6: Find the actual text-bearing element (including ARIA attributes)
+   * Phase 7: Fully restore element to original state
+   */
+  private revertElementToOriginal(element: HTMLElement, cache: ElementCache): void {
+    const type = cache.elementType;
+    
+    if (type === ElementType.INPUT || type === ElementType.TEXTAREA) {
+      (element as HTMLInputElement | HTMLTextAreaElement).value = cache.originalValue;
+    } else if (type === ElementType.PLACEHOLDER) {
+      (element as HTMLInputElement).placeholder = cache.originalValue;
+    } else if (type === ElementType.ARIA_LABEL) {
+      element.setAttribute('aria-label', cache.originalValue);
+    } else if (element.hasAttribute('title')) {
+      element.setAttribute('title', cache.originalValue);
+    } else if (element.hasAttribute('alt')) {
+      element.setAttribute('alt', cache.originalValue);
+    } else if (cache.originalHTML) {
+      // Phase 7: Restore full HTML structure (preserves icons, styling, etc.)
+      element.innerHTML = cache.originalHTML;
+    } else {
+      // Fallback to textContent
+      element.textContent = cache.originalValue;
+    }
+  }
+
+  /**
+   * Phase 7: Find the actual text-bearing element (innermost text node)
    */
   private findTextHost(element: HTMLElement): HTMLElement | null {
-    // Handle form inputs
+    // Handle form inputs - these are always the target
     if (
       element instanceof HTMLInputElement ||
       element instanceof HTMLTextAreaElement
@@ -340,19 +367,64 @@ class OverflowScoutContent {
       return element;
     }
 
-    // Handle contenteditable
+    // Handle contenteditable - these are always the target
     if (element.isContentEditable) {
       return element;
     }
 
-    // Handle elements with text content
+    // Phase 6: Enhanced ARIA attribute support - check first
+    if (this.hasARIAText(element)) {
+      return element;
+    }
+
+    // Phase 7: Find the innermost element with direct text content
+    // This prevents targeting wrapper divs and preserves child structure
+    const innermost = this.findInnermostTextElement(element);
+    if (innermost) {
+      return innermost;
+    }
+
+    // Fallback: if element has text content, use it
     if (element.textContent && element.textContent.trim()) {
       return element;
     }
 
-    // Phase 6: Enhanced ARIA attribute support
-    if (this.hasARIAText(element)) {
-      return element;
+    return null;
+  }
+
+  /**
+   * Phase 7: Find the innermost element that contains direct text (not just in children)
+   */
+  private findInnermostTextElement(element: HTMLElement): HTMLElement | null {
+    // Check if this element has direct text nodes (not just in children)
+    let hasDirectText = false;
+    for (const node of Array.from(element.childNodes)) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+        hasDirectText = true;
+        break;
+      }
+    }
+
+    // If this element has direct text and no text-bearing children, it's the target
+    if (hasDirectText) {
+      // Check if any children also have text - if so, prefer the child
+      for (const child of Array.from(element.children)) {
+        const htmlChild = child as HTMLElement;
+        const childResult = this.findInnermostTextElement(htmlChild);
+        if (childResult) {
+          return childResult; // Prefer deeper child
+        }
+      }
+      return element; // This is the innermost
+    }
+
+    // No direct text, check children
+    for (const child of Array.from(element.children)) {
+      const htmlChild = child as HTMLElement;
+      const result = this.findInnermostTextElement(htmlChild);
+      if (result) {
+        return result;
+      }
     }
 
     return null;
@@ -502,13 +574,15 @@ class OverflowScoutContent {
       element,
       originalValue,
       elementType: type,
+      originalHTML: (type === ElementType.INPUT || type === ElementType.TEXTAREA || type === ElementType.PLACEHOLDER || type === ElementType.ARIA_LABEL) ? undefined : element.innerHTML,
     });
 
     return originalValue;
   }
 
   /**
-   * Phase 6: Set text on an element based on its type (enhanced for ARIA)
+   * Phase 7: Set text on an element based on its type (preserves structure)
+   * IMPORTANT: Only modifies text content, preserves child elements like icons
    */
   private setElementText(element: HTMLElement, type: ElementType, text: string): void {
     if (type === ElementType.INPUT || type === ElementType.TEXTAREA) {
@@ -524,8 +598,57 @@ class OverflowScoutContent {
       // Phase 6: Support alt attribute
       element.setAttribute('alt', text);
     } else {
-      element.textContent = text;
+      // Phase 7: Smart text replacement that preserves child elements
+      this.setTextPreservingChildren(element, text);
     }
+  }
+
+  /**
+   * Phase 7: Set text while preserving child elements (icons, SVGs, etc.)
+   */
+  private setTextPreservingChildren(element: HTMLElement, text: string): void {
+    // Find all direct text nodes
+    const textNodes: Text[] = [];
+    const childNodes = Array.from(element.childNodes);
+    for (const node of childNodes) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+        textNodes.push(node as Text);
+      }
+    }
+
+    if (textNodes.length > 0) {
+      // Replace first text node, remove others
+      textNodes[0].textContent = text;
+      for (let i = 1; i < textNodes.length; i++) {
+        textNodes[i].textContent = '';
+      }
+    } else {
+      // No text nodes found, check if element has only one text-bearing child
+      const textChild = this.findTextChild(element);
+      if (textChild) {
+        textChild.textContent = text;
+      } else {
+        // Fallback: prepend text node to preserve existing children
+        element.insertBefore(document.createTextNode(text + ' '), element.firstChild);
+      }
+    }
+  }
+
+  /**
+   * Phase 7: Find the child element that contains the main text
+   */
+  private findTextChild(element: HTMLElement): HTMLElement | null {
+    const children = Array.from(element.children);
+    for (const child of children) {
+      const htmlChild = child as HTMLElement;
+      // Common text-bearing elements in buttons/links
+      if (htmlChild.tagName === 'SPAN' || htmlChild.tagName === 'DIV') {
+        if (htmlChild.textContent && htmlChild.textContent.trim()) {
+          return htmlChild;
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -726,14 +849,21 @@ class OverflowScoutContent {
 
     for (const state of states) {
       try {
-        // Revert text
-        this.setElementText(state.element, state.elementType, state.originalValue);
+        const cache = this.elementCache.get(state.elementId);
+        if (cache) {
+          // Phase 7: Fully restore original state
+          this.revertElementToOriginal(state.element, cache);
+        } else {
+          // Fallback if cache not found
+          this.setElementText(state.element, state.elementType, state.originalValue);
+        }
         
         // Remove highlight
         removeHighlight(state.element);
         
-        // Clean up
+        // Clean up all attributes
         state.element.removeAttribute('data-overflow-scout-id');
+        state.element.removeAttribute('data-overflow-scout-highlighted');
         this.elementCache.delete(state.elementId);
         
         reverted++;
