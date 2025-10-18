@@ -89,55 +89,44 @@ export function removeAllHighlights(): void {
  */
 function createTooltip(
   detection: OverflowDetection,
-  originalText: string,
-  injectedText: string
+  _originalText: string,
+  _injectedText: string
 ): HTMLElement {
-  const tooltipHeight = 200;
-  
-  // Format detected issues
+  // Format detected issues - short version
   const issues = detection.types.map(formatOverflowType).join(', ');
 
   const tooltip = document.createElement('div');
   tooltip.className = TOOLTIP_CLASS;
+  
+  // Phase 8: Compact tooltip design
   tooltip.style.cssText = `
     position: absolute;
-    top: -${tooltipHeight}px;
-    left: 0;
+    top: -4px;
+    left: 100%;
+    margin-left: 8px;
     background: #1f2937;
     color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: monospace;
-    white-space: pre-wrap;
-    max-width: 400px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-    z-index: 1000000;
-    line-height: 1.4;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    white-space: nowrap;
+    max-width: 250px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1000001;
+    line-height: 1.3;
+    pointer-events: none;
   `;
   
   // Phase 8: Accessibility attributes for tooltip
   tooltip.setAttribute('role', 'tooltip');
   tooltip.setAttribute('aria-hidden', 'true');
   
+  // Compact content - just the essentials
   tooltip.innerHTML = `
-    <div style="font-weight: 600; margin-bottom: 6px; color: #fca5a5;">
-      ⚠️ Overflow Detected
+    <div style="font-weight: 600; color: #fca5a5; font-size: 10px;">
+      ⚠️ ${issues}
     </div>
-    <div style="margin-bottom: 4px;">
-      <strong>Issues:</strong> ${issues || 'Unknown'}
-    </div>
-    <div style="margin-bottom: 4px; font-size: 11px; opacity: 0.9;">
-      <strong>Original:</strong> "${truncate(originalText, 40)}"
-    </div>
-    <div style="font-size: 11px; opacity: 0.9;">
-      <strong>Injected:</strong> "${truncate(injectedText, 40)}"
-    </div>
-    ${detection.details.scrollWidth && detection.details.clientWidth ? `
-      <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 11px;">
-        Content: ${detection.details.scrollWidth}px → Visible: ${detection.details.clientWidth}px
-      </div>
-    ` : ''}
   `;
 
   return tooltip;
@@ -190,14 +179,6 @@ function formatOverflowType(type: OverflowType): string {
     default:
       return 'Unknown';
   }
-}
-
-/**
- * Truncate text for display
- */
-function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
 }
 
 /**
