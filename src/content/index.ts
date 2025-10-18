@@ -10,7 +10,7 @@
  * This script runs in the context of web pages
  */
 
-import { MessageType, Logger, ElementType, type Message, type OverflowDetection } from '@/types';
+import { MessageType, Logger, ElementType, type Message, type OverflowDetection, type BatchTestResult } from '@/types';
 import {
   TEXT_PATTERNS,
   COMPONENT_PATTERNS,
@@ -20,6 +20,10 @@ import {
 } from '@/lib/textPatterns';
 import { detectOverflow, getOverflowSeverity } from '@/lib/overflowDetector';
 import { createHighlight, removeHighlight } from '@/lib/highlighter';
+import { processInBatches } from '@/lib/batchProcessor';
+import { findSimilarElements, groupAllElementsByType, filterTextableElements, getBestGroup } from '@/lib/elementGrouper';
+import { StateManager } from '@/lib/stateManager';
+import { updateSessionBanner, removeSessionBanner } from '@/lib/sessionBanner';
 
 /**
  * Cache structure for storing original element state
@@ -36,6 +40,7 @@ class OverflowScoutContent {
   private lastClickedElement: HTMLElement | null = null;
   private elementCache = new Map<string, ElementCache>();
   private elementIdCounter = 0;
+  private stateManager = new StateManager();
 
   constructor() {
     this.init();
@@ -110,6 +115,27 @@ class OverflowScoutContent {
       case MessageType.REVERT_TEXT:
         return this.revertText();
 
+      case MessageType.TEST_ALL_SIMILAR:
+        return this.testAllSimilar();
+
+      case MessageType.TEST_ALL_BUTTONS:
+        return this.testAllByType('button');
+
+      case MessageType.TEST_ALL_HEADINGS:
+        return this.testAllByType('heading');
+
+      case MessageType.TEST_ALL_INPUTS:
+        return this.testAllByType('input');
+
+      case MessageType.TEST_ALL_LINKS:
+        return this.testAllByType('link');
+
+      case MessageType.REVERT_ALL:
+        return this.revertAll();
+
+      case MessageType.GET_STATE:
+        return this.getState();
+
       default:
         Logger.warn('Unknown message type in content:', message.type);
         return { error: 'Unknown message type' };
@@ -164,7 +190,7 @@ class OverflowScoutContent {
     // Inject the test string
     this.setElementText(textHost, elementType, testString);
 
-    // Phase 3: Detect overflow after injection
+    // Phase 3-5: Detect overflow and update state
     // Wait for layout to settle
     requestAnimationFrame(() => {
       const detection = detectOverflow(textHost);
@@ -174,6 +200,20 @@ class OverflowScoutContent {
       const cache = this.elementCache.get(elementId);
       if (cache) {
         cache.overflowDetection = detection;
+        
+        // Phase 5: Add to state manager
+        this.stateManager.addState({
+          element: textHost,
+          elementId,
+          originalValue: original,
+          elementType,
+          injectedValue: testString,
+          overflowDetection: detection,
+          timestamp: Date.now(),
+        });
+        
+        // Update session banner
+        this.updateBanner();
       }
 
       // Auto-highlight if overflow detected
@@ -225,12 +265,18 @@ class OverflowScoutContent {
     // Revert text
     this.setElementText(this.lastClickedElement, cache.elementType, cache.originalValue);
     
-    // Phase 3: Remove highlight
+    // Phase 3-5: Remove highlight and cleanup
     removeHighlight(this.lastClickedElement);
+    
+    // Phase 5: Remove from state manager
+    this.stateManager.removeState(elementId);
     
     // Clean up
     this.elementCache.delete(elementId);
     this.lastClickedElement.removeAttribute('data-overflow-scout-id');
+    
+    // Update banner
+    this.updateBanner();
 
     Logger.info('Reverted element:', elementId);
 
@@ -494,9 +540,207 @@ class OverflowScoutContent {
     ].join('\n\n');
   }
 
+  /**
+   * Phase 4: Test all elements similar to the clicked one
+   */
+  private async testAllSimilar(): Promise<BatchTestResult> {
+    if (!this.lastClickedElement) {
+      Logger.warn('No element selected for batch testing');
+      return { total: 0, tested: 0, broken: 0, duration: 0, summary: 'No element selected' };
+    }
+
+    const groups = findSimilarElements(this.lastClickedElement);
+    const bestGroup = getBestGroup(groups);
+
+    if (!bestGroup) {
+      Logger.warn('No similar elements found');
+      return { total: 0, tested: 0, broken: 0, duration: 0, summary: 'No similar elements found' };
+    }
+
+    Logger.info(`Testing ${bestGroup.elements.length} similar elements:`, bestGroup.description);
+
+    const textableElements = filterTextableElements(bestGroup.elements);
+    return this.batchTestElements(textableElements, bestGroup.description);
+  }
+
+  /**
+   * Phase 4: Test all elements of a specific type
+   */
+  private async testAllByType(type: 'button' | 'heading' | 'input' | 'link'): Promise<BatchTestResult> {
+    const group = groupAllElementsByType(type);
+
+    if (!group) {
+      Logger.warn(`No ${type} elements found`);
+      return { total: 0, tested: 0, broken: 0, duration: 0, summary: `No ${type} elements found` };
+    }
+
+    Logger.info(`Testing all ${type} elements:`, group.description);
+
+    const textableElements = filterTextableElements(group.elements);
+    return this.batchTestElements(textableElements, group.description);
+  }
+
+  /**
+   * Phase 4: Batch test multiple elements with rAF scheduling
+   */
+  private async batchTestElements(elements: HTMLElement[], description: string): Promise<BatchTestResult> {
+    let brokenCount = 0;
+    const startTime = performance.now();
+
+    // Process elements in batches to avoid jank
+    const result = await processInBatches(
+      elements,
+      (element) => {
+        // Skip if already tested
+        const elementId = element.getAttribute('data-overflow-scout-id');
+        if (elementId && this.elementCache.has(elementId)) {
+          return; // Already tested
+        }
+
+        const textHost = this.findTextHost(element);
+        if (!textHost) return;
+
+        const elementType = this.detectElementType(textHost);
+        const original = this.cacheOriginalValue(textHost, elementType);
+        const testString = this.generateTestString(elementType, original);
+
+        // Inject
+        this.setElementText(textHost, elementType, testString);
+
+        // Detect overflow after layout settles
+        requestAnimationFrame(() => {
+          const detection = detectOverflow(textHost);
+          const id = this.getElementId(textHost);
+          const cache = this.elementCache.get(id);
+          if (cache) {
+            cache.overflowDetection = detection;
+            
+            // Phase 5: Add to state manager
+            this.stateManager.addState({
+              element: textHost,
+              elementId: id,
+              originalValue: original,
+              elementType,
+              injectedValue: testString,
+              overflowDetection: detection,
+              timestamp: Date.now(),
+            });
+            
+            // Update banner
+            this.updateBanner();
+          }
+
+          if (detection.hasOverflow) {
+            createHighlight(textHost, detection, original, testString);
+            brokenCount++;
+          }
+        });
+      },
+      10, // Batch size
+      (current, total) => {
+        Logger.debug(`Progress: ${current}/${total}`);
+      }
+    );
+
+    const duration = performance.now() - startTime;
+    const summary = `${description}: ${brokenCount}/${result.processed} broken`;
+
+    Logger.info('Batch test complete:', {
+      total: result.processed,
+      broken: brokenCount,
+      duration,
+    });
+
+    return {
+      total: result.processed,
+      tested: result.processed,
+      broken: brokenCount,
+      duration,
+      summary,
+    };
+  }
+
+  /**
+   * Phase 5: Revert all tested elements to original state
+   */
+  private revertAll(): { success: boolean; count: number; message: string } {
+    const states = this.stateManager.getAllStates();
+    
+    if (states.length === 0) {
+      Logger.info('No elements to revert');
+      return { success: true, count: 0, message: 'No elements to revert' };
+    }
+
+    let reverted = 0;
+
+    for (const state of states) {
+      try {
+        // Revert text
+        this.setElementText(state.element, state.elementType, state.originalValue);
+        
+        // Remove highlight
+        removeHighlight(state.element);
+        
+        // Clean up
+        state.element.removeAttribute('data-overflow-scout-id');
+        this.elementCache.delete(state.elementId);
+        
+        reverted++;
+      } catch (error) {
+        Logger.error('Failed to revert element:', state.elementId, error);
+      }
+    }
+
+    // Clear all state
+    this.stateManager.clearAll();
+    
+    // Remove banner
+    removeSessionBanner();
+
+    Logger.info(`Reverted ${reverted}/${states.length} elements`);
+
+    return {
+      success: true,
+      count: reverted,
+      message: `Reverted ${reverted} element(s) to original`,
+    };
+  }
+
+  /**
+   * Phase 5: Get current session state
+   */
+  private getState(): object {
+    const stats = this.stateManager.getStats();
+    const states = this.stateManager.getAllStates();
+
+    return {
+      isActive: this.stateManager.isSessionActive(),
+      stats,
+      elementCount: states.length,
+      brokenCount: this.stateManager.getBrokenStates().length,
+    };
+  }
+
+  /**
+   * Phase 5: Update session banner with current stats
+   */
+  private updateBanner(): void {
+    const stats = this.stateManager.getStats();
+    
+    if (stats.totalTested > 0) {
+      updateSessionBanner({
+        totalTested: stats.totalTested,
+        totalBroken: stats.totalBroken,
+        onRevertAll: () => {
+          this.revertAll();
+        },
+      });
+    } else {
+      removeSessionBanner();
+    }
+  }
+
   // Future phase methods:
-  // Phase 4: batchTestSimilar() - group and test similar elements
-  // Phase 5: revertAll() - restore all original text
   // Phase 6: handleShadowDOM() - support web components
 }
 

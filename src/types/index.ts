@@ -13,11 +13,15 @@ export enum MessageType {
   INJECT_SUCCESS = 'INJECT_SUCCESS',
   REVERT_SUCCESS = 'REVERT_SUCCESS',
   
-  // Phase 3 - Detection (future)
+  // Phase 3 - Detection
   DETECT_OVERFLOW = 'DETECT_OVERFLOW',
   
-  // Phase 4 - Batch Testing (future)
+  // Phase 4 - Batch Testing
   TEST_ALL_SIMILAR = 'TEST_ALL_SIMILAR',
+  TEST_ALL_BUTTONS = 'TEST_ALL_BUTTONS',
+  TEST_ALL_HEADINGS = 'TEST_ALL_HEADINGS',
+  TEST_ALL_INPUTS = 'TEST_ALL_INPUTS',
+  TEST_ALL_LINKS = 'TEST_ALL_LINKS',
   
   // Phase 5 - State Management (future)
   REVERT_ALL = 'REVERT_ALL',
@@ -53,6 +57,17 @@ export interface InjectSuccessPayload {
 
 export interface RevertTextPayload {
   elementId?: string;
+}
+
+/**
+ * Phase 4: Batch testing results
+ */
+export interface BatchTestResult {
+  total: number;
+  tested: number;
+  broken: number;
+  duration: number;
+  summary: string;
 }
 
 /**

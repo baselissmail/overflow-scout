@@ -23,7 +23,7 @@ class BackgroundService {
   }
 
   /**
-   * Phase 1: Context menu setup
+   * Phase 1-4: Context menu setup
    */
   private setupContextMenus(): void {
     chrome.runtime.onInstalled.addListener(() => {
@@ -42,9 +42,71 @@ class BackgroundService {
       });
 
       chrome.contextMenus.create({
+        id: 'test-all-similar',
+        parentId: 'overflow-scout-main',
+        title: 'Test all similar elements',
+        contexts: ['all'],
+        enabled: true,
+      });
+
+      chrome.contextMenus.create({
+        id: 'separator-1',
+        parentId: 'overflow-scout-main',
+        type: 'separator',
+        contexts: ['all'],
+      });
+
+      chrome.contextMenus.create({
+        id: 'test-all-buttons',
+        parentId: 'overflow-scout-main',
+        title: 'Test all buttons',
+        contexts: ['all'],
+        enabled: true,
+      });
+
+      chrome.contextMenus.create({
+        id: 'test-all-headings',
+        parentId: 'overflow-scout-main',
+        title: 'Test all headings',
+        contexts: ['all'],
+        enabled: true,
+      });
+
+      chrome.contextMenus.create({
+        id: 'test-all-inputs',
+        parentId: 'overflow-scout-main',
+        title: 'Test all inputs',
+        contexts: ['all'],
+        enabled: true,
+      });
+
+      chrome.contextMenus.create({
+        id: 'test-all-links',
+        parentId: 'overflow-scout-main',
+        title: 'Test all links',
+        contexts: ['all'],
+        enabled: true,
+      });
+
+      chrome.contextMenus.create({
+        id: 'separator-2',
+        parentId: 'overflow-scout-main',
+        type: 'separator',
+        contexts: ['all'],
+      });
+
+      chrome.contextMenus.create({
         id: 'revert-text',
         parentId: 'overflow-scout-main',
         title: 'Revert to original',
+        contexts: ['all'],
+        enabled: true,
+      });
+
+      chrome.contextMenus.create({
+        id: 'revert-all',
+        parentId: 'overflow-scout-main',
+        title: 'Revert All',
         contexts: ['all'],
         enabled: true,
       });
@@ -76,9 +138,51 @@ class BackgroundService {
         });
         break;
 
+      case 'test-all-similar':
+        this.sendMessageToTab(tab.id, {
+          type: MessageType.TEST_ALL_SIMILAR,
+          payload: {},
+        });
+        break;
+
+      case 'test-all-buttons':
+        this.sendMessageToTab(tab.id, {
+          type: MessageType.TEST_ALL_BUTTONS,
+          payload: {},
+        });
+        break;
+
+      case 'test-all-headings':
+        this.sendMessageToTab(tab.id, {
+          type: MessageType.TEST_ALL_HEADINGS,
+          payload: {},
+        });
+        break;
+
+      case 'test-all-inputs':
+        this.sendMessageToTab(tab.id, {
+          type: MessageType.TEST_ALL_INPUTS,
+          payload: {},
+        });
+        break;
+
+      case 'test-all-links':
+        this.sendMessageToTab(tab.id, {
+          type: MessageType.TEST_ALL_LINKS,
+          payload: {},
+        });
+        break;
+
       case 'revert-text':
         this.sendMessageToTab(tab.id, {
           type: MessageType.REVERT_TEXT,
+          payload: {},
+        });
+        break;
+
+      case 'revert-all':
+        this.sendMessageToTab(tab.id, {
+          type: MessageType.REVERT_ALL,
           payload: {},
         });
         break;
