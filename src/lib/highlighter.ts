@@ -28,7 +28,7 @@ export function createHighlight(
   overlay.className = HIGHLIGHT_CLASS;
   overlay.id = `${OVERLAY_ID_PREFIX}${getElementId(element)}`;
   
-  // Position overlay
+  // Position overlay - Phase 8: Accessibility-safe
   overlay.style.cssText = `
     position: absolute;
     left: ${rect.left + window.scrollX}px;
@@ -42,7 +42,12 @@ export function createHighlight(
     border-radius: 4px;
     box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
     transition: all 0.2s ease;
+    aria-hidden: true;
   `;
+  
+  // Phase 8: Accessibility attributes
+  overlay.setAttribute('role', 'presentation');
+  overlay.setAttribute('aria-hidden', 'true');
 
   // Create tooltip
   const tooltip = createTooltip(detection, originalText, injectedText);
@@ -87,33 +92,34 @@ function createTooltip(
   originalText: string,
   injectedText: string
 ): HTMLElement {
+  const tooltipHeight = 200;
+  
+  // Format detected issues
+  const issues = detection.types.map(formatOverflowType).join(', ');
+
   const tooltip = document.createElement('div');
   tooltip.className = TOOLTIP_CLASS;
-  
   tooltip.style.cssText = `
     position: absolute;
-    top: -8px;
+    top: -${tooltipHeight}px;
     left: 0;
     background: #1f2937;
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 12px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1.4;
-    pointer-events: auto;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    z-index: 1000000;
-    min-width: 200px;
+    font-family: monospace;
+    white-space: pre-wrap;
     max-width: 400px;
-    transform: translateY(-100%);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    z-index: 1000000;
+    line-height: 1.4;
   `;
-
-  const issues = detection.types
-    .filter(t => t !== OverflowType.NONE)
-    .map(t => formatOverflowType(t))
-    .join(', ');
-
+  
+  // Phase 8: Accessibility attributes for tooltip
+  tooltip.setAttribute('role', 'tooltip');
+  tooltip.setAttribute('aria-hidden', 'true');
+  
   tooltip.innerHTML = `
     <div style="font-weight: 600; margin-bottom: 6px; color: #fca5a5;">
       ⚠️ Overflow Detected

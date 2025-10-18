@@ -95,14 +95,20 @@ export class BatchProcessor<T> {
       return;
     }
 
-    // Process current batch
+    // Process batch with error handling
     for (const task of batch) {
       try {
         task.process();
         this.processed++;
       } catch (error) {
-        Logger.error('Task failed:', error);
         this.failed++;
+        console.error('Batch processing error:', error);
+        
+        // Phase 8: Circuit breaker - stop if too many failures
+        if (this.failed > this.tasks.length * 0.5) {
+          console.error('Too many failures - stopping batch processing');
+          break;
+        }
       }
     }
 
@@ -131,15 +137,18 @@ export class BatchProcessor<T> {
 export async function processInBatches<T>(
   items: T[],
   processor: (item: T) => void,
-  batchSize = 10,
+  batchSize: number = 10,
   onProgress?: (current: number, total: number) => void
 ): Promise<BatchResult> {
-  const batch = new BatchProcessor<T>(batchSize);
+  // Phase 8: Optimize batch size for large sets
+  const optimizedBatchSize = items.length > 1000 ? Math.min(batchSize, 20) : batchSize;
 
   const tasks: BatchTask<T>[] = items.map(item => ({
     item,
     process: () => processor(item),
   }));
+
+  const batch = new BatchProcessor<T>(optimizedBatchSize);
 
   batch.addTasks(tasks);
 

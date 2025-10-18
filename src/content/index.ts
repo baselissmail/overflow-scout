@@ -24,6 +24,8 @@ import { StateManager } from '@/lib/stateManager';
 import { updateSessionBanner, removeSessionBanner } from '@/lib/sessionBanner';
 import { logShadowDOMStructure } from '@/lib/shadowDomHelper';
 import { spaObserver } from '@/lib/spaObserver';
+import { ErrorHandler } from '@/lib/errorHandler';
+import { PerformanceMonitor } from '@/lib/performanceMonitor';
 
 /**
  * Cache structure for storing original element state
@@ -738,28 +740,48 @@ class OverflowScoutContent {
   }
 
   /**
-   * Phase 4: Test all elements of a specific type
+   * Phase 4-8: Test all elements of a specific type (with performance monitoring)
    */
   private async testAllByType(type: 'button' | 'heading' | 'input' | 'link'): Promise<BatchTestResult> {
-    const group = groupAllElementsByType(type);
+    const stopTimer = PerformanceMonitor.start(`test-all-${type}`);
+    
+    const result = await ErrorHandler.safely(
+      async () => {
+        const group = groupAllElementsByType(type);
 
-    if (!group) {
-      Logger.warn(`No ${type} elements found`);
-      return { total: 0, tested: 0, broken: 0, duration: 0, summary: `No ${type} elements found` };
-    }
+        if (!group) {
+          Logger.warn(`No ${type} elements found`);
+          return { total: 0, tested: 0, broken: 0, duration: 0, summary: `No ${type} elements found` };
+        }
 
-    Logger.info(`Testing all ${type} elements:`, group.description);
+        Logger.info(`Testing all ${type} elements:`, group.description);
 
-    const textableElements = filterTextableElements(group.elements);
-    return this.batchTestElements(textableElements, group.description);
+        const textableElements = filterTextableElements(group.elements);
+        
+        // Phase 8: Warn if testing large number of elements
+        if (textableElements.length > 500) {
+          Logger.warn(`Testing ${textableElements.length} elements - this may take a moment`);
+        }
+        
+        return this.batchTestElements(textableElements, group.description);
+      },
+      { total: 0, tested: 0, broken: 0, duration: 0, summary: 'Error during testing' },
+      `test-all-${type}`
+    );
+    
+    stopTimer();
+    return result;
   }
 
   /**
-   * Phase 4: Batch test multiple elements with rAF scheduling
+   * Phase 8: Batch test multiple elements with performance optimization
    */
   private async batchTestElements(elements: HTMLElement[], description: string): Promise<BatchTestResult> {
     let brokenCount = 0;
     const startTime = performance.now();
+    
+    // Phase 8: Use optimized batch size
+    const optimalBatchSize = PerformanceMonitor.getOptimalBatchSize(elements.length);
 
     // Process elements in batches to avoid jank
     const result = await processInBatches(
@@ -810,7 +832,7 @@ class OverflowScoutContent {
           }
         });
       },
-      10, // Batch size
+      optimalBatchSize, // Phase 8: Optimized batch size
       (current, total) => {
         Logger.debug(`Progress: ${current}/${total}`);
       }
