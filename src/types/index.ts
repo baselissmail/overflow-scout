@@ -23,9 +23,14 @@ export enum MessageType {
   TEST_ALL_INPUTS = 'TEST_ALL_INPUTS',
   TEST_ALL_LINKS = 'TEST_ALL_LINKS',
   
-  // Phase 5 - State Management (future)
+  // Phase 5 - State Management
   REVERT_ALL = 'REVERT_ALL',
   GET_STATE = 'GET_STATE',
+  
+  // Phase 7 - Popup UI
+  SET_MODE = 'SET_MODE',
+  GET_SETTINGS = 'GET_SETTINGS',
+  BATCH_TEST_PAGE = 'BATCH_TEST_PAGE',
 }
 
 export interface Message<T = unknown> {
@@ -68,6 +73,30 @@ export interface BatchTestResult {
   broken: number;
   duration: number;
   summary: string;
+}
+
+/**
+ * Phase 7: Settings and modes
+ */
+export enum TestMode {
+  DEFAULT = 'default',
+  GERMAN = 'german',
+  ARABIC = 'arabic',
+  CJK = 'cjk',
+  UGC = 'ugc',
+  MIXED = 'mixed',
+}
+
+export interface Settings {
+  mode: TestMode;
+  targetSelector?: string;
+}
+
+export interface PopupStats {
+  isActive: boolean;
+  totalTested: number;
+  totalBroken: number;
+  sessionDuration: number;
 }
 
 /**

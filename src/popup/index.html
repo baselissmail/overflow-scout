@@ -7,50 +7,65 @@
   <link rel="stylesheet" href="./popup.css">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <h1 class="title">
-        <span class="icon">🔍</span>
-        Overflow Scout
-      </h1>
-      <p class="subtitle">Text overflow stress testing</p>
+  <div id="app">
+    <header>
+      <h1>🔍 Overflow Scout</h1>
+      <p class="subtitle">Stress-test UI text overflow</p>
     </header>
 
-    <main class="main">
-      <section class="status-section">
-        <div class="status-card">
-          <div class="status-label">Mode</div>
-          <div class="status-value" id="mode-status">Idle</div>
-        </div>
-        <div class="status-card">
-          <div class="status-label">Tested</div>
-          <div class="status-value" id="tested-count">0</div>
-        </div>
-        <div class="status-card">
-          <div class="status-label">Broken</div>
-          <div class="status-value status-error" id="broken-count">0</div>
-        </div>
-      </section>
+    <section class="stats-section">
+      <div class="stat-card">
+        <div class="stat-value" id="tested-count">0</div>
+        <div class="stat-label">Tested</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value broken" id="broken-count">0</div>
+        <div class="stat-label">Broken</div>
+      </div>
+    </section>
 
-      <section class="actions-section">
-        <div class="info-message">
-          <p>
-            <strong>Phase 0 Complete!</strong><br>
-            Extension is loaded and ready.
-          </p>
-          <p class="phase-info">
-            Phase 1 will add: Right-click → Test with long text
-          </p>
-        </div>
-        
-        <button class="btn btn-primary" id="test-connection" disabled>
-          Test Connection
-        </button>
-      </section>
-    </main>
+    <section class="mode-section">
+      <label class="section-label">Test Mode</label>
+      <select id="mode-selector" class="mode-select">
+        <option value="mixed">Mixed (All Languages)</option>
+        <option value="default">English</option>
+        <option value="german">German (Übersetzung)</option>
+        <option value="arabic">Arabic (RTL)</option>
+        <option value="cjk">CJK (中文/日本語)</option>
+        <option value="ugc">UGC (Emojis & Caps)</option>
+      </select>
+    </section>
+
+    <section class="actions-section">
+      <button id="test-all-buttons" class="btn btn-primary">
+        <span class="btn-icon">🔘</span>
+        Test All Buttons
+      </button>
+      <button id="test-all-headings" class="btn btn-primary">
+        <span class="btn-icon">📰</span>
+        Test All Headings
+      </button>
+      <button id="test-all-inputs" class="btn btn-primary">
+        <span class="btn-icon">📝</span>
+        Test All Inputs
+      </button>
+      <button id="test-all-links" class="btn btn-primary">
+        <span class="btn-icon">🔗</span>
+        Test All Links
+      </button>
+    </section>
+
+    <section class="actions-section">
+      <button id="revert-all" class="btn btn-danger">
+        <span class="btn-icon">↩️</span>
+        Revert All
+      </button>
+    </section>
 
     <footer class="footer">
-      <span class="version">v0.1.0 • Phase 0</span>
+      <div class="footer-text">
+        Right-click any element for more options
+      </div>
     </footer>
   </div>
 

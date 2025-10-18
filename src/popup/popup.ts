@@ -7,13 +7,18 @@
  * - Send commands to content scripts via background
  */
 
-import { MessageType, Logger } from '@/types';
+import { MessageType, Logger, TestMode } from '@/types';
 
 class PopupController {
-  private modeStatus: HTMLElement | null = null;
   private testedCount: HTMLElement | null = null;
   private brokenCount: HTMLElement | null = null;
-  private testConnectionBtn: HTMLButtonElement | null = null;
+  private modeSelector: HTMLSelectElement | null = null;
+  private testAllButtonsBtn: HTMLButtonElement | null = null;
+  private testAllHeadingsBtn: HTMLButtonElement | null = null;
+  private testAllInputsBtn: HTMLButtonElement | null = null;
+  private testAllLinksBtn: HTMLButtonElement | null = null;
+  private revertAllBtn: HTMLButtonElement | null = null;
+  private updateInterval: number | null = null;
 
   constructor() {
     this.init();
@@ -24,105 +29,142 @@ class PopupController {
     
     this.cacheElements();
     this.setupEventListeners();
-    this.loadState();
+    this.loadSettings();
+    this.updateStats();
+    this.startStatsPolling();
+    
+    // Cleanup on unload
+    window.addEventListener('unload', () => this.stopStatsPolling());
   }
 
   private cacheElements(): void {
-    this.modeStatus = document.getElementById('mode-status');
     this.testedCount = document.getElementById('tested-count');
     this.brokenCount = document.getElementById('broken-count');
-    this.testConnectionBtn = document.getElementById('test-connection') as HTMLButtonElement;
+    this.modeSelector = document.getElementById('mode-selector') as HTMLSelectElement;
+    this.testAllButtonsBtn = document.getElementById('test-all-buttons') as HTMLButtonElement;
+    this.testAllHeadingsBtn = document.getElementById('test-all-headings') as HTMLButtonElement;
+    this.testAllInputsBtn = document.getElementById('test-all-inputs') as HTMLButtonElement;
+    this.testAllLinksBtn = document.getElementById('test-all-links') as HTMLButtonElement;
+    this.revertAllBtn = document.getElementById('revert-all') as HTMLButtonElement;
   }
 
   private setupEventListeners(): void {
-    if (this.testConnectionBtn) {
-      this.testConnectionBtn.addEventListener('click', () => this.testConnection());
-    }
+    // Mode selector
+    this.modeSelector?.addEventListener('change', () => this.saveMode());
+
+    // Batch test buttons
+    this.testAllButtonsBtn?.addEventListener('click', () => this.sendMessage(MessageType.TEST_ALL_BUTTONS));
+    this.testAllHeadingsBtn?.addEventListener('click', () => this.sendMessage(MessageType.TEST_ALL_HEADINGS));
+    this.testAllInputsBtn?.addEventListener('click', () => this.sendMessage(MessageType.TEST_ALL_INPUTS));
+    this.testAllLinksBtn?.addEventListener('click', () => this.sendMessage(MessageType.TEST_ALL_LINKS));
+    
+    // Revert all
+    this.revertAllBtn?.addEventListener('click', () => this.sendMessage(MessageType.REVERT_ALL));
   }
 
   /**
-   * Load current state from storage
+   * Load settings from storage
    */
-  private async loadState(): Promise<void> {
+  private async loadSettings(): Promise<void> {
     try {
-      const result = await chrome.storage.local.get(['mode', 'testedElements', 'brokenElements']);
+      const result = await chrome.storage.local.get(['mode']);
+      const mode = result.mode || TestMode.MIXED;
       
-      if (this.modeStatus) {
-        this.modeStatus.textContent = result.mode || 'Idle';
-      }
-      
-      if (this.testedCount) {
-        this.testedCount.textContent = String(result.testedElements || 0);
-      }
-      
-      if (this.brokenCount) {
-        this.brokenCount.textContent = String(result.brokenElements || 0);
+      if (this.modeSelector) {
+        this.modeSelector.value = mode;
       }
 
-      // Enable test button once state is loaded
-      if (this.testConnectionBtn) {
-        this.testConnectionBtn.disabled = false;
-      }
-
-      Logger.debug('State loaded:', result);
+      Logger.debug('Settings loaded:', result);
     } catch (error) {
-      Logger.error('Failed to load state:', error);
+      Logger.error('Failed to load settings:', error);
     }
   }
 
   /**
-   * Test connection to background and content scripts
+   * Save mode to storage
    */
-  private async testConnection(): Promise<void> {
-    if (!this.testConnectionBtn) return;
+  private async saveMode(): Promise<void> {
+    if (!this.modeSelector) return;
 
-    this.testConnectionBtn.disabled = true;
-    this.testConnectionBtn.textContent = 'Testing...';
-
+    const mode = this.modeSelector.value as TestMode;
+    
     try {
-      // Test background connection
-      const response = await chrome.runtime.sendMessage({
-        type: MessageType.PING,
-      });
+      await chrome.storage.local.set({ mode });
+      Logger.info('Mode saved:', mode);
+      
+      // Notify content script of mode change
+      this.sendMessage(MessageType.SET_MODE, { mode });
+    } catch (error) {
+      Logger.error('Failed to save mode:', error);
+    }
+  }
 
-      Logger.info('Background response:', response);
-
-      // Test content script connection
+  /**
+   * Update stats from active tab
+   */
+  private async updateStats(): Promise<void> {
+    try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
-      if (tab.id) {
-        const contentResponse = await chrome.tabs.sendMessage(tab.id, {
-          type: MessageType.PING,
-        });
+      if (!tab.id) return;
+
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        type: MessageType.GET_STATE,
+      });
+
+      if (response) {
+        if (this.testedCount) {
+          this.testedCount.textContent = String(response.elementCount || 0);
+        }
         
-        Logger.info('Content script response:', contentResponse);
+        if (this.brokenCount) {
+          this.brokenCount.textContent = String(response.brokenCount || 0);
+        }
+      }
+    } catch (error) {
+      // Content script may not be ready yet
+      Logger.debug('Stats update failed:', error);
+    }
+  }
+
+  /**
+   * Send message to active tab
+   */
+  private async sendMessage(type: MessageType, payload: unknown = {}): Promise<void> {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      if (!tab.id) {
+        Logger.warn('No active tab found');
+        return;
       }
 
-      this.showSuccess('✓ Connection test passed!');
+      await chrome.tabs.sendMessage(tab.id, { type, payload });
+      Logger.info('Message sent:', type);
+      
+      // Update stats after action
+      setTimeout(() => this.updateStats(), 500);
     } catch (error) {
-      Logger.error('Connection test failed:', error);
-      this.showError('✗ Connection test failed');
-    } finally {
-      setTimeout(() => {
-        if (this.testConnectionBtn) {
-          this.testConnectionBtn.disabled = false;
-          this.testConnectionBtn.textContent = 'Test Connection';
-        }
-      }, 2000);
+      Logger.error('Failed to send message:', error);
     }
   }
 
-  private showSuccess(message: string): void {
-    if (this.testConnectionBtn) {
-      this.testConnectionBtn.textContent = message;
-      this.testConnectionBtn.style.background = 'var(--success)';
-    }
+  /**
+   * Poll stats every second
+   */
+  private startStatsPolling(): void {
+    this.updateInterval = window.setInterval(() => {
+      this.updateStats();
+    }, 1000);
   }
 
-  private showError(message: string): void {
-    if (this.testConnectionBtn) {
-      this.testConnectionBtn.textContent = message;
-      this.testConnectionBtn.style.background = 'var(--error)';
+  /**
+   * Stop polling when popup closes
+   */
+  private stopStatsPolling(): void {
+    if (this.updateInterval !== null) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
     }
   }
 }
