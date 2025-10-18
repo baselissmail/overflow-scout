@@ -92,6 +92,42 @@ export interface ElementContext {
 }
 
 /**
+ * Phase 3: Overflow detection results
+ */
+export enum OverflowType {
+  NONE = 'none',
+  CLIPPING = 'clipping',
+  ELLIPSIS = 'ellipsis',
+  LINE_CLAMP = 'line_clamp',
+  WRAPPING = 'wrapping',
+  SCROLLABLE = 'scrollable',
+}
+
+export interface OverflowDetection {
+  hasOverflow: boolean;
+  types: OverflowType[];
+  details: {
+    isClipped?: boolean;
+    hasEllipsis?: boolean;
+    hasLineClamp?: boolean;
+    isWrapping?: boolean;
+    isScrollable?: boolean;
+    scrollWidth?: number;
+    clientWidth?: number;
+    scrollHeight?: number;
+    clientHeight?: number;
+    computedStyle?: {
+      overflow?: string;
+      overflowX?: string;
+      overflowY?: string;
+      textOverflow?: string;
+      whiteSpace?: string;
+      webkitLineClamp?: string;
+    };
+  };
+}
+
+/**
  * Extension state (Phase 5+)
  */
 export interface ExtensionState {

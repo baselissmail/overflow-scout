@@ -43,6 +43,18 @@ export var ElementType;
     ElementType["BREADCRUMB"] = "breadcrumb";
 })(ElementType || (ElementType = {}));
 /**
+ * Phase 3: Overflow detection results
+ */
+export var OverflowType;
+(function (OverflowType) {
+    OverflowType["NONE"] = "none";
+    OverflowType["CLIPPING"] = "clipping";
+    OverflowType["ELLIPSIS"] = "ellipsis";
+    OverflowType["LINE_CLAMP"] = "line_clamp";
+    OverflowType["WRAPPING"] = "wrapping";
+    OverflowType["SCROLLABLE"] = "scrollable";
+})(OverflowType || (OverflowType = {}));
+/**
  * Logger utility for consistent logging across extension
  */
 export class Logger {

@@ -10,7 +10,7 @@
  * This script runs in the context of web pages
  */
 
-import { MessageType, Logger, ElementType, type Message } from '@/types';
+import { MessageType, Logger, ElementType, type Message, type OverflowDetection } from '@/types';
 import {
   TEXT_PATTERNS,
   COMPONENT_PATTERNS,
@@ -18,6 +18,8 @@ import {
   getRandomPattern,
   getTextByLength,
 } from '@/lib/textPatterns';
+import { detectOverflow, getOverflowSeverity } from '@/lib/overflowDetector';
+import { createHighlight, removeHighlight } from '@/lib/highlighter';
 
 /**
  * Cache structure for storing original element state
@@ -26,6 +28,7 @@ interface ElementCache {
   element: HTMLElement;
   originalValue: string;
   elementType: ElementType;
+  overflowDetection?: OverflowDetection;
 }
 
 class OverflowScoutContent {
@@ -136,7 +139,7 @@ class OverflowScoutContent {
   }
 
   /**
-   * Phase 1: Inject test text into the last clicked element
+   * Phase 1-3: Inject test text and detect overflow
    */
   private injectText(): { success: boolean; message?: string } {
     if (!this.lastClickedElement) {
@@ -161,6 +164,33 @@ class OverflowScoutContent {
     // Inject the test string
     this.setElementText(textHost, elementType, testString);
 
+    // Phase 3: Detect overflow after injection
+    // Wait for layout to settle
+    requestAnimationFrame(() => {
+      const detection = detectOverflow(textHost);
+      const elementId = this.getElementId(textHost);
+      
+      // Store detection results in cache
+      const cache = this.elementCache.get(elementId);
+      if (cache) {
+        cache.overflowDetection = detection;
+      }
+
+      // Auto-highlight if overflow detected
+      if (detection.hasOverflow) {
+        createHighlight(textHost, detection, original, testString);
+        const severity = getOverflowSeverity(detection);
+        Logger.info('Overflow detected:', {
+          elementId,
+          severity,
+          types: detection.types,
+          details: detection.details,
+        });
+      } else {
+        Logger.debug('No overflow detected for', elementId);
+      }
+    });
+
     const elementId = this.getElementId(textHost);
     Logger.info('Injected text:', {
       elementId,
@@ -178,7 +208,7 @@ class OverflowScoutContent {
   }
 
   /**
-   * Phase 1: Revert the last clicked element to original text
+   * Phase 1-3: Revert element and remove highlight
    */
   private revertText(): { success: boolean; message?: string } {
     if (!this.lastClickedElement) {
@@ -191,7 +221,14 @@ class OverflowScoutContent {
     }
 
     const cache = this.elementCache.get(elementId)!;
+    
+    // Revert text
     this.setElementText(this.lastClickedElement, cache.elementType, cache.originalValue);
+    
+    // Phase 3: Remove highlight
+    removeHighlight(this.lastClickedElement);
+    
+    // Clean up
     this.elementCache.delete(elementId);
     this.lastClickedElement.removeAttribute('data-overflow-scout-id');
 
@@ -458,9 +495,9 @@ class OverflowScoutContent {
   }
 
   // Future phase methods:
-  // Phase 3: detectOverflow() - identify clipping/ellipsis issues
   // Phase 4: batchTestSimilar() - group and test similar elements
   // Phase 5: revertAll() - restore all original text
+  // Phase 6: handleShadowDOM() - support web components
 }
 
 // Initialize content script when DOM is ready

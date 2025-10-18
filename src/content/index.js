@@ -11,6 +11,8 @@
  */
 import { MessageType, Logger, ElementType } from '@/types';
 import { TEXT_PATTERNS, COMPONENT_PATTERNS, TextPatternType, getRandomPattern, getTextByLength, } from '@/lib/textPatterns';
+import { detectOverflow, getOverflowSeverity } from '@/lib/overflowDetector';
+import { createHighlight, removeHighlight } from '@/lib/highlighter';
 class OverflowScoutContent {
     constructor() {
         this.initialized = false;
@@ -101,7 +103,7 @@ class OverflowScoutContent {
         });
     }
     /**
-     * Phase 1: Inject test text into the last clicked element
+     * Phase 1-3: Inject test text and detect overflow
      */
     injectText() {
         if (!this.lastClickedElement) {
@@ -120,6 +122,31 @@ class OverflowScoutContent {
         const testString = this.generateTestString(elementType, original);
         // Inject the test string
         this.setElementText(textHost, elementType, testString);
+        // Phase 3: Detect overflow after injection
+        // Wait for layout to settle
+        requestAnimationFrame(() => {
+            const detection = detectOverflow(textHost);
+            const elementId = this.getElementId(textHost);
+            // Store detection results in cache
+            const cache = this.elementCache.get(elementId);
+            if (cache) {
+                cache.overflowDetection = detection;
+            }
+            // Auto-highlight if overflow detected
+            if (detection.hasOverflow) {
+                createHighlight(textHost, detection, original, testString);
+                const severity = getOverflowSeverity(detection);
+                Logger.info('Overflow detected:', {
+                    elementId,
+                    severity,
+                    types: detection.types,
+                    details: detection.details,
+                });
+            }
+            else {
+                Logger.debug('No overflow detected for', elementId);
+            }
+        });
         const elementId = this.getElementId(textHost);
         Logger.info('Injected text:', {
             elementId,
@@ -135,7 +162,7 @@ class OverflowScoutContent {
         };
     }
     /**
-     * Phase 1: Revert the last clicked element to original text
+     * Phase 1-3: Revert element and remove highlight
      */
     revertText() {
         if (!this.lastClickedElement) {
@@ -146,7 +173,11 @@ class OverflowScoutContent {
             return { success: false, message: 'Element not modified' };
         }
         const cache = this.elementCache.get(elementId);
+        // Revert text
         this.setElementText(this.lastClickedElement, cache.elementType, cache.originalValue);
+        // Phase 3: Remove highlight
+        removeHighlight(this.lastClickedElement);
+        // Clean up
         this.elementCache.delete(elementId);
         this.lastClickedElement.removeAttribute('data-overflow-scout-id');
         Logger.info('Reverted element:', elementId);
