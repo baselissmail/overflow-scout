@@ -5,6 +5,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# TypeScript compiled files (should only be in dist/)
+src/**/*.js
+src/**/*.js.map
+
 # Environment
 .env
 .env.local
