@@ -1141,6 +1141,13 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
             issue.element.textContent = issue.element.dataset.overflowScoutOriginal;
             revertedCount++;
             
+            // Reset textarea to show original text (auto-scan cards also have textareas)
+            const textarea = cardElement.querySelector('textarea') as HTMLTextAreaElement;
+            if (textarea) {
+              textarea.value = issue.element.dataset.overflowScoutOriginal;
+              textarea.placeholder = 'Original text restored';
+            }
+            
             // Update revert button state
             const revertBtn = cardElement.querySelector('.revert-btn') as HTMLButtonElement;
             if (revertBtn) {
@@ -1736,8 +1743,9 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
     }
   });
   
-  // Store element reference on card for batch operations
+  // Store element reference and issue on card for batch operations
   (card as any).__overflowScoutElement = issue.element;
+  (card as any).__overflowScoutIssue = issue;
   
   return card;
 }
@@ -1767,16 +1775,21 @@ function enableRevertButton(card: HTMLElement): void {
  * Revert element to original text
  */
 function revertElement(card: HTMLElement, elementId: string): void {
+  // Try to find element - could be from auto-scan or manual
   const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
   
-  if (element && element.dataset.overflowScoutOriginal) {
+  // Also check if this is an auto-scan card with stored issue
+  const issue = (card as any).__overflowScoutIssue;
+  const targetElement = element || issue?.element;
+  
+  if (targetElement && targetElement.dataset.overflowScoutOriginal) {
     // Revert to original text
-    element.textContent = element.dataset.overflowScoutOriginal;
+    targetElement.textContent = targetElement.dataset.overflowScoutOriginal;
     
     // Reset textarea to show original text
     const textarea = card.querySelector('textarea') as HTMLTextAreaElement;
     if (textarea) {
-      textarea.value = element.dataset.overflowScoutOriginal;
+      textarea.value = targetElement.dataset.overflowScoutOriginal;
       textarea.placeholder = 'Original text restored';
     }
     
