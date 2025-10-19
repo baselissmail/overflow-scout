@@ -33,6 +33,7 @@ export enum MessageType {
   GET_SETTINGS = 'GET_SETTINGS',
   BATCH_TEST_PAGE = 'BATCH_TEST_PAGE',
   TOGGLE_INTERACTIVE_MODE = 'TOGGLE_INTERACTIVE_MODE',  // Phase 9: Point & Click
+  AUTO_SCAN = 'AUTO_SCAN',  // Phase 10: Auto-scan mode
 }
 
 export interface Message<T = unknown> {

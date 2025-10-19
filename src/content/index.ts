@@ -11,11 +11,7 @@
  */
 
 import { MessageType, Logger, ElementType, type Message, type OverflowDetection, type BatchTestResult, TestMode } from '@/types';
-import {
-  TEXT_PATTERNS,
-  TextPatternType,
-  getTextByLength,
-} from '@/lib/textPatterns';
+import { TextPatternType } from '@/lib/textPatterns';
 import { detectOverflow, getOverflowSeverity } from '@/lib/overflowDetector';
 import { createHighlight, removeHighlight } from '@/lib/highlighter';
 import { processInBatches } from '@/lib/batchProcessor';
@@ -27,6 +23,9 @@ import { spaObserver } from '@/lib/spaObserver';
 import { ErrorHandler } from '@/lib/errorHandler';
 import { PerformanceMonitor } from '@/lib/performanceMonitor';
 import { InteractiveModeManager } from '@/lib/interactiveMode';
+import { generateIntelligentText } from '@/lib/intelligentTextGenerator';
+import { AutoScanner } from '@/lib/autoScanner';
+import { createAutoBadge, createResultsPanel, removeResultsPanel, isPanelOpen } from '@/lib/autoBadge';
 
 /**
  * Cache structure for storing original element state
@@ -47,6 +46,8 @@ class OverflowScoutContent {
   private stateManager = new StateManager();
   private currentMode = TextPatternType.DEFAULT; // Phase 7: Default to English
   private interactiveMode = new InteractiveModeManager(); // Phase 9: Point & Click
+  private varietyCounter = 0; // Phase 9: For varied text generation
+  private autoScanner = new AutoScanner(); // Phase 10: Auto-scan
 
   constructor() {
     this.init();
@@ -159,9 +160,59 @@ class OverflowScoutContent {
       case MessageType.TOGGLE_INTERACTIVE_MODE:
         return this.toggleInteractiveMode(message.payload);
 
+      case MessageType.AUTO_SCAN:
+        return this.runAutoScan();
+
       default:
-        Logger.warn('Unknown message type in content:', message.type);
+        Logger.warn('Unknown message type:', message.type);
         return { error: 'Unknown message type' };
+    }
+  }
+
+  /**
+   * Phase 10: Run auto-scan and show results
+   */
+  private async runAutoScan(): Promise<{ success: boolean; issueCount: number }> {
+    try {
+      Logger.info('Running auto-scan...');
+      
+      // Run the scan
+      const issues = await this.autoScanner.scan({
+        sampleSize: 100,
+        includeHidden: false,
+      });
+      
+      Logger.info(`Auto-scan complete: ${issues.length} issues found`);
+      
+      // Show badge with count
+      createAutoBadge(issues.length, () => {
+        // Toggle panel on click
+        if (isPanelOpen()) {
+          removeResultsPanel();
+        } else {
+          createResultsPanel(issues, () => {
+            removeResultsPanel();
+          });
+        }
+      });
+      
+      // Auto-open panel if issues found
+      if (issues.length > 0) {
+        createResultsPanel(issues, () => {
+          removeResultsPanel();
+        });
+      }
+      
+      return {
+        success: true,
+        issueCount: issues.length,
+      };
+    } catch (error) {
+      Logger.error('Auto-scan failed:', error);
+      return {
+        success: false,
+        issueCount: 0,
+      };
     }
   }
 
@@ -689,66 +740,40 @@ class OverflowScoutContent {
   }
 
   /**
-   * Phase 7: Smart text generation with pattern library
+   * Phase 9: Intelligent text generation with variety
    * Returns varied, realistic, context-appropriate test strings
-   * Now respects mode selection and ensures test is LONGER
    */
   private generateTestString(type: ElementType, originalText: string = ''): string {
-    // Phase 7: For component-specific types, use current mode instead of random
-    // This ensures mode selection is respected everywhere
-    switch (type) {
-      case ElementType.BUTTON:
-      case ElementType.BUTTON_SUBMIT:
-      case ElementType.LINK:
-      case ElementType.LABEL:
-      case ElementType.PLACEHOLDER:
-      case ElementType.HEADING:
-      case ElementType.NOTIFICATION:
-      case ElementType.BREADCRUMB:
-        // Use current mode for all UI components
-        return getTextByLength(TEXT_PATTERNS[this.currentMode], 'medium');
-
-      // Input type-specific patterns
-      case ElementType.INPUT_EMAIL:
-        return 'extremely.long.email.address.for.testing@international-company-domain-name.com';
-
-      case ElementType.INPUT_URL:
-        return 'https://www.extremely-long-international-domain-name-for-overflow-testing.com/path/to/resource';
-
-      case ElementType.INPUT_SEARCH:
-        return 'searching for extremely specific international product with very long descriptive name';
-
-      case ElementType.INPUT_TEL:
-        return '+1 (555) 123-4567 ext. 89012';
-
-      case ElementType.INPUT:
-      case ElementType.TEXTAREA:
-      case ElementType.CONTENTEDITABLE:
-      case ElementType.ARIA_LABEL:
-        // Use current mode for text inputs
-        return getTextByLength(TEXT_PATTERNS[this.currentMode], 'long');
-
-      // Default text patterns - use current mode
-      case ElementType.TEXT:
-      default:
-        return this.selectTextPattern(originalText);
+    // Phase 9: Use intelligent generator for realistic, varied text
+    const intelligentText = generateIntelligentText(type, originalText, this.varietyCounter++);
+    
+    // If using non-default language mode, append i18n suffix
+    if (this.currentMode !== TextPatternType.DEFAULT) {
+      const i18nSuffix = this.getI18nSuffix();
+      return `${intelligentText} ${i18nSuffix}`;
     }
+    
+    return intelligentText;
   }
 
   /**
-   * Phase 7: Select pattern type based on mode and original length
+   * Phase 9: Get i18n suffix based on current mode
    */
-  private selectTextPattern(originalText: string): string {
-    const originalLength = originalText.trim().length;
-
-    // If original is already long (>50 chars), test with even longer text
-    if (originalLength > 50) {
-      return getTextByLength(TEXT_PATTERNS[this.currentMode], 'long');
+  private getI18nSuffix(): string {
+    switch (this.currentMode) {
+      case TextPatternType.I18N_GERMAN:
+        return 'Übersetzung';
+      case TextPatternType.I18N_ARABIC:
+        return 'الترجمة';
+      case TextPatternType.I18N_CJK:
+        return '翻訳';
+      case TextPatternType.UGC_COMMENT:
+        return '🎉 AWESOME!';
+      default:
+        return '';
     }
-
-    // Use current mode
-    return getTextByLength(TEXT_PATTERNS[this.currentMode], 'long');
   }
+
 
 
   /**

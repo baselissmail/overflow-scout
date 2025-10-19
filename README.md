@@ -89,12 +89,25 @@ public/
 
 ## 🎯 Core Features (Planned)
 
-- **Right-click testing**: One-click text overflow injection
-- **Smart text generation**: Context-aware long strings (i18n, RTL, UGC)
-- **Automatic detection**: Find clipping, ellipsis, line-clamp issues
-- **Batch testing**: Test all similar components at once
-- **Visual highlighting**: Non-intrusive overlay system
-- **Instant revert**: One-click restoration to original state
+## Usage
+
+### Quick Start
+
+1. **Click the extension icon** to open the popup
+2. **Click "🤖 Auto-Scan Page"** to find all overflow issues instantly
+3. **View results** in the detailed side panel
+4. **Test individual elements** with custom text
+5. **Jump to elements** to see exactly where issues are
+6. **Apply suggested fixes** to your CSS
+
+### Features
+
+- **🤖 Auto-Scan**: Automatically detect all overflow issues on the page
+- **👆 Point & Click Mode**: Click any element to test it interactively
+- **🧪 Custom Text Testing**: Test each element with real data from your app
+- **💡 Actionable Fixes**: Get specific CSS suggestions for each issue
+- **🎯 Jump to Element**: Visual highlighting shows exactly which element
+- **↩️ Revert All**: Restore page to original state
 - **SPA support**: Works with React, Vue, modern frameworks
 - **Shadow DOM**: Handles Web Components where possible
 

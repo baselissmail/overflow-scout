@@ -259,6 +259,34 @@ header .subtitle {
   font-size: 16px;
 }
 
+.btn-auto-scan {
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  color: white;
+  flex-direction: column;
+  padding: 16px;
+  gap: 4px;
+  font-size: 15px;
+}
+
+.btn-auto-scan small {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.btn-auto-scan:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.btn-auto-scan:active {
+  transform: translateY(0);
+}
+
+.btn-auto-scan .btn-icon {
+  font-size: 28px;
+}
+
 .btn-interactive {
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
   color: white;

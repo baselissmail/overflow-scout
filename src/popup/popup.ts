@@ -32,6 +32,9 @@ class PopupController {
   // Phase 9: Interactive mode
   private interactiveModeBtn: HTMLButtonElement | null = null;
   private isInteractiveModeActive = false;
+  
+  // Phase 10: Auto-scan
+  private autoScanBtn: HTMLButtonElement | null = null;
 
   constructor() {
     this.init();
@@ -71,6 +74,9 @@ class PopupController {
     
     // Phase 9: Interactive mode
     this.interactiveModeBtn = document.getElementById('interactive-mode') as HTMLButtonElement;
+    
+    // Phase 10: Auto-scan
+    this.autoScanBtn = document.getElementById('auto-scan') as HTMLButtonElement;
   }
 
   private setupEventListeners(): void {
@@ -97,6 +103,9 @@ class PopupController {
     
     // Phase 9: Interactive mode button
     this.interactiveModeBtn?.addEventListener('click', () => this.toggleInteractiveMode());
+    
+    // Phase 10: Auto-scan button
+    this.autoScanBtn?.addEventListener('click', () => this.runAutoScan());
   }
 
   /**
@@ -299,6 +308,51 @@ class PopupController {
         Point & Click Mode
         <small>Click elements to test</small>
       `;
+    }
+  }
+  
+  /**
+   * Phase 10: Run auto-scan
+   */
+  private async runAutoScan(): Promise<void> {
+    if (!this.autoScanBtn) return;
+    
+    // Show loading state
+    this.autoScanBtn.disabled = true;
+    this.autoScanBtn.innerHTML = `
+      <span class="btn-icon">⏳</span>
+      Scanning...
+      <small>Please wait</small>
+    `;
+    
+    try {
+      await this.sendMessage(MessageType.AUTO_SCAN);
+      
+      // Reset button after a delay
+      setTimeout(() => {
+        if (this.autoScanBtn) {
+          this.autoScanBtn.disabled = false;
+          this.autoScanBtn.innerHTML = `
+            <span class="btn-icon">🤖</span>
+            Auto-Scan Page
+            <small>Find all overflow issues instantly</small>
+          `;
+        }
+      }, 1000);
+      
+      Logger.info('Auto-scan triggered successfully');
+    } catch (error) {
+      Logger.error('Failed to trigger auto-scan:', error);
+      
+      // Reset button on error
+      if (this.autoScanBtn) {
+        this.autoScanBtn.disabled = false;
+        this.autoScanBtn.innerHTML = `
+          <span class="btn-icon">🤖</span>
+          Auto-Scan Page
+          <small>Find all overflow issues instantly</small>
+        `;
+      }
     }
   }
 }
