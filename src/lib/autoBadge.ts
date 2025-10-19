@@ -954,11 +954,20 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   `;
   document.head.appendChild(style);
   
-  // Inject dark mode styles
+  // Inject dark mode styles and apply theme
   injectDarkModeStyles();
   
-  // Apply dark mode if enabled
-  applyDarkMode(isDarkModeEnabled());
+  // Apply dark mode if enabled (uses system preference if no user setting)
+  const shouldUseDarkMode = isDarkModeEnabled();
+  applyDarkMode(shouldUseDarkMode);
+  
+  // Initialize toggle button to match current theme
+  setTimeout(() => {
+    const darkModeToggle = panel.querySelector('#dark-mode-toggle');
+    if (darkModeToggle) {
+      darkModeToggle.textContent = shouldUseDarkMode ? '☀️' : '🌙';
+    }
+  }, 0);
   
   // Add close handler
   const closeBtn = panel.querySelector('#close-panel');

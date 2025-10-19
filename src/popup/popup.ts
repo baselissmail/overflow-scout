@@ -89,9 +89,13 @@ class PopupController {
     const themeToggle = document.getElementById('theme-toggle');
     const themeIcon = themeToggle?.querySelector('.theme-icon');
     
-    // Load saved theme from the same key as sidebar
+    // Check user preference or system preference
     const savedTheme = localStorage.getItem('overflow-scout-dark-mode');
-    if (savedTheme === 'true') {
+    const prefersDark = savedTheme === null 
+      ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      : savedTheme === 'true';
+    
+    if (prefersDark) {
       document.body.classList.add('dark-mode');
       if (themeIcon) themeIcon.textContent = '☀️';
     }
