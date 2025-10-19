@@ -85,6 +85,236 @@ export function removeBadge(): void {
   if (badge) badge.remove();
 }
 
+// Track manually added elements
+const manuallyAddedElements: Map<string, any> = new Map();
+
+/**
+ * Create manual element card (simplified version of auto-scan card)
+ */
+function createManualElementCard(element: HTMLElement, elementData: any, index: number): HTMLElement {
+  const card = document.createElement('div');
+  card.setAttribute('data-element-id', elementData.elementId);
+  
+  card.style.cssText = `
+    background: #eff6ff;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+  `;
+  
+  card.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+      <div style="font-weight: 600; color: #1e40af; flex: 1;">
+        #${index + 1} ${elementData.selector}
+      </div>
+      <div style="
+        background: #3b82f6;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+      ">👆 Manual</div>
+    </div>
+    
+    <div style="color: #1e40af; font-size: 12px; margin-bottom: 12px;">
+      "${elementData.originalText}..."
+    </div>
+    
+    <div style="padding-top: 12px; border-top: 1px solid #bfdbfe;">
+      <div style="font-weight: 600; color: #1e40af; font-size: 11px; margin-bottom: 6px;">
+        🧪 Test with Text:
+      </div>
+      <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
+        <button class="preset-btn-manual-${index}" data-text="María José García-Hernández" style="
+          background: white;
+          border: 1px solid #93c5fd;
+          padding: 3px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          cursor: pointer;
+          color: #1e40af;
+        ">Long Name</button>
+        <button class="preset-btn-manual-${index}" data-text="Apple MacBook Pro 16-inch M3 Max" style="
+          background: white;
+          border: 1px solid #93c5fd;
+          padding: 3px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          cursor: pointer;
+          color: #1e40af;
+        ">Product</button>
+      </div>
+      <input 
+        type="text" 
+        id="custom-input-manual-${index}" 
+        placeholder="Type your own text..." 
+        style="
+          width: 100%;
+          border: 1px solid #93c5fd;
+          border-radius: 4px;
+          padding: 6px 8px;
+          font-size: 11px;
+          margin-bottom: 6px;
+        "
+      />
+      <div style="display: flex; gap: 4px;">
+        <button class="test-custom-btn-manual" data-issue-index="${index}" style="
+          background: #10b981;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          flex: 1;
+        ">Test</button>
+        <button class="revert-btn-manual" data-issue-index="${index}" style="
+          background: #6b7280;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          opacity: 0.5;
+          pointer-events: none;
+        " disabled>Revert</button>
+      </div>
+    </div>
+    
+    <button class="jump-btn-manual" data-issue-index="${index}" style="
+      margin-top: 8px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    ">Jump to Element</button>
+  `;
+  
+  // Wire up handlers
+  setupManualCardHandlers(card, element, index);
+  
+  return card;
+}
+
+/**
+ * Setup manual card handlers
+ */
+function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index: number): void {
+  const inputId = `custom-input-manual-${index}`;
+  
+  // Preset buttons
+  card.querySelectorAll(`.preset-btn-manual-${index}`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = (btn as HTMLElement).dataset.text;
+      const input = document.getElementById(inputId) as HTMLInputElement;
+      if (input && text) {
+        input.value = text;
+      }
+    });
+  });
+  
+  // Test button
+  card.querySelector('.test-custom-btn-manual')?.addEventListener('click', () => {
+    const input = document.getElementById(inputId) as HTMLInputElement;
+    const customText = input?.value.trim();
+    
+    if (customText) {
+      testElementWithCustomText(element, customText, card);
+    }
+  });
+  
+  // Revert button
+  const revertBtn = card.querySelector('.revert-btn-manual');
+  if (revertBtn) {
+    revertBtn.addEventListener('click', () => {
+      revertElement(element, card);
+    });
+  }
+  
+  // Jump button
+  card.querySelector('.jump-btn-manual')?.addEventListener('click', () => {
+    highlightAndJumpToElement(element);
+  });
+}
+
+/**
+ * Listen for elements added via interactive mode
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'OVERFLOW_SCOUT_ADD_ELEMENT') {
+      addManualElement(event.data.element);
+    }
+  });
+}
+
+/**
+ * Add manually clicked element to the list
+ */
+function addManualElement(elementData: any): void {
+  // Check if already added
+  if (manuallyAddedElements.has(elementData.elementId)) {
+    // Flash existing card and ensure panel is open
+    ensurePanelIsOpen();
+    const panel = document.getElementById(PANEL_ID);
+    if (panel) {
+      const existingCard = panel.querySelector(`[data-element-id="${elementData.elementId}"]`);
+      if (existingCard) {
+        (existingCard as HTMLElement).style.animation = 'flashCard 0.5s';
+        // Scroll to card
+        existingCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+    return;
+  }
+  
+  // Add to tracked elements
+  manuallyAddedElements.set(elementData.elementId, elementData);
+  
+  // Open panel if not open
+  ensurePanelIsOpen();
+  
+  // Add card to panel
+  const panel = document.getElementById(PANEL_ID);
+  if (panel) {
+    const content = panel.querySelector('[data-content-area]') as HTMLElement;
+    if (content) {
+      // Find actual element
+      const element = document.querySelector(`[data-overflow-scout-id="${elementData.elementId}"]`) as HTMLElement;
+      if (element) {
+        const card = createManualElementCard(element, elementData, content.children.length);
+        content.insertBefore(card, content.firstChild); // Add to top
+        // Scroll to new card
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }
+}
+
+/**
+ * Ensure panel is open (create if doesn't exist)
+ */
+function ensurePanelIsOpen(): void {
+  const panel = document.getElementById(PANEL_ID);
+  if (!panel) {
+    // Create empty panel
+    createResultsPanel([], () => {
+      removeResultsPanel();
+    });
+  }
+}
+
 /**
  * Create results panel showing all issues
  */
@@ -143,15 +373,25 @@ export function createResultsPanel(issues: OverflowIssue[], onClose: () => void)
   
   // Content area
   const content = document.createElement('div');
+  content.setAttribute('data-content-area', 'true');
   content.style.cssText = `
     flex: 1;
     overflow-y: auto;
     padding: 16px;
   `;
   
-  // Generate issue cards
+  // Add manually added elements first (from interactive mode)
+  manuallyAddedElements.forEach((elementData) => {
+    const element = document.querySelector(`[data-overflow-scout-id="${elementData.elementId}"]`) as HTMLElement;
+    if (element) {
+      const card = createManualElementCard(element, elementData, content.children.length);
+      content.appendChild(card);
+    }
+  });
+  
+  // Then add auto-scan results
   issues.forEach((issue, index) => {
-    const card = createIssueCard(issue, index);
+    const card = createIssueCard(issue, index + manuallyAddedElements.size);
     content.appendChild(card);
   });
   
@@ -168,6 +408,11 @@ export function createResultsPanel(issues: OverflowIssue[], onClose: () => void)
       to {
         transform: translateX(0);
       }
+    }
+    
+    @keyframes flashCard {
+      0%, 100% { background: #f9fafb; }
+      50% { background: #dbeafe; }
     }
   `;
   document.head.appendChild(style);
@@ -378,7 +623,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
  * Enable revert button for a card
  */
 function enableRevertButton(card: HTMLElement): void {
-  const revertBtn = card.querySelector('.revert-btn') as HTMLButtonElement;
+  const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
   if (revertBtn) {
     revertBtn.disabled = false;
     revertBtn.style.opacity = '1';
@@ -398,8 +643,8 @@ function revertElement(element: HTMLElement, card: HTMLElement): void {
     delete element.dataset.overflowScoutOriginal;
     delete element.dataset.overflowScoutTested;
     
-    // Disable revert button
-    const revertBtn = card.querySelector('.revert-btn') as HTMLButtonElement;
+    // Disable revert button (works for both regular and manual cards)
+    const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
     if (revertBtn) {
       revertBtn.disabled = true;
       revertBtn.style.opacity = '0.5';

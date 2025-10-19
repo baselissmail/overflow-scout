@@ -224,13 +224,15 @@ class OverflowScoutContent {
       const active = payload?.active || false;
       
       if (active) {
-        // Activate interactive mode - click any element to test it
+        // Activate interactive mode - click to add element to sidebar
         this.interactiveMode.activate((element: HTMLElement) => {
           Logger.info('Interactive click on element:', element.tagName);
           
-          // Set as last clicked element and inject text (reuse existing logic)
-          this.lastClickedElement = element;
-          this.injectText();
+          // Send element to sidebar (don't modify it yet)
+          window.postMessage({ 
+            type: 'OVERFLOW_SCOUT_ADD_ELEMENT',
+            element: this.serializeElement(element)
+          }, '*');
         });
         Logger.info('Interactive mode activated');
       } else {
@@ -244,6 +246,43 @@ class OverflowScoutContent {
       Logger.error('Error toggling interactive mode:', error);
       return { success: false };
     }
+  }
+  
+  /**
+   * Phase 9: Serialize element info for sidebar
+   */
+  private serializeElement(element: HTMLElement): any {
+    const elementType = this.detectElementType(element);
+    
+    // Get text content
+    let originalText = '';
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      originalText = element.value || element.placeholder || '';
+    } else {
+      originalText = element.textContent || '';
+    }
+    
+    // Generate selector
+    let selector = '';
+    if (element.id) {
+      selector = `#${element.id}`;
+    } else if (element.className && typeof element.className === 'string') {
+      const classes = element.className.trim().split(/\s+/).slice(0, 2).join('.');
+      selector = classes ? `${element.tagName.toLowerCase()}.${classes}` : element.tagName.toLowerCase();
+    } else {
+      selector = element.tagName.toLowerCase();
+    }
+    
+    // Store reference
+    const elementId = this.getElementId(element);
+    
+    return {
+      elementId,
+      selector,
+      tagName: element.tagName.toLowerCase(),
+      originalText: originalText.substring(0, 100),
+      elementType
+    };
   }
 
   /**

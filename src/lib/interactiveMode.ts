@@ -27,6 +27,23 @@ export function injectInteractiveModeStyles(): void {
       cursor: crosshair !important;
     }
     
+    /* Normal cursor for sidebar - make it fully functional */
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel,
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel *,
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-auto-badge,
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-auto-badge * {
+      cursor: auto !important;
+    }
+    
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel button,
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel input {
+      cursor: pointer !important;
+    }
+    
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel input[type="text"] {
+      cursor: text !important;
+    }
+    
     /* Hover highlight */
     .${INTERACTIVE_HIGHLIGHT_CLASS} {
       outline: 2px dashed #3b82f6 !important;
@@ -207,40 +224,59 @@ export class InteractiveModeManager {
   private setupEventHandlers(): void {
     // Click handler
     this.clickHandler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
       // Ignore clicks on banner
-      if ((e.target as HTMLElement).closest('.overflow-scout-interactive-banner')) {
+      if (target.closest('.overflow-scout-interactive-banner')) {
+        return;
+      }
+      
+      // Ignore clicks on sidebar/panel - let them work normally!
+      if (target.closest('#overflow-scout-results-panel') || 
+          target.closest('#overflow-scout-auto-badge')) {
         return;
       }
       
       e.preventDefault();
       e.stopPropagation();
       
-      const target = e.target as HTMLElement;
       const isDoubleClick = e.detail === 2;
       
       if (this.onElementClick) {
         this.onElementClick(target, isDoubleClick);
       }
     };
-    
+
     // Hover handler for visual feedback
     this.hoverHandler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      
+
       // Ignore banner
       if (target.closest('.overflow-scout-interactive-banner')) {
         return;
       }
       
+      // Ignore sidebar/panel - no highlight on sidebar!
+      if (target.closest('#overflow-scout-results-panel') || 
+          target.closest('#overflow-scout-auto-badge')) {
+        // Remove any previous highlight when hovering over sidebar
+        if (this.currentHoverElement) {
+          this.currentHoverElement.classList.remove(INTERACTIVE_HIGHLIGHT_CLASS);
+          this.currentHoverElement = null;
+        }
+        return;
+      }
+
       // Remove previous highlight
       if (this.currentHoverElement && this.currentHoverElement !== target) {
         this.currentHoverElement.classList.remove(INTERACTIVE_HIGHLIGHT_CLASS);
       }
-      
+
       // Add new highlight
       target.classList.add(INTERACTIVE_HIGHLIGHT_CLASS);
       this.currentHoverElement = target;
     };
+
     
     // Key handler (ESC to exit)
     this.keyHandler = (e: KeyboardEvent) => {
