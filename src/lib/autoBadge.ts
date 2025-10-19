@@ -1428,6 +1428,31 @@ function showTestResult(isOverflowing: boolean, customText: string, card: HTMLEl
 }
 
 /**
+ * Generate unique ID for an element based on its position in the DOM
+ */
+function generateElementId(element: HTMLElement): string {
+  const tagName = element.tagName.toLowerCase();
+  const className = element.className || 'no-class';
+  const textContent = (element.textContent || '').substring(0, 20);
+  
+  // Try to find a unique identifier
+  let path = tagName;
+  let current: HTMLElement | null = element;
+  let depth = 0;
+  
+  while (current && current.parentElement && depth < 5) {
+    const parent: HTMLElement = current.parentElement;
+    const siblings = Array.from(parent.children);
+    const index = siblings.indexOf(current);
+    path = `${parent.tagName.toLowerCase()}[${index}]/${path}`;
+    current = parent;
+    depth++;
+  }
+  
+  return `${path}-${className}-${textContent}`;
+}
+
+/**
  * Update existing results panel with new issues (no animation)
  */
 export function updateResultsPanel(issues: OverflowIssue[]): void {
@@ -1447,11 +1472,37 @@ export function updateResultsPanel(issues: OverflowIssue[]): void {
       emptyState.remove();
     }
     
-    // Add new auto-scan results after manual cards
+    // Get existing element IDs from manual cards to avoid duplicates
+    const existingElements = new Set<string>();
+    content.querySelectorAll('[data-manual-card]').forEach(card => {
+      const elementId = (card as HTMLElement).dataset.elementId;
+      if (elementId) {
+        existingElements.add(elementId);
+      }
+    });
+    
+    // Add new auto-scan results after manual cards (skip duplicates)
+    const manualCards = content.querySelectorAll('[data-manual-card]');
+    const insertPosition = manualCards.length > 0 
+      ? (manualCards[manualCards.length - 1] as HTMLElement).nextSibling 
+      : content.firstChild;
+    
     issues.forEach((issue, index) => {
+      // Generate element ID for comparison
+      const elementId = generateElementId(issue.element);
+      
+      // Skip if this element already exists as a manual card
+      if (existingElements.has(elementId)) {
+        return;
+      }
+      
       const card = createIssueCard(issue, index + manuallyAddedElements.size);
       card.setAttribute('data-issue-card', 'true');
-      content.appendChild(card);
+      if (insertPosition) {
+        content.insertBefore(card, insertPosition);
+      } else {
+        content.appendChild(card);
+      }
     });
     
     // If no issues and no manual elements, show success message
