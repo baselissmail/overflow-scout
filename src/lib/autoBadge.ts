@@ -778,11 +778,10 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
         font-weight: 600;
         display: flex;
         align-items: center;
-        justify-content: center;
         gap: 6px;
-        flex: 1;
         transition: all 0.2s;
-      " title="Re-run auto scan" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+        flex: 1;
+      " title="Re-run scan (Ctrl+Shift+O)">
         <span style="font-size: 14px;">🔄</span>
         <span>Scan</span>
       </button>
@@ -866,8 +865,8 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
         font-weight: 600;
         flex: 1;
         transition: all 0.2s;
-      " title="Clear all manual cards" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-        🗑️ Clear
+      " title="Clear all cards and reset" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+        🗑️ Clear All
       </button>
     </div>
   `;
@@ -1047,7 +1046,33 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   });
   
   panel.querySelector('#clear-all-btn')?.addEventListener('click', () => {
-    clearAllManualCards(panel);
+    if (confirm('Are you sure you want to clear all cards? This cannot be undone.')) {
+      // Clear all cards
+      const contentArea = panel.querySelector('[data-content-area]');
+      if (contentArea) {
+        contentArea.innerHTML = `
+          <div data-empty-state style="
+            padding: 60px 20px;
+            text-align: center;
+            color: #10b981;
+          ">
+            <div style="font-size: 48px; margin-bottom: 12px;">✨</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
+              All Clear!
+            </div>
+            <div style="font-size: 13px; color: #6b7280;">
+              Click "Scan" to find overflow issues
+            </div>
+          </div>
+        `;
+      }
+      
+      // Clear manual elements map
+      elementPresetIndex.clear();
+      
+      // Show success toast
+      showToast('✨ All cards cleared!', 'success');
+    }
   });
   
   document.body.appendChild(panel);
@@ -2326,38 +2351,8 @@ function exportAllResults(issues: OverflowIssue[]): void {
   link.download = `overflow-scout-results-${timestamp}.json`;
   link.href = url;
   link.click();
-  URL.revokeObjectURL(url);
   
   showToast('📦 Results exported!', 'success');
-}
-
-/**
- * Clear all manual cards
- */
-function clearAllManualCards(panel: HTMLElement): void {
-  const content = panel.querySelector('[data-content-area]') as HTMLElement;
-  if (!content) return;
-  
-  const manualCards = content.querySelectorAll('[data-manual-card]');
-  
-  if (manualCards.length === 0) {
-    showToast('No manual cards to clear', 'error');
-    return;
-  }
-  
-  const confirmed = confirm(`Clear all ${manualCards.length} manual cards? This cannot be undone.`);
-  if (!confirmed) return;
-  
-  manualCards.forEach((card, index) => {
-    setTimeout(() => {
-      const removeBtn = card.querySelector('.remove-manual-card-btn') as HTMLButtonElement;
-      if (removeBtn) {
-        removeBtn.click();
-      }
-    }, index * 50);
-  });
-  
-  showToast(`🗑️ Cleared ${manualCards.length} manual cards!`, 'success');
 }
 
 /**

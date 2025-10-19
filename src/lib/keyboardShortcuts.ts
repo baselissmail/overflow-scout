@@ -5,8 +5,10 @@
 export function setupKeyboardShortcuts(): void {
   document.addEventListener('keydown', (e: KeyboardEvent) => {
     // Ctrl+Shift+O or Cmd+Shift+O - Trigger scan
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'O') {
+    // Check both uppercase and lowercase to handle different keyboard layouts
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'O' || e.key === 'o')) {
       e.preventDefault();
+      console.log('[Overflow Scout] Keyboard shortcut triggered: Scan');
       window.postMessage({ type: 'OVERFLOW_SCOUT_RESCAN' }, '*');
     }
     
