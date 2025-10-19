@@ -296,17 +296,25 @@ if (typeof window !== 'undefined') {
  * Add manually clicked element to the list
  */
 function addManualElement(elementData: any): void {
+  // Check if panel is currently open or collapsed
+  const panel = document.getElementById(PANEL_ID);
+  const isPanelVisible = panel && panel.style.display !== 'none';
+  
   // Check if already added - prevent duplicates
   if (manuallyAddedElements.has(elementData.elementId)) {
-    // Flash existing card and ensure panel is open
-    ensurePanelIsOpen();
-    const panel = document.getElementById(PANEL_ID);
-    if (panel) {
-      const existingCard = panel.querySelector(`[data-element-id="${elementData.elementId}"]`);
+    // Only open panel if it was already visible
+    if (isPanelVisible) {
+      const existingCard = panel!.querySelector(`[data-element-id="${elementData.elementId}"]`);
       if (existingCard) {
         (existingCard as HTMLElement).style.animation = 'flashCard 0.5s';
         // Scroll to card
         existingCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    } else {
+      // Just update tab count
+      const tab = document.getElementById('overflow-scout-toggle-tab');
+      if (tab) {
+        updateToggleTabContent(tab);
       }
     }
     return;
@@ -315,13 +323,17 @@ function addManualElement(elementData: any): void {
   // Add to tracked elements
   manuallyAddedElements.set(elementData.elementId, elementData);
   
-  // Open panel if not open
-  ensurePanelIsOpen();
+  // Update toggle tab count (always, preserve current display state)
+  const tab = document.getElementById('overflow-scout-toggle-tab');
+  if (tab) {
+    const isTabVisible = tab.style.display !== 'none';
+    updateToggleTabContent(tab, isTabVisible);
+  }
   
-  // Add card to panel
-  const panel = document.getElementById(PANEL_ID);
-  if (panel) {
-    const content = panel.querySelector('[data-content-area]') as HTMLElement;
+  // Only open/update panel if it was already visible
+  if (isPanelVisible) {
+    // Add card to panel
+    const content = panel!.querySelector('[data-content-area]') as HTMLElement;
     if (content) {
       // Remove "All Good" empty state if it exists
       const emptyState = content.querySelector('[data-empty-state]');
@@ -338,21 +350,69 @@ function addManualElement(elementData: any): void {
         card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
+  } else {
+    // Panel is collapsed, ensure panel exists but keep it hidden
+    if (!panel) {
+      // Create panel without showing it
+      createResultsPanel([], () => {
+        removeResultsPanel();
+      });
+      
+      // Get the newly created panel
+      const newPanel = document.getElementById(PANEL_ID);
+      if (newPanel) {
+        // Hide panel immediately (before animation)
+        newPanel.style.display = 'none';
+        newPanel.setAttribute('data-panel-open', 'false');
+        
+        // Make sure tab is visible
+        const tab = document.getElementById('overflow-scout-toggle-tab');
+        if (tab) {
+          updateToggleTabContent(tab, true);
+        }
+        
+        // Add card to hidden panel
+        const content = newPanel.querySelector('[data-content-area]') as HTMLElement;
+        if (content) {
+          const emptyState = content.querySelector('[data-empty-state]');
+          if (emptyState) {
+            emptyState.remove();
+          }
+          
+          const element = document.querySelector(`[data-overflow-scout-id="${elementData.elementId}"]`) as HTMLElement;
+          if (element) {
+            const card = createManualElementCard(element, elementData, content.children.length);
+            content.insertBefore(card, content.firstChild);
+          }
+        }
+      }
+    } else {
+      // Panel exists but is hidden, add card silently
+      const content = panel.querySelector('[data-content-area]') as HTMLElement;
+      if (content) {
+        // Remove "All Good" empty state if it exists
+        const emptyState = content.querySelector('[data-empty-state]');
+        if (emptyState) {
+          emptyState.remove();
+        }
+        
+        // Find actual element
+        const element = document.querySelector(`[data-overflow-scout-id="${elementData.elementId}"]`) as HTMLElement;
+        if (element) {
+          const card = createManualElementCard(element, elementData, content.children.length);
+          content.insertBefore(card, content.firstChild); // Add to top
+        }
+      }
+      
+      // Make sure tab is visible and updated
+      const tab = document.getElementById('overflow-scout-toggle-tab');
+      if (tab) {
+        updateToggleTabContent(tab, true);
+      }
+    }
   }
 }
 
-/**
- * Ensure panel is open (create if doesn't exist)
- */
-function ensurePanelIsOpen(): void {
-  const panel = document.getElementById(PANEL_ID);
-  if (!panel) {
-    // Create empty panel
-    createResultsPanel([], () => {
-      removeResultsPanel();
-    });
-  }
-}
 
 /**
  * Remove a card from sidebar
@@ -391,6 +451,13 @@ function removeManualCard(card: HTMLElement, elementId: string): void {
   // Remove from tracked elements
   manuallyAddedElements.delete(elementId);
   
+  // Update toggle tab count (preserve display state)
+  const tab = document.getElementById('overflow-scout-toggle-tab');
+  if (tab) {
+    const isTabVisible = tab.style.display !== 'none';
+    updateToggleTabContent(tab, isTabVisible);
+  }
+  
   // Revert element if it was modified
   const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
   if (element && element.dataset.overflowScoutOriginal) {
@@ -421,11 +488,12 @@ function removeManualCard(card: HTMLElement, elementId: string): void {
 /**
  * Create results panel showing all issues
  */
-export function createResultsPanel(issues: OverflowIssue[], onClose: () => void): void {
+export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => void): void {
   removeResultsPanel();
   
   const panel = document.createElement('div');
   panel.id = PANEL_ID;
+  panel.setAttribute('data-panel-open', 'true');
   
   panel.style.cssText = `
     position: fixed;
@@ -434,12 +502,12 @@ export function createResultsPanel(issues: OverflowIssue[], onClose: () => void)
     width: 400px;
     height: 100vh;
     background: white;
-    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
-    z-index: 2147483647;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+    z-index: 2147483648;
     display: flex;
     flex-direction: column;
     animation: slideInRight 0.3s ease-out;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   `;
   
   // Header
@@ -543,17 +611,188 @@ export function createResultsPanel(issues: OverflowIssue[], onClose: () => void)
       }
     }
     
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0);
+      }
+      to {
+        transform: translateX(100%);
+      }
+    }
+    
     @keyframes flashCard {
-      0%, 100% { background: #f9fafb; }
-      50% { background: #dbeafe; }
+      0%, 100% {
+        background: white;
+      }
+      50% {
+        background: #dbeafe;
+      }
     }
   `;
   document.head.appendChild(style);
   
+  // Add close handler
+  const closeBtn = panel.querySelector('#close-panel');
+  closeBtn?.addEventListener('click', () => {
+    collapsePanelToTab();
+  });
+  
   document.body.appendChild(panel);
   
-  // Close button handler
-  document.getElementById('close-panel')?.addEventListener('click', onClose);
+  // Create or show the toggle tab
+  ensureToggleTab();
+}
+
+/**
+ * Create a small tab that stays visible when sidebar is collapsed
+ */
+function ensureToggleTab(): void {
+  let tab = document.getElementById('overflow-scout-toggle-tab');
+  
+  if (!tab) {
+    tab = document.createElement('div');
+    tab.id = 'overflow-scout-toggle-tab';
+    updateToggleTabContent(tab, false);
+    
+    document.body.appendChild(tab);
+    
+    tab.style.cssText = `
+      position: fixed;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: white;
+      padding: 12px 6px;
+      border-radius: 6px 0 0 6px;
+      cursor: pointer;
+      z-index: 2147483647;
+      box-shadow: -2px 2px 12px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      display: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      pointer-events: auto;
+    `;
+    
+    tab.addEventListener('mouseenter', () => {
+      tab!.style.right = '5px';
+      tab!.style.boxShadow = '-4px 4px 16px rgba(59, 130, 246, 0.4)';
+    });
+    
+    tab.addEventListener('mouseleave', () => {
+      tab!.style.right = '0';
+      tab!.style.boxShadow = '-2px 2px 12px rgba(0,0,0,0.2)';
+    });
+    
+    tab.addEventListener('click', () => {
+      expandPanelFromTab();
+    });
+  } else {
+    // Update content if tab already exists
+    updateToggleTabContent(tab, false);
+  }
+  
+  // Hide tab when panel is open
+  tab.style.display = 'none';
+}
+
+/**
+ * Update toggle tab content with current count
+ */
+function updateToggleTabContent(tab: HTMLElement, shouldShow: boolean = false): void {
+  const manualCount = manuallyAddedElements.size;
+  
+  tab.innerHTML = `
+    <div style="
+      writing-mode: vertical-rl;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: white;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+    ">
+      <span>OVERFLOW SCOUT</span>
+      ${manualCount > 0 ? `<span style="
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        padding: 4px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        min-width: 20px;
+        text-align: center;
+        writing-mode: horizontal-tb;
+      ">${manualCount}</span>` : ''}
+    </div>
+  `;
+  
+  // Set styles but don't override display - manage it separately
+  if (!tab.style.position) {
+    tab.style.cssText = `
+      position: fixed;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: white;
+      padding: 12px 6px;
+      border-radius: 6px 0 0 6px;
+      cursor: pointer;
+      z-index: 2147483647;
+      box-shadow: -2px 2px 12px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      display: ${shouldShow ? 'block' : 'none'};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      pointer-events: auto;
+    `;
+  } else {
+    // Tab already has styles, just update display if needed
+    if (shouldShow) {
+      tab.style.display = 'block';
+    }
+  }
+}
+
+/**
+ * Collapse panel to just the tab
+ */
+function collapsePanelToTab(): void {
+  const panel = document.getElementById(PANEL_ID);
+  const tab = document.getElementById('overflow-scout-toggle-tab');
+  
+  if (panel) {
+    panel.style.animation = 'slideOutRight 0.3s ease-out';
+    setTimeout(() => {
+      panel.style.display = 'none';
+      panel.setAttribute('data-panel-open', 'false');
+    }, 300);
+  }
+  
+  if (tab) {
+    setTimeout(() => {
+      tab.style.display = 'block';
+    }, 300);
+  }
+}
+
+/**
+ * Expand panel from tab
+ */
+function expandPanelFromTab(): void {
+  const panel = document.getElementById(PANEL_ID);
+  const tab = document.getElementById('overflow-scout-toggle-tab');
+  
+  if (tab) {
+    tab.style.display = 'none';
+  }
+  
+  if (panel) {
+    panel.style.display = 'flex';
+    panel.setAttribute('data-panel-open', 'true');
+    panel.style.animation = 'slideInRight 0.3s ease-out';
+  }
 }
 
 /**
@@ -991,11 +1230,14 @@ export function updateResultsPanel(issues: OverflowIssue[]): void {
 }
 
 /**
- * Remove results panel
+ * Remove results panel and tab
  */
 export function removeResultsPanel(): void {
   const panel = document.getElementById(PANEL_ID);
   if (panel) panel.remove();
+  
+  const tab = document.getElementById('overflow-scout-toggle-tab');
+  if (tab) tab.remove();
 }
 
 /**

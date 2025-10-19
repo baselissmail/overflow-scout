@@ -27,7 +27,7 @@ export function injectInteractiveModeStyles(): void {
       cursor: crosshair !important;
     }
     
-    /* Normal cursor for sidebar - make it fully functional */
+    /* Normal cursor for sidebar and tab - make them fully functional */
     body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel,
     body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel *,
     body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-auto-badge,
@@ -35,6 +35,8 @@ export function injectInteractiveModeStyles(): void {
       cursor: auto !important;
     }
     
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-toggle-tab,
+    body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-toggle-tab *,
     body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel button,
     body.${INTERACTIVE_CURSOR_CLASS} #overflow-scout-results-panel input {
       cursor: pointer !important;
@@ -64,7 +66,7 @@ export function injectInteractiveModeStyles(): void {
       font-size: 14px !important;
       font-weight: 600 !important;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-      z-index: 2147483647 !important;
+      z-index: 2147483646 !important;
       display: flex !important;
       align-items: center !important;
       gap: 12px !important;
@@ -231,8 +233,9 @@ export class InteractiveModeManager {
         return;
       }
       
-      // Ignore clicks on sidebar/panel - let them work normally!
+      // Ignore clicks on sidebar/panel and toggle tab - let them work normally!
       if (target.closest('#overflow-scout-results-panel') || 
+          target.closest('#overflow-scout-toggle-tab') ||
           target.closest('#overflow-scout-auto-badge')) {
         return;
       }
