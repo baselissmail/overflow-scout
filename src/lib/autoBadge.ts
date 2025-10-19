@@ -971,6 +971,12 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
     if (darkModeToggle) {
       darkModeToggle.textContent = isDark ? '☀️' : '🌙';
     }
+    
+    // Notify other contexts (like popup) that theme changed
+    window.postMessage({ 
+      type: 'OVERFLOW_SCOUT_THEME_CHANGED',
+      payload: { isDark }
+    }, '*');
   });
   
   // Add rescan handler

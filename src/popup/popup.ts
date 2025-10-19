@@ -77,6 +77,46 @@ class PopupController {
     
     // Phase 10: Auto-scan
     this.autoScanBtn = document.getElementById('auto-scan') as HTMLButtonElement;
+    
+    // Dark mode toggle
+    this.setupThemeToggle();
+  }
+  
+  /**
+   * Setup theme toggle functionality
+   */
+  private setupThemeToggle(): void {
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle?.querySelector('.theme-icon');
+    
+    // Load saved theme from the same key as sidebar
+    const savedTheme = localStorage.getItem('overflow-scout-dark-mode');
+    if (savedTheme === 'true') {
+      document.body.classList.add('dark-mode');
+      if (themeIcon) themeIcon.textContent = '☀️';
+    }
+    
+    // Toggle handler
+    themeToggle?.addEventListener('click', async () => {
+      const isDark = document.body.classList.toggle('dark-mode');
+      if (themeIcon) themeIcon.textContent = isDark ? '☀️' : '🌙';
+      // Use same key as sidebar for sync
+      localStorage.setItem('overflow-scout-dark-mode', isDark.toString());
+      
+      // Notify sidebar to update its theme
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.id) {
+          chrome.tabs.sendMessage(tab.id, {
+            type: 'OVERFLOW_SCOUT_THEME_CHANGED',
+            payload: { isDark }
+          });
+        }
+      } catch (error) {
+        // Content script may not be loaded, that's ok
+        Logger.debug('Failed to sync theme to sidebar:', error);
+      }
+    });
   }
 
   private setupEventListeners(): void {

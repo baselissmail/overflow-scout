@@ -108,15 +108,27 @@ class OverflowScoutContent {
    */
   private setupMessageHandlers(): void {
     chrome.runtime.onMessage.addListener(
-      (message: Message, _sender, sendResponse) => {
+      (message: any, _sender, sendResponse) => {
+        // Handle theme change messages
+        if (message.type === 'OVERFLOW_SCOUT_THEME_CHANGED') {
+          const { isDark } = message.payload || {};
+          if (isDark !== undefined) {
+            import('@/lib/darkMode').then(({ applyDarkMode }) => {
+              applyDarkMode(isDark);
+              sendResponse({ success: true });
+            });
+          }
+          return true;
+        }
+        
         this.handleMessage(message)
           .then(sendResponse)
           .catch((error) => {
-            Logger.error('Content script message error:', error);
-            sendResponse({ error: error.message });
+            Logger.error('Message handling error:', error);
+            sendResponse({ success: false, error: error.message });
           });
         
-        return true; // Keep channel open for async
+        return true; // Keep channel open for async response
       }
     );
   }
@@ -1139,6 +1151,14 @@ if (typeof window !== 'undefined') {
       if (contentInstance) {
         const isActive = contentInstance.interactiveMode.isActive();
         contentInstance['toggleInteractiveMode']({ active: !isActive });
+      }
+    } else if (event.data?.type === 'OVERFLOW_SCOUT_THEME_CHANGED') {
+      // Theme changed from sidebar, update via import
+      const { isDark } = event.data.payload || {};
+      if (isDark !== undefined) {
+        import('@/lib/darkMode').then(({ applyDarkMode }) => {
+          applyDarkMode(isDark);
+        });
       }
     }
   });

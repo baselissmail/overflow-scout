@@ -7,17 +7,38 @@
 }
 
 :root {
+  /* Light mode colors */
   --primary: #3b82f6;
   --primary-dark: #2563eb;
+  --primary-light: #60a5fa;
   --error: #ef4444;
   --success: #10b981;
   --bg: #ffffff;
   --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
   --border: #e5e7eb;
   --text: #111827;
   --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --gradient-header: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-scan: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  --gradient-interactive: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+}
+
+/* Dark mode colors */
+body.dark-mode {
+  --bg: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --border: #374151;
+  --text: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --gradient-header: linear-gradient(135deg, #4c51bf 0%, #6b46c1 100%);
 }
 
 body {
@@ -29,7 +50,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f5f5f5;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #app {
@@ -40,9 +61,16 @@ body {
 /* Header */
 header {
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-header);
   color: white;
-  text-align: center;
+  transition: background 0.3s ease;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 header h1 {
@@ -58,6 +86,35 @@ header .subtitle {
   font-weight: 400;
 }
 
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+.theme-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
 /* Stats Section */
 .stats-section {
   display: grid;
@@ -69,11 +126,12 @@ header .subtitle {
 }
 
 .stat-card {
-  background: white;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   text-align: center;
+  transition: all 0.2s ease;
 }
 
 .stat-value {
@@ -123,9 +181,9 @@ header .subtitle {
   padding: 12px;
   border: 2px solid var(--border);
   border-radius: 8px;
-  background: white;
+  background: var(--bg);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -224,8 +282,10 @@ header .subtitle {
   border-radius: 4px;
   font-size: 12px;
   font-family: inherit;
-  background: white;
+  background: var(--bg);
+  color: var(--text);
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 /* Actions Section */
@@ -262,12 +322,13 @@ header .subtitle {
 }
 
 .btn-auto-scan {
-  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  background: var(--gradient-scan);
   color: white;
   flex-direction: column;
   padding: 16px;
   gap: 4px;
   font-size: 15px;
+  box-shadow: var(--shadow);
 }
 
 .btn-auto-scan small {
@@ -290,11 +351,12 @@ header .subtitle {
 }
 
 .btn-interactive {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: var(--gradient-interactive);
   color: white;
   flex-direction: column;
   padding: 16px;
   gap: 4px;
+  box-shadow: var(--shadow);
 }
 
 .btn-interactive small {
@@ -337,9 +399,10 @@ header .subtitle {
 }
 
 .btn-secondary {
-  background: white;
+  background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
+  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
