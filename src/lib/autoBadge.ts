@@ -336,8 +336,8 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
     </div>
     
     <div style="display: flex; gap: 4px; margin-top: 8px;">
-      <button class="jump-btn-manual" data-issue-index="${index}" style="
-        background: #3b82f6;
+      <button class="screenshot-btn-manual" style="
+        background: #8b5cf6;
         color: white;
         border: none;
         padding: 6px 12px;
@@ -346,7 +346,18 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
         font-weight: 600;
         cursor: pointer;
         flex: 1;
-      ">Jump to Element</button>
+      ">📸 Capture</button>
+      <button class="jump-btn-manual" style="
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        flex: 1;
+      ">Jump</button>
       <button class="remove-manual-card-btn" data-element-id="${elementData.elementId}" style="
         background: #ef4444;
         color: white;
@@ -356,6 +367,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
         font-size: 11px;
         font-weight: 600;
         cursor: pointer;
+        flex: 1;
       ">Remove</button>
     </div>
   `;
@@ -411,7 +423,7 @@ function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index:
   }
   
   // Test button
-  card.querySelector('.test-custom-btn-manual')?.addEventListener('click', () => {
+  card.querySelector('.test-btn-manual')?.addEventListener('click', () => {
     const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
     const customText = textarea?.value.trim();
     
@@ -427,6 +439,15 @@ function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index:
       revertElement(element, card);
     });
   }
+  
+  // Screenshot button
+  card.querySelector('.screenshot-btn-manual')?.addEventListener('click', async () => {
+    await captureElementScreenshot(element, {
+      selector: elementId,
+      testText: element.textContent?.substring(0, 40) || '',
+      severity: 'manual'
+    });
+  });
   
   // Jump button
   card.querySelector('.jump-btn-manual')?.addEventListener('click', () => {
