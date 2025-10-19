@@ -248,51 +248,11 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
         🧪 Test with Text:
       </div>
       <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
-        <button class="preset-btn-manual-${index}" data-preset-type="longName" style="
-          background: white;
-          border: 1px solid #93c5fd;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">Long Name</button>
-        <button class="preset-btn-manual-${index}" data-preset-type="product" style="
-          background: white;
-          border: 1px solid #93c5fd;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">Product</button>
-        <button class="preset-btn-manual-${index}" data-preset-type="url" style="
-          background: white;
-          border: 1px solid #93c5fd;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">URL</button>
-        <button class="preset-btn-manual-${index}" data-preset-type="email" style="
-          background: white;
-          border: 1px solid #93c5fd;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">Email</button>
-        <button class="preset-btn-manual-${index}" data-preset-type="longText" style="
-          background: white;
-          border: 1px solid #93c5fd;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">Long Text</button>
+        <button class="preset-btn-manual-${index} os-preset-btn os-preset-btn-manual" data-preset-type="longName">Long Name</button>
+        <button class="preset-btn-manual-${index} os-preset-btn os-preset-btn-manual" data-preset-type="product">Product</button>
+        <button class="preset-btn-manual-${index} os-preset-btn os-preset-btn-manual" data-preset-type="url">URL</button>
+        <button class="preset-btn-manual-${index} os-preset-btn os-preset-btn-manual" data-preset-type="email">Email</button>
+        <button class="preset-btn-manual-${index} os-preset-btn os-preset-btn-manual" data-preset-type="longText">Long Text</button>
       </div>
       <textarea 
         id="custom-input-manual-${index}" 
@@ -706,17 +666,25 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   panel.setAttribute('data-panel-open', 'true');
   
   panel.style.cssText = `
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 400px;
-    height: 100vh;
-    background: white;
-    box-shadow: -2px 0 20px rgba(0, 0, 0, 0.15);
-    z-index: 2147483648;
-    display: flex;
-    flex-direction: column;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    all: initial;
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: 400px !important;
+    height: 100vh !important;
+    background: white !important;
+    box-shadow: -2px 0 20px rgba(0, 0, 0, 0.15) !important;
+    z-index: 2147483648 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-sizing: border-box !important;
     animation: slideInRight 0.3s ease-out;
   `;
   
@@ -740,71 +708,16 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
         </div>
       </div>
       <div style="display: flex; gap: 8px;">
-        <button id="dark-mode-toggle" style="
-          background: rgba(255,255,255,0.2);
-          border: none;
-          color: white;
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        " title="Toggle dark mode">🌙</button>
-        <button id="close-panel" style="
-          background: rgba(255,255,255,0.2);
-          border: none;
-          color: white;
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        " title="Collapse sidebar">×</button>
+        <button id="dark-mode-toggle" class="os-button os-btn-icon" title="Toggle dark mode">🌙</button>
+        <button id="close-panel" class="os-button os-btn-icon os-btn-close" title="Collapse sidebar">×</button>
       </div>
     </div>
     <div style="display: flex; gap: 8px;">
-      <button id="rescan-btn" style="
-        background: rgba(255,255,255,0.15);
-        border: 1px solid rgba(255,255,255,0.2);
-        color: white;
-        padding: 8px 14px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        transition: all 0.2s;
-        flex: 1;
-      " title="Re-run scan (Ctrl+Shift+O)">
+      <button id="rescan-btn" class="os-button os-btn-action" title="Re-run scan (Ctrl+Shift+O)">
         <span style="font-size: 14px;">🔄</span>
         <span>Scan</span>
       </button>
-      <button id="toggle-interactive-btn" style="
-        background: rgba(255,255,255,0.15);
-        border: 1px solid rgba(255,255,255,0.2);
-        color: white;
-        padding: 8px 14px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        flex: 1;
-        transition: all 0.2s;
-      " title="Start interactive mode" data-active="false" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background=this.dataset.active === 'true' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)'">
+      <button id="toggle-interactive-btn" class="os-button os-btn-action" title="Start interactive mode" data-active="false">
         <span style="font-size: 14px;">👆</span>
         <span id="interactive-btn-text">Start</span>
       </button>
@@ -816,60 +729,16 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
       display: flex;
       gap: 6px;
     ">
-      <button id="test-all-btn" style="
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: white;
-        padding: 6px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 10px;
-        font-weight: 600;
-        flex: 1;
-        transition: all 0.2s;
-      " title="Test all elements with random long text" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+      <button id="test-all-btn" class="os-button os-btn-batch" title="Test all elements with random long text">
         🧪 Test All
       </button>
-      <button id="revert-all-btn" style="
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: white;
-        padding: 6px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 10px;
-        font-weight: 600;
-        flex: 1;
-        transition: all 0.2s;
-      " title="Revert all elements to original" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+      <button id="revert-all-btn" class="os-button os-btn-batch" title="Revert all elements to original">
         ↩️ Revert All
       </button>
-      <button id="export-all-btn" style="
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: white;
-        padding: 6px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 10px;
-        font-weight: 600;
-        flex: 1;
-        transition: all 0.2s;
-      " title="Export all results as JSON" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+      <button id="export-all-btn" class="os-button os-btn-batch" title="Export all results as JSON">
         📦 Export
       </button>
-      <button id="clear-all-btn" style="
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: white;
-        padding: 6px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 10px;
-        font-weight: 600;
-        flex: 1;
-        transition: all 0.2s;
-      " title="Clear all cards and reset" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+      <button id="clear-all-btn" class="os-button os-btn-batch" title="Clear all cards and reset">
         🗑️ Clear All
       </button>
     </div>
@@ -968,9 +837,10 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   `;
   panel.appendChild(footer);
   
-  // Add animation
+  // Add animation and CSS isolation
   const style = document.createElement('style');
   style.textContent = `
+    /* Animation */
     @keyframes slideInRight {
       from {
         transform: translateX(100%);
@@ -978,6 +848,220 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
       to {
         transform: translateX(0);
       }
+    }
+    
+    /* CSS Isolation for Extension Panel - Smart reset that preserves inline styles */
+    #overflow-scout-results-panel {
+      /* Force consistent box model */
+      box-sizing: border-box !important;
+      
+      /* Prevent font inheritance issues */
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      -webkit-font-smoothing: antialiased !important;
+      -moz-osx-font-smoothing: grayscale !important;
+      
+      /* Isolate from website styles without breaking inline styles */
+      text-transform: none !important;
+      text-decoration: none !important;
+      text-shadow: none !important;
+      float: none !important;
+      clear: none !important;
+      list-style: none !important;
+    }
+    
+    #overflow-scout-results-panel * {
+      /* Only reset non-layout properties that might interfere */
+      box-sizing: border-box !important;
+      font-family: inherit !important;
+      -webkit-font-smoothing: antialiased !important;
+      -moz-osx-font-smoothing: grayscale !important;
+      text-transform: none !important;
+      letter-spacing: normal !important;
+      word-spacing: normal !important;
+      quotes: none !important;
+      float: none !important;
+      clear: none !important;
+      vertical-align: baseline !important;
+      list-style: none !important;
+      transform: none !important;
+      animation: none !important;
+      transition: none !important;
+    }
+    
+    /* Button base reset - high specificity */
+    #overflow-scout-results-panel .os-button,
+    #overflow-scout-results-panel .os-preset-btn {
+      all: unset !important;
+      display: inline-block !important;
+      box-sizing: border-box !important;
+      cursor: pointer !important;
+      user-select: none !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
+    
+    /* Header buttons */
+    #overflow-scout-results-panel .os-btn-icon {
+      background: rgba(255,255,255,0.2) !important;
+      border: none !important;
+      color: white !important;
+      width: 28px !important;
+      height: 28px !important;
+      border-radius: 6px !important;
+      font-size: 14px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+    }
+    
+    #overflow-scout-results-panel .os-btn-close {
+      font-size: 16px !important;
+    }
+    
+    /* Action buttons */
+    #overflow-scout-results-panel .os-btn-action {
+      background: rgba(255,255,255,0.15) !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+      color: white !important;
+      padding: 8px 14px !important;
+      border-radius: 6px !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      transition: all 0.2s !important;
+      flex: 1 !important;
+    }
+    
+    /* Batch operation buttons */
+    #overflow-scout-results-panel .os-btn-batch {
+      background: rgba(255,255,255,0.1) !important;
+      border: 1px solid rgba(255,255,255,0.15) !important;
+      color: white !important;
+      padding: 6px 10px !important;
+      border-radius: 4px !important;
+      font-size: 10px !important;
+      font-weight: 600 !important;
+      flex: 1 !important;
+      transition: all 0.2s !important;
+    }
+    
+    #overflow-scout-results-panel .os-btn-batch:hover {
+      background: rgba(255,255,255,0.2) !important;
+    }
+    
+    /* Preset buttons */
+    #overflow-scout-results-panel .os-preset-btn {
+      background: #eff6ff !important;
+      border: 1px solid #bfdbfe !important;
+      padding: 3px 6px !important;
+      border-radius: 3px !important;
+      font-size: 10px !important;
+      color: #2563eb !important;
+    }
+    
+    #overflow-scout-results-panel .os-preset-btn-manual {
+      background: white !important;
+      border: 1px solid #93c5fd !important;
+      padding: 3px 6px !important;
+      border-radius: 3px !important;
+      font-size: 10px !important;
+      color: #2563eb !important;
+    }
+    
+    /* Card styles */
+    #overflow-scout-results-panel .os-card {
+      background: #f9fafb !important;
+      border: 1px solid #e5e7eb !important;
+      border-radius: 8px !important;
+      padding: 12px !important;
+      margin-bottom: 12px !important;
+      font-size: 13px !important;
+    }
+    
+    #overflow-scout-results-panel .os-card-severity-high {
+      border-left: 4px solid #dc2626 !important;
+    }
+    
+    #overflow-scout-results-panel .os-card-severity-medium {
+      border-left: 4px solid #f59e0b !important;
+    }
+    
+    #overflow-scout-results-panel .os-card-severity-low {
+      border-left: 4px solid #3b82f6 !important;
+    }
+    
+    #overflow-scout-results-panel .os-card-header {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      margin-bottom: 8px !important;
+    }
+    
+    #overflow-scout-results-panel .os-card-title {
+      font-weight: 600 !important;
+      color: #111827 !important;
+      flex: 1 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+    }
+    
+    #overflow-scout-results-panel .os-selector-text {
+      font-family: monospace !important;
+      font-size: 11px !important;
+      color: #6b7280 !important;
+    }
+    
+    #overflow-scout-results-panel .os-btn-copy {
+      background: transparent !important;
+      border: none !important;
+      color: #6b7280 !important;
+      padding: 2px 4px !important;
+      font-size: 10px !important;
+    }
+    
+    #overflow-scout-results-panel .os-btn-copy:hover {
+      color: #3b82f6 !important;
+    }
+    
+    #overflow-scout-results-panel .os-severity-badge {
+      padding: 2px 6px !important;
+      border-radius: 4px !important;
+      font-size: 10px !important;
+      font-weight: 600 !important;
+      text-transform: uppercase !important;
+      color: white !important;
+    }
+    
+    #overflow-scout-results-panel .os-severity-high {
+      background: #dc2626 !important;
+    }
+    
+    #overflow-scout-results-panel .os-severity-medium {
+      background: #f59e0b !important;
+    }
+    
+    #overflow-scout-results-panel .os-severity-low {
+      background: #3b82f6 !important;
+    }
+    
+    #overflow-scout-results-panel input,
+    #overflow-scout-results-panel textarea {
+      font-family: inherit !important;
+    }
+    
+    /* Prevent text selection issues */
+    #overflow-scout-results-panel {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+    }
+    
+    /* Ensure scrolling works */
+    #overflow-scout-results-panel [data-content-area] {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
     }
     
     @keyframes slideOutRight {
@@ -1498,44 +1582,16 @@ function expandPanelFromTab(): void {
 function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
   const card = document.createElement('div');
   card.setAttribute('data-issue-card', 'true');
-  
-  const severityColor = issue.severity === 'high' ? '#dc2626' : 
-                       issue.severity === 'medium' ? '#f59e0b' : '#3b82f6';
-  
-  card.style.cssText = `
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-left: 4px solid ${severityColor};
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 12px;
-    font-size: 13px;
-  `;
+  card.className = `os-card os-card-severity-${issue.severity}`;
   
   card.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-      <div style="font-weight: 600; color: #111827; flex: 1;">
-        #${index + 1} 
-        <span class="selector-text" style="font-family: monospace; font-size: 11px; color: #6b7280;">${issue.selector}</span>
-        <button class="copy-selector-btn" title="Copy selector" style="
-          background: transparent;
-          border: none;
-          color: #6b7280;
-          cursor: pointer;
-          padding: 2px 4px;
-          font-size: 10px;
-          margin-left: 4px;
-        ">📋</button>
+    <div class="os-card-header">
+      <div class="os-card-title">
+        <span>#${index + 1}</span>
+        <span class="os-selector-text">${issue.selector}</span>
+        <button class="os-button os-btn-copy copy-selector-btn" title="Copy selector">📋</button>
       </div>
-      <div style="
-        background: ${severityColor};
-        color: white;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-      ">${issue.severity}</div>
+      <div class="os-severity-badge os-severity-${issue.severity}">${issue.severity}</div>
     </div>
     
     <div style="color: #6b7280; font-size: 12px; margin-bottom: 8px;">
@@ -1574,51 +1630,11 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
         🧪 Test with Different Text:
       </div>
       <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
-        <button class="preset-btn-${index}" data-preset-type="longName" style="
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">Long Name</button>
-        <button class="preset-btn-${index}" data-preset-type="product" style="
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">Product</button>
-        <button class="preset-btn-${index}" data-preset-type="url" style="
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">URL</button>
-        <button class="preset-btn-${index}" data-preset-type="email" style="
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">Email</button>
-        <button class="preset-btn-${index}" data-preset-type="longText" style="
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          padding: 3px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          cursor: pointer;
-          color: #2563eb;
-        ">Long Text</button>
+        <button class="preset-btn-${index} os-preset-btn" data-preset-type="longName">Long Name</button>
+        <button class="preset-btn-${index} os-preset-btn" data-preset-type="product">Product</button>
+        <button class="preset-btn-${index} os-preset-btn" data-preset-type="url">URL</button>
+        <button class="preset-btn-${index} os-preset-btn" data-preset-type="email">Email</button>
+        <button class="preset-btn-${index} os-preset-btn" data-preset-type="longText">Long Text</button>
       </div>
       <textarea 
         id="custom-input-${index}" 
