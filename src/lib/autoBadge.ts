@@ -439,7 +439,7 @@ function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index:
   const revertBtn = card.querySelector('.revert-btn-manual');
   if (revertBtn) {
     revertBtn.addEventListener('click', () => {
-      revertElement(element, card);
+      revertElement(card, elementId);
     });
   }
   
@@ -658,12 +658,16 @@ function removeManualCard(card: HTMLElement, elementId: string): void {
     updateToggleTabContent(tab, isTabVisible);
   }
   
-  // Revert element if it was modified
+  // Revert element if it was modified and remove ALL tracking
   const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
-  if (element && element.dataset.overflowScoutOriginal) {
-    element.textContent = element.dataset.overflowScoutOriginal;
+  if (element) {
+    if (element.dataset.overflowScoutOriginal) {
+      element.textContent = element.dataset.overflowScoutOriginal;
+    }
     delete element.dataset.overflowScoutOriginal;
     delete element.dataset.overflowScoutTested;
+    delete element.dataset.overflowScoutManual;
+    delete element.dataset.overflowScoutId; // ✅ Remove ID so it can be re-added
   }
   
   // Remove card with animation
@@ -1069,7 +1073,96 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   });
   
   panel.querySelector('#revert-all-btn')?.addEventListener('click', () => {
-    revertAllElements(panel);
+    const content = panel.querySelector('[data-content-area]') as HTMLElement;
+    if (content) {
+      const allCards = content.querySelectorAll('[data-issue-card], [data-manual-card]');
+      let revertedCount = 0;
+      
+      // Revert each element's text (DON'T remove cards or tracking)
+      allCards.forEach((card) => {
+        const cardElement = card as HTMLElement;
+        
+        // Check if it's a manual card or issue card
+        if (cardElement.hasAttribute('data-manual-card')) {
+          const elementId = cardElement.dataset.elementId;
+          if (elementId) {
+            const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
+            if (element && element.dataset.overflowScoutOriginal) {
+              // Only revert the text
+              element.textContent = element.dataset.overflowScoutOriginal;
+              revertedCount++;
+              
+              // Reset textarea to show original text
+              const textarea = cardElement.querySelector('textarea') as HTMLTextAreaElement;
+              if (textarea) {
+                textarea.value = element.dataset.overflowScoutOriginal;
+                textarea.placeholder = 'Original text restored';
+              }
+              
+              // Update revert button state
+              const revertBtn = cardElement.querySelector('.revert-btn-manual') as HTMLButtonElement;
+              if (revertBtn) {
+                revertBtn.disabled = true;
+                revertBtn.style.opacity = '0.5';
+                revertBtn.style.pointerEvents = 'none';
+                revertBtn.style.background = '#6b7280';
+              }
+              
+              // Clear test results
+              cardElement.querySelectorAll('.test-result').forEach(r => r.remove());
+              
+              // Show success message in card
+              const successMsg = document.createElement('div');
+              successMsg.className = 'test-result';
+              successMsg.style.cssText = `
+                background: #f0fdf4;
+                border: 1px solid #bbf7d0;
+                border-radius: 4px;
+                padding: 8px;
+                margin-top: 8px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #15803d;
+              `;
+              successMsg.textContent = '✅ Reverted to original text';
+              cardElement.appendChild(successMsg);
+              
+              setTimeout(() => {
+                successMsg.style.transition = 'opacity 0.3s';
+                successMsg.style.opacity = '0';
+                setTimeout(() => successMsg.remove(), 300);
+              }, 2000);
+            }
+          }
+        } else if (cardElement.hasAttribute('data-issue-card')) {
+          // Revert auto-scan issue
+          const issue = (cardElement as any).__overflowScoutIssue;
+          if (issue?.element && issue.element.dataset.overflowScoutOriginal) {
+            issue.element.textContent = issue.element.dataset.overflowScoutOriginal;
+            revertedCount++;
+            
+            // Update revert button state
+            const revertBtn = cardElement.querySelector('.revert-btn') as HTMLButtonElement;
+            if (revertBtn) {
+              revertBtn.disabled = true;
+              revertBtn.style.opacity = '0.5';
+              revertBtn.style.pointerEvents = 'none';
+              revertBtn.style.background = '#6b7280';
+            }
+            
+            // Clear test results
+            cardElement.querySelectorAll('.test-result').forEach(r => r.remove());
+          }
+        }
+      });
+      
+      // Show success toast
+      if (revertedCount > 0) {
+        showToast(`↩️ Reverted ${revertedCount} elements to original text!`, 'success');
+      } else {
+        showToast('No elements to revert', 'error');
+      }
+    }
   });
   
   panel.querySelector('#export-all-btn')?.addEventListener('click', () => {
@@ -1077,32 +1170,85 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   });
   
   panel.querySelector('#clear-all-btn')?.addEventListener('click', () => {
-    if (confirm('Are you sure you want to clear all cards? This cannot be undone.')) {
-      // Clear all cards
-      const contentArea = panel.querySelector('[data-content-area]');
-      if (contentArea) {
-        contentArea.innerHTML = `
-          <div data-empty-state style="
-            padding: 60px 20px;
-            text-align: center;
-            color: #10b981;
-          ">
-            <div style="font-size: 48px; margin-bottom: 12px;">✨</div>
-            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
-              All Clear!
-            </div>
-            <div style="font-size: 13px; color: #6b7280;">
-              Click "Scan" to find overflow issues
-            </div>
+    if (confirm('Are you sure you want to clear all cards? Elements will be reverted to original text.')) {
+      // Use the same logic as Revert All button
+      const content = panel.querySelector('[data-content-area]') as HTMLElement;
+      if (content) {
+        // Get all cards before removing
+        const allCards = content.querySelectorAll('[data-issue-card], [data-manual-card]');
+        
+        // Revert each element properly
+        allCards.forEach((card) => {
+          const cardElement = card as HTMLElement;
+          
+          // Check if it's a manual card or issue card
+          if (cardElement.hasAttribute('data-manual-card')) {
+            const elementId = cardElement.dataset.elementId;
+            if (elementId) {
+              // Remove from tracked elements
+              manuallyAddedElements.delete(elementId);
+              
+              // Revert element and remove ALL tracking
+              const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
+              if (element) {
+                if (element.dataset.overflowScoutOriginal) {
+                  element.textContent = element.dataset.overflowScoutOriginal;
+                }
+                delete element.dataset.overflowScoutOriginal;
+                delete element.dataset.overflowScoutTested;
+                delete element.dataset.overflowScoutManual;
+                delete element.dataset.overflowScoutId;
+              }
+            }
+          } else if (cardElement.hasAttribute('data-issue-card')) {
+            // Revert auto-scan issue
+            const issue = (cardElement as any).__overflowScoutIssue;
+            if (issue?.element) {
+              if (issue.element.dataset.overflowScoutOriginal) {
+                issue.element.textContent = issue.element.dataset.overflowScoutOriginal;
+              }
+              delete issue.element.dataset.overflowScoutOriginal;
+              delete issue.element.dataset.overflowScoutTested;
+              delete issue.element.dataset.overflowScoutId;
+            }
+          }
+        });
+        
+        // Remove all cards
+        content.innerHTML = '';
+        
+        // Show empty state
+        const emptyState = document.createElement('div');
+        emptyState.setAttribute('data-empty-state', 'true');
+        emptyState.style.cssText = `
+          padding: 48px 24px;
+          text-align: center;
+          color: #10b981;
+        `;
+        emptyState.innerHTML = `
+          <div style="font-size: 48px; margin-bottom: 12px;">✨</div>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
+            All Clear!
+          </div>
+          <div style="font-size: 13px; color: #6b7280;">
+            All elements reverted. Click "Scan" to find issues or add elements manually.
           </div>
         `;
+        
+        content.appendChild(emptyState);
+        
+        // Clear preset index
+        elementPresetIndex.clear();
+        
+        // Update toggle tab
+        const tab = document.getElementById('overflow-scout-toggle-tab');
+        if (tab) {
+          updateToggleTabContent(tab, false);
+        }
+        
+        // Show success toast
+        showToast('✨ All elements reverted and cleared!', 'success');
       }
-      
-      // Clear manual elements map
-      elementPresetIndex.clear();
-      
-      // Show success toast
-      showToast('✨ All cards cleared!', 'success');
     }
   });
   
@@ -1557,7 +1703,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
   
   // Revert button handler
   card.querySelector('.revert-btn')?.addEventListener('click', () => {
-    revertElement(issue.element, card);
+    revertElement(card, issue.element.dataset.overflowScoutId || '');
   });
   
   // Jump to element handler
@@ -1620,15 +1766,21 @@ function enableRevertButton(card: HTMLElement): void {
 /**
  * Revert element to original text
  */
-function revertElement(element: HTMLElement, card: HTMLElement): void {
-  const original = element.dataset.overflowScoutOriginal;
+function revertElement(card: HTMLElement, elementId: string): void {
+  const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
   
-  if (original !== undefined) {
-    element.textContent = original;
-    delete element.dataset.overflowScoutOriginal;
-    delete element.dataset.overflowScoutTested;
+  if (element && element.dataset.overflowScoutOriginal) {
+    // Revert to original text
+    element.textContent = element.dataset.overflowScoutOriginal;
     
-    // Disable revert button (works for both regular and manual cards)
+    // Reset textarea to show original text
+    const textarea = card.querySelector('textarea') as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.value = element.dataset.overflowScoutOriginal;
+      textarea.placeholder = 'Original text restored';
+    }
+    
+    // Update button state
     const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
     if (revertBtn) {
       revertBtn.disabled = true;
@@ -1636,32 +1788,32 @@ function revertElement(element: HTMLElement, card: HTMLElement): void {
       revertBtn.style.pointerEvents = 'none';
       revertBtn.style.background = '#6b7280';
     }
-    
-    // Clear test results
-    card.querySelectorAll('.test-result').forEach(r => r.remove());
-    
-    // Show success message
-    const result = document.createElement('div');
-    result.style.cssText = `
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 4px;
-      padding: 8px;
-      margin-top: 8px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #16a34a;
-    `;
-    result.textContent = '✅ Reverted to original text';
-    result.className = 'test-result';
-    card.appendChild(result);
-    
-    setTimeout(() => {
-      result.style.transition = 'opacity 0.3s';
-      result.style.opacity = '0';
-      setTimeout(() => result.remove(), 300);
-    }, 2000);
   }
+  
+  // Clear test results
+  card.querySelectorAll('.test-result').forEach(r => r.remove());
+  
+  // Show success message
+  const message = document.createElement('div');
+  message.style.cssText = `
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 600;
+  `;
+  message.style.color = '#16a34a'; // Set inline color separately to preserve it
+  message.textContent = '✅ Reverted to original text';
+  message.className = 'test-result';
+  card.appendChild(message);
+  
+  setTimeout(() => {
+    message.style.transition = 'opacity 0.3s';
+    message.style.opacity = '0';
+    setTimeout(() => message.remove(), 300);
+  }, 2000);
 }
 
 /**
@@ -2327,50 +2479,6 @@ function testAllElements(panel: HTMLElement): void {
   });
 }
 
-/**
- * Revert all elements to original text
- */
-function revertAllElements(panel: HTMLElement): void {
-  const content = panel.querySelector('[data-content-area]') as HTMLElement;
-  if (!content) return;
-  
-  const cards = content.querySelectorAll('[data-issue-card], [data-manual-card]');
-  const revertableCards: HTMLButtonElement[] = [];
-  
-  // Find all cards that can be reverted
-  cards.forEach((card) => {
-    const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
-    if (revertBtn && !revertBtn.disabled) {
-      revertableCards.push(revertBtn);
-    }
-  });
-  
-  if (revertableCards.length === 0) {
-    showToast('No elements to revert', 'error');
-    return;
-  }
-  
-  // Click all revert buttons and restore textareas to original text
-  cards.forEach((card) => {
-    const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
-    if (revertBtn && !revertBtn.disabled) {
-      // Get original text before reverting
-      const cardElement = (card as any).__overflowScoutElement;
-      const originalText = cardElement?.dataset.overflowScoutOriginal || '';
-      
-      revertBtn.click();
-      
-      // Restore textarea to show original text
-      const textarea = card.querySelector('textarea') as HTMLTextAreaElement;
-      if (textarea && originalText) {
-        textarea.value = originalText;
-        textarea.placeholder = 'Original text restored';
-      }
-    }
-  });
-  
-  showToast(`↩️ Reverted ${revertableCards.length} elements!`, 'success');
-}
 
 /**
  * Export all results as JSON
