@@ -25,6 +25,7 @@ import { PerformanceMonitor } from '@/lib/performanceMonitor';
 import { InteractiveModeManager } from '@/lib/interactiveMode';
 import { generateIntelligentText } from '@/lib/intelligentTextGenerator';
 import { AutoScanner } from '@/lib/autoScanner';
+import { setupKeyboardShortcuts } from '@/lib/keyboardShortcuts';
 import {
   createResultsPanel,
   updateResultsPanel,
@@ -83,6 +84,7 @@ class OverflowScoutContent {
     this.setupClickTracking();
     this.setupDOMObserver();
     this.setupSPAObserver();
+    setupKeyboardShortcuts(); // Global keyboard shortcuts
     this.loadSettings();
     this.notifyBackgroundReady();
     
@@ -98,7 +100,6 @@ class OverflowScoutContent {
   private setupClickTracking(): void {
     document.addEventListener('contextmenu', (e) => {
       this.lastClickedElement = e.target as HTMLElement;
-      Logger.debug('Element right-clicked:', this.lastClickedElement.tagName);
     });
   }
 

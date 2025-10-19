@@ -1,9 +1,11 @@
 /**
- * Auto-Scan Badge - Floating indicator for overflow issues
- * Shows count and allows viewing detailed results
+ * Auto Badge - New sidebar-based results panel
+ * Shows overflow issues in a collapsible sidebar
  */
 
 import type { OverflowIssue } from './autoScanner';
+import { showOnboardingTooltip } from './onboarding';
+import { toggleDarkMode, applyDarkMode, isDarkModeEnabled, injectDarkModeStyles } from './darkMode';
 
 const BADGE_ID = 'overflow-scout-auto-badge';
 const PANEL_ID = 'overflow-scout-results-panel';
@@ -465,6 +467,18 @@ function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index:
       }
     });
   }
+  
+  // Copy selector button
+  card.querySelector('.copy-selector-btn')?.addEventListener('click', async () => {
+    try {
+      const selectorText = card.querySelector('.selector-text')?.textContent || '';
+      await navigator.clipboard.writeText(selectorText);
+      showToast('📋 Selector copied!', 'success');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      showToast('❌ Copy failed', 'error');
+    }
+  });
 }
 
 /**
@@ -677,6 +691,9 @@ function removeManualCard(card: HTMLElement, elementId: string): void {
 export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => void): void {
   removeResultsPanel();
   
+  // Show onboarding on first use
+  setTimeout(() => showOnboardingTooltip(), 500);
+  
   const panel = document.createElement('div');
   panel.id = PANEL_ID;
   panel.setAttribute('data-panel-open', 'true');
@@ -715,20 +732,36 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
           Overflow Testing
         </div>
       </div>
-      <button id="close-panel" style="
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      " title="Collapse sidebar">×</button>
+      <div style="display: flex; gap: 8px;">
+        <button id="dark-mode-toggle" style="
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        " title="Toggle dark mode">${isDarkModeEnabled() ? '☀️' : '🌙'}</button>
+        <button id="close-panel" style="
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        " title="Collapse sidebar">×</button>
+      </div>
     </div>
     <div style="display: flex; gap: 8px;">
       <button id="rescan-btn" style="
@@ -919,10 +952,25 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   `;
   document.head.appendChild(style);
   
+  // Inject dark mode styles
+  injectDarkModeStyles();
+  
+  // Apply dark mode if enabled
+  applyDarkMode(isDarkModeEnabled());
+  
   // Add close handler
   const closeBtn = panel.querySelector('#close-panel');
   closeBtn?.addEventListener('click', () => {
     collapsePanelToTab();
+  });
+  
+  // Add dark mode toggle handler
+  const darkModeToggle = panel.querySelector('#dark-mode-toggle');
+  darkModeToggle?.addEventListener('click', () => {
+    const isDark = toggleDarkMode();
+    if (darkModeToggle) {
+      darkModeToggle.textContent = isDark ? '☀️' : '🌙';
+    }
   });
   
   // Add rescan handler
@@ -1174,7 +1222,17 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
   card.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
       <div style="font-weight: 600; color: #1f2937; flex: 1;">
-        #${index + 1} ${issue.selector}
+        #${index + 1} 
+        <span class="selector-text" style="font-family: monospace; font-size: 11px; color: #6b7280;">${issue.selector}</span>
+        <button class="copy-selector-btn" title="Copy selector" style="
+          background: transparent;
+          border: none;
+          color: #6b7280;
+          cursor: pointer;
+          padding: 2px 4px;
+          font-size: 10px;
+          margin-left: 4px;
+        ">📋</button>
       </div>
       <div style="
         background: ${severityColor};
@@ -1423,6 +1481,17 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
       testText: issue.element.textContent?.substring(0, 40) || '',
       severity: issue.severity
     });
+  });
+  
+  // Copy selector button
+  card.querySelector('.copy-selector-btn')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(issue.selector);
+      showToast('📋 Selector copied!', 'success');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      showToast('❌ Copy failed', 'error');
+    }
   });
   
   // Store element reference on card for batch operations
