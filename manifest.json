@@ -2,14 +2,16 @@
   "manifest_version": 3,
   "name": "Overflow Scout",
   "version": "0.1.0",
-  "description": "Stress-test text overflow on live web applications without opening DevTools",
+  "description": "Professional text overflow testing tool. Auto-scan pages or test elements interactively with realistic content.",
+  "author": "Basel Issmail",
+  "homepage_url": "https://www.linkedin.com/in/basel-issmail/",
   "permissions": [
-    "contextMenus",
     "activeTab",
     "storage"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "src/background/index.ts",
