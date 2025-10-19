@@ -185,25 +185,115 @@ class PopupController {
   }
 
   /**
-   * Send message to active tab
+   * Send message to content script
    */
-  private async sendMessage(type: MessageType, payload: unknown = {}): Promise<void> {
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      if (!tab.id) {
-        Logger.warn('No active tab found');
-        return;
-      }
-
-      await chrome.tabs.sendMessage(tab.id, { type, payload });
-      Logger.info('Message sent:', type);
-      
-      // Update stats after action
-      setTimeout(() => this.updateStats(), 500);
-    } catch (error) {
-      Logger.error('Failed to send message:', error);
+  private async sendMessage(type: MessageType, payload?: unknown): Promise<any> {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tab?.id) {
+      throw new Error('No active tab found');
     }
+    
+    try {
+      return await chrome.tabs.sendMessage(tab.id, { type, payload });
+    } catch (error: any) {
+      // Check if it's a connection error
+      if (error.message?.includes('Could not establish connection') || 
+          error.message?.includes('Receiving end does not exist')) {
+        this.showReloadWarning();
+        throw new Error('Page needs reload');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Show warning that page needs to be reloaded
+   */
+  private showReloadWarning(): void {
+    // Check if banner already exists
+    if (document.getElementById('reload-warning-banner')) return;
+    
+    const banner = document.createElement('div');
+    banner.id = 'reload-warning-banner';
+    banner.style.cssText = `
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      border-left: 3px solid #dc2626;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      animation: slideIn 0.3s ease-out;
+    `;
+    
+    banner.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+        <span style="color: #dc2626; font-size: 14px;">⚠️</span>
+        <span style="color: #991b1b; font-size: 12px; font-weight: 500;">
+          Page reload required
+        </span>
+      </div>
+      <button id="reload-page-btn" style="
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+        Reload
+      </button>
+    `;
+    
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Insert after header, before actions-section
+    const header = document.querySelector('header');
+    const actionsSection = document.querySelector('.actions-section');
+    
+    if (header && actionsSection) {
+      // Insert between header and actions
+      actionsSection.parentNode?.insertBefore(banner, actionsSection);
+    } else if (actionsSection) {
+      // Fallback: insert before actions
+      actionsSection.parentNode?.insertBefore(banner, actionsSection);
+    } else {
+      // Last fallback: insert at top of body
+      const firstChild = document.body.firstChild;
+      if (firstChild) {
+        document.body.insertBefore(banner, firstChild);
+      } else {
+        document.body.appendChild(banner);
+      }
+    }
+    
+    // Reload button handler
+    banner.querySelector('#reload-page-btn')?.addEventListener('click', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        chrome.tabs.reload(tab.id);
+        window.close();
+      }
+    });
   }
 
   /**

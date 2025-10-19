@@ -689,7 +689,7 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   const totalCount = issues.length + manuallyAddedElements.size;
   
   header.innerHTML = `
-    <div>
+    <div style="flex: 1;">
       <div style="font-size: 18px; font-weight: 700;">
         ${totalCount > 0 ? 'Overflow Testing' : 'Scan Complete'}
       </div>
@@ -697,19 +697,51 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
         ${totalCount > 0 ? `${issues.length} auto-scanned${hasManualElements ? ` + ${manuallyAddedElements.size} manual` : ''}` : 'No overflow issues found!'}
       </div>
     </div>
-    <button id="close-panel" style="
-      background: rgba(255,255,255,0.2);
-      border: none;
-      color: white;
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    ">×</button>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button id="rescan-btn" style="
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      " title="Re-run auto scan">
+        🔄 Scan
+      </button>
+      <button id="toggle-interactive-btn" style="
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      " title="Toggle interactive mode">
+        👆 Interactive
+      </button>
+      <button id="close-panel" style="
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">×</button>
+    </div>
   `;
   
   
@@ -799,6 +831,20 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   const closeBtn = panel.querySelector('#close-panel');
   closeBtn?.addEventListener('click', () => {
     collapsePanelToTab();
+  });
+  
+  // Add rescan handler
+  const rescanBtn = panel.querySelector('#rescan-btn');
+  rescanBtn?.addEventListener('click', () => {
+    // Send message to re-run auto scan
+    window.postMessage({ type: 'OVERFLOW_SCOUT_RESCAN' }, '*');
+  });
+  
+  // Add toggle interactive mode handler
+  const interactiveBtn = panel.querySelector('#toggle-interactive-btn');
+  interactiveBtn?.addEventListener('click', () => {
+    // Send message to toggle interactive mode
+    window.postMessage({ type: 'OVERFLOW_SCOUT_TOGGLE_INTERACTIVE' }, '*');
   });
   
   document.body.appendChild(panel);

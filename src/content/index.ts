@@ -1114,7 +1114,7 @@ class OverflowScoutContent {
   // Phase 8: Polish and edge cases
 }
 
-// Initialize content script when DOM is ready
+// Initialization moved up to be accessible by message listeners
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => new OverflowScoutContent());
 } else {
