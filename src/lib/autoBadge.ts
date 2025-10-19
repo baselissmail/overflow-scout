@@ -9,6 +9,14 @@ const BADGE_ID = 'overflow-scout-auto-badge';
 const PANEL_ID = 'overflow-scout-results-panel';
 
 /**
+ * Remove existing badge
+ */
+export function removeBadge(): void {
+  const badge = document.getElementById(BADGE_ID);
+  if (badge) badge.remove();
+}
+
+/**
  * Create floating badge showing issue count
  */
 export function createAutoBadge(issueCount: number, onClick: () => void): void {
@@ -77,16 +85,125 @@ export function createAutoBadge(issueCount: number, onClick: () => void): void {
   document.body.appendChild(badge);
 }
 
-/**
- * Remove badge
- */
-export function removeBadge(): void {
-  const badge = document.getElementById(BADGE_ID);
-  if (badge) badge.remove();
-}
+// Track manually added elements from interactive mode
+const manuallyAddedElements = new Map<string, any>();
 
-// Track manually added elements
-const manuallyAddedElements: Map<string, any> = new Map();
+// Track current preset index for each element
+const elementPresetIndex = new Map<string, { [key: string]: number }>();
+
+// Preset text pools (20 variations each)
+const PRESET_POOLS = {
+  longName: [
+    'María José García-Hernández',
+    'Jean-Baptiste François-Marie de la Vallée',
+    'Alessandro Giovanni Giuseppe Benedetto',
+    'Anastasia Nikolaevna Romanova-Petrova',
+    'Muhammad ibn Abdullah al-Rashid',
+    'Nguyễn Thị Thanh Hương Mai',
+    'José Francisco de San Martín y Matorras',
+    'Catherine Elizabeth Middleton Windsor',
+    'Wolfgang Amadeus Theophilus Mozart',
+    'Ludwig Heinrich Eduard von Beethoven',
+    'Siddhartha Gautama Shakyamuni Buddha',
+    'Alexander Sergeyevich Pushkin-Gannibal',
+    'Isabella Christina Maria Adelaide',
+    'Friedrich Wilhelm Heinrich August',
+    'Gabriella Sofia Alexandra Victoria',
+    'Maximiliano Fernando José de Habsburgo',
+    'Constantine Alexandros Papadopoulos',
+    'Svetlana Ivanovna Zhukova-Petrova',
+    'Francisco Javier González Rodríguez',
+    'Elisabeth Marie-Christine von Habsburg'
+  ],
+  product: [
+    'Apple MacBook Pro 16-inch M3 Max with 64GB RAM',
+    'Samsung Galaxy Ultra S24+ 5G Titanium Edition',
+    'Sony Alpha 7R V Full-Frame Mirrorless Camera',
+    'Herman Miller Aeron Ergonomic Office Chair Remastered',
+    'Bose QuietComfort Ultra Noise Cancelling Headphones',
+    'LG OLED Evo C3 65-inch 4K Smart TV with AI',
+    'Microsoft Surface Laptop Studio 2 with NVIDIA RTX',
+    'Dell UltraSharp 32 6K Monitor with Thunderbolt',
+    'Dyson V15 Detect Absolute Cordless Vacuum Cleaner',
+    'Ninja Foodi MAX Multi-Cooker Pressure Fryer',
+    'Philips Sonicare DiamondClean Smart 9700 Electric',
+    'Breville Barista Touch Impress Espresso Machine',
+    'Weber Genesis II S-435 Natural Gas Grill Black',
+    'Peloton Bike+ Premium Indoor Exercise Bike Package',
+    'Secretlab TITAN Evo 2022 Gaming Chair XL Size',
+    'Sonos Arc Premium Smart Soundbar with Dolby Atmos',
+    'Google Nest Learning Thermostat Pro 4th Generation',
+    'Ring Video Doorbell Pro 2 with 3D Motion Detection',
+    'Anova Precision Cooker Nano Sous Vide Immersion',
+    'Vitamix Professional Series 750 Heritage Blender'
+  ],
+  url: [
+    'https://www.very-long-domain-name.example.com',
+    'https://subdomain.another-long-website-address.co.uk',
+    'https://api.v2.production.environment.company.io',
+    'https://blog.technology-news-and-updates.org',
+    'https://shop.international-electronics-store.net',
+    'https://docs.developer-resources-portal.example',
+    'https://cdn.static-assets-delivery-network.cloud',
+    'https://auth.secure-authentication-service.app',
+    'https://mail.enterprise-email-platform.business',
+    'https://analytics.data-tracking-dashboard.tech',
+    'https://storage.cloud-backup-service-provider.online',
+    'https://payments.international-payment-gateway.secure',
+    'https://streaming.video-content-delivery.media',
+    'https://support.customer-service-helpdesk.help',
+    'https://marketplace.digital-products-store.shop',
+    'https://forum.community-discussion-platform.social',
+    'https://admin.enterprise-management-console.systems',
+    'https://portal.professional-services-platform.pro',
+    'https://dashboard.business-intelligence-suite.cloud',
+    'https://app.project-management-collaboration.work'
+  ],
+  email: [
+    'user.name@company-subdomain.org',
+    'firstname.lastname@international-corporation.com',
+    'contact.department@global-enterprise-solutions.net',
+    'support.team@customer-service-center.co.uk',
+    'admin.notifications@system-alerts-platform.io',
+    'marketing.campaigns@digital-advertising-agency.com',
+    'sales.inquiries@business-development-team.biz',
+    'info.requests@information-technology-services.tech',
+    'accounts.payable@financial-services-department.org',
+    'human.resources@talent-acquisition-office.work',
+    'legal.compliance@corporate-governance-division.law',
+    'research.development@innovation-laboratory.science',
+    'customer.success@client-relations-management.app',
+    'product.feedback@quality-assurance-testing.dev',
+    'security.alerts@cybersecurity-operations-center.secure',
+    'billing.department@accounting-services-firm.finance',
+    'technical.support@engineering-services-team.help',
+    'media.relations@public-affairs-communications.press',
+    'partnership.opportunities@strategic-alliances.partners',
+    'investor.relations@corporate-finance-group.invest'
+  ],
+  longText: [
+    'This is an exceptionally long piece of text designed to test how user interfaces handle extended content that spans multiple lines and may cause layout issues.',
+    'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.',
+    'In a world where information flows rapidly and continuously, the ability to process and display extensive textual content efficiently becomes increasingly important for modern applications.',
+    'The quick brown fox jumps over the lazy dog multiple times while demonstrating how various typographic systems handle extended sequences of characters in different contextual scenarios.',
+    'Product Description: Our revolutionary new device features cutting-edge technology, advanced capabilities, premium materials, exceptional performance, and an innovative design that sets new industry standards.',
+    'Customer testimonial: I have been using this service for several years now and I must say that the quality, reliability, and customer support have consistently exceeded my expectations time and time again.',
+    'Legal disclaimer: By using this software, you acknowledge and agree to the terms and conditions set forth herein, including but not limited to limitations of liability, warranty disclaimers, and dispute resolution procedures.',
+    'Technical specifications: Processor speed 3.5GHz base frequency, 5.0GHz turbo boost, 8 cores, 16 threads, 32MB cache, integrated graphics, support for DDR5-4800 memory, PCIe 5.0 compatibility.',
+    'Breaking news update: Researchers at the international scientific conference announced groundbreaking discoveries that could potentially revolutionize our understanding of fundamental principles.',
+    'Installation instructions: Before beginning the setup process, please ensure that all prerequisite software components are properly installed and configured according to the detailed documentation provided.',
+    'Company mission statement: We strive to deliver innovative solutions that empower individuals and organizations to achieve their goals through technology, collaboration, and sustainable practices.',
+    'Error message details: An unexpected exception occurred during the execution of the requested operation due to insufficient system resources or conflicting configuration settings that require immediate attention.',
+    'Privacy policy notice: We are committed to protecting your personal information and will only collect, process, and store data in accordance with applicable regulations and industry best practices.',
+    'Performance optimization: To achieve maximum efficiency, the system employs advanced caching mechanisms, load balancing algorithms, and distributed processing techniques across multiple server instances.',
+    'User feedback response: Thank you for bringing this issue to our attention. Our development team is actively investigating the reported behavior and will provide updates as soon as possible.',
+    'Marketing campaign message: Transform your business with our comprehensive suite of integrated tools designed specifically for modern enterprises seeking competitive advantages in dynamic markets.',
+    'Academic abstract summary: This research paper examines the complex interrelationships between various factors affecting outcomes and proposes novel methodologies for addressing contemporary challenges.',
+    'Environmental impact statement: Our sustainable manufacturing processes minimize waste, reduce carbon emissions, conserve natural resources, and promote circular economy principles throughout the supply chain.',
+    'Financial disclosure notice: Past performance is not indicative of future results. Investment values may fluctuate and investors may receive back less than their original investment amount.',
+    'Terms of service agreement: These terms govern your access to and use of our services, including any content, functionality, and features offered through our platform or affiliated applications.'
+  ]
+};
 
 /**
  * Create manual element card (simplified version of auto-scan card)
@@ -128,7 +245,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
         🧪 Test with Text:
       </div>
       <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
-        <button class="preset-btn-manual-${index}" data-text="María José García-Hernández" style="
+        <button class="preset-btn-manual-${index}" data-preset-type="longName" style="
           background: white;
           border: 1px solid #93c5fd;
           padding: 3px 6px;
@@ -137,7 +254,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           cursor: pointer;
           color: #1e40af;
         ">Long Name</button>
-        <button class="preset-btn-manual-${index}" data-text="Apple MacBook Pro 16-inch M3 Max" style="
+        <button class="preset-btn-manual-${index}" data-preset-type="product" style="
           background: white;
           border: 1px solid #93c5fd;
           padding: 3px 6px;
@@ -146,6 +263,33 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           cursor: pointer;
           color: #1e40af;
         ">Product</button>
+        <button class="preset-btn-manual-${index}" data-preset-type="url" style="
+          background: white;
+          border: 1px solid #93c5fd;
+          padding: 3px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          cursor: pointer;
+          color: #1e40af;
+        ">URL</button>
+        <button class="preset-btn-manual-${index}" data-preset-type="email" style="
+          background: white;
+          border: 1px solid #93c5fd;
+          padding: 3px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          cursor: pointer;
+          color: #1e40af;
+        ">Email</button>
+        <button class="preset-btn-manual-${index}" data-preset-type="longText" style="
+          background: white;
+          border: 1px solid #93c5fd;
+          padding: 3px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          cursor: pointer;
+          color: #1e40af;
+        ">Long Text</button>
       </div>
       <textarea 
         id="custom-input-manual-${index}" 
@@ -163,7 +307,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           font-family: inherit;
           line-height: 1.4;
         "
-      ></textarea>
+      >${elementData.originalText}</textarea>
       <div style="display: flex; gap: 4px;">
         <button class="test-custom-btn-manual" data-issue-index="${index}" style="
           background: #10b981;
@@ -217,7 +361,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
   `;
   
   // Wire up handlers
-  setupManualCardHandlers(card, element, index);
+  setupManualCardHandlers(card, element, index, elementData.elementId);
   
   return card;
 }
@@ -225,13 +369,33 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
 /**
  * Setup manual card handlers
  */
-function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index: number): void {
+function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index: number, elementId: string): void {
   const textareaId = `custom-input-manual-${index}`;
   
-  // Preset buttons
+  // Preset buttons with rotation
   card.querySelectorAll(`.preset-btn-manual-${index}`).forEach(btn => {
     btn.addEventListener('click', () => {
-      const text = (btn as HTMLElement).dataset.text;
+      const presetType = (btn as HTMLElement).dataset.presetType as keyof typeof PRESET_POOLS;
+      if (!presetType) return;
+      
+      // Get or initialize preset index for this element
+      if (!elementPresetIndex.has(elementId)) {
+        elementPresetIndex.set(elementId, {});
+      }
+      
+      const indices = elementPresetIndex.get(elementId)!;
+      if (indices[presetType] === undefined) {
+        indices[presetType] = 0;
+      }
+      
+      // Get current preset text
+      const presetPool = PRESET_POOLS[presetType];
+      const text = presetPool[indices[presetType]];
+      
+      // Rotate to next preset
+      indices[presetType] = (indices[presetType] + 1) % presetPool.length;
+      
+      // Apply to textarea
       const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
       if (textarea && text) {
         textarea.value = text;
@@ -866,7 +1030,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
         🧪 Test with Different Text:
       </div>
       <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
-        <button class="preset-btn-${index}" data-text="María José García-Hernández" style="
+        <button class="preset-btn-${index}" data-preset-type="longName" style="
           background: #eff6ff;
           border: 1px solid #bfdbfe;
           padding: 3px 6px;
@@ -875,7 +1039,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           cursor: pointer;
           color: #1e40af;
         ">Long Name</button>
-        <button class="preset-btn-${index}" data-text="Apple MacBook Pro 16-inch M3 Max with 64GB" style="
+        <button class="preset-btn-${index}" data-preset-type="product" style="
           background: #eff6ff;
           border: 1px solid #bfdbfe;
           padding: 3px 6px;
@@ -884,7 +1048,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           cursor: pointer;
           color: #1e40af;
         ">Product</button>
-        <button class="preset-btn-${index}" data-text="https://www.very-long-domain-name.example.com" style="
+        <button class="preset-btn-${index}" data-preset-type="url" style="
           background: #eff6ff;
           border: 1px solid #bfdbfe;
           padding: 3px 6px;
@@ -893,7 +1057,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           cursor: pointer;
           color: #1e40af;
         ">URL</button>
-        <button class="preset-btn-${index}" data-text="user.name@company-subdomain.org" style="
+        <button class="preset-btn-${index}" data-preset-type="email" style="
           background: #eff6ff;
           border: 1px solid #bfdbfe;
           padding: 3px 6px;
@@ -902,6 +1066,15 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           cursor: pointer;
           color: #1e40af;
         ">Email</button>
+        <button class="preset-btn-${index}" data-preset-type="longText" style="
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          padding: 3px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          cursor: pointer;
+          color: #1e40af;
+        ">Long Text</button>
       </div>
       <textarea 
         id="custom-input-${index}" 
@@ -919,7 +1092,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           font-family: inherit;
           line-height: 1.4;
         "
-      ></textarea>
+      >${issue.originalText}</textarea>
       <div style="display: flex; gap: 4px;">
         <button class="test-custom-btn" data-issue-index="${index}" style="
           background: #10b981;
@@ -972,10 +1145,33 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
     </div>
   `;
   
-  // Preset buttons handler
+  // Preset buttons handler with rotation
   card.querySelectorAll(`.preset-btn-${index}`).forEach(btn => {
     btn.addEventListener('click', () => {
-      const text = (btn as HTMLElement).dataset.text;
+      const presetType = (btn as HTMLElement).dataset.presetType as keyof typeof PRESET_POOLS;
+      if (!presetType) return;
+      
+      // Use element's memory address as unique ID
+      const elementId = `auto-${index}`;
+      
+      // Get or initialize preset index for this element
+      if (!elementPresetIndex.has(elementId)) {
+        elementPresetIndex.set(elementId, {});
+      }
+      
+      const indices = elementPresetIndex.get(elementId)!;
+      if (indices[presetType] === undefined) {
+        indices[presetType] = 0;
+      }
+      
+      // Get current preset text
+      const presetPool = PRESET_POOLS[presetType];
+      const text = presetPool[indices[presetType]];
+      
+      // Rotate to next preset
+      indices[presetType] = (indices[presetType] + 1) % presetPool.length;
+      
+      // Apply to textarea
       const textarea = document.getElementById(`custom-input-${index}`) as HTMLTextAreaElement;
       if (textarea && text) {
         textarea.value = text;
