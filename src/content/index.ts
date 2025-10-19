@@ -26,6 +26,7 @@ import { logShadowDOMStructure } from '@/lib/shadowDomHelper';
 import { spaObserver } from '@/lib/spaObserver';
 import { ErrorHandler } from '@/lib/errorHandler';
 import { PerformanceMonitor } from '@/lib/performanceMonitor';
+import { InteractiveModeManager } from '@/lib/interactiveMode';
 
 /**
  * Cache structure for storing original element state
@@ -45,6 +46,7 @@ class OverflowScoutContent {
   private elementIdCounter = 0;
   private stateManager = new StateManager();
   private currentMode = TextPatternType.DEFAULT; // Phase 7: Default to English
+  private interactiveMode = new InteractiveModeManager(); // Phase 9: Point & Click
 
   constructor() {
     this.init();
@@ -154,9 +156,42 @@ class OverflowScoutContent {
       case MessageType.SET_MODE:
         return this.setMode(message.payload);
 
+      case MessageType.TOGGLE_INTERACTIVE_MODE:
+        return this.toggleInteractiveMode(message.payload);
+
       default:
         Logger.warn('Unknown message type in content:', message.type);
         return { error: 'Unknown message type' };
+    }
+  }
+
+  /**
+   * Phase 9: Toggle interactive point & click mode
+   */
+  private toggleInteractiveMode(payload: any): { success: boolean } {
+    try {
+      const active = payload?.active || false;
+      
+      if (active) {
+        // Activate interactive mode - click any element to test it
+        this.interactiveMode.activate((element: HTMLElement) => {
+          Logger.info('Interactive click on element:', element.tagName);
+          
+          // Set as last clicked element and inject text (reuse existing logic)
+          this.lastClickedElement = element;
+          this.injectText();
+        });
+        Logger.info('Interactive mode activated');
+      } else {
+        // Deactivate interactive mode
+        this.interactiveMode.deactivate();
+        Logger.info('Interactive mode deactivated');
+      }
+      
+      return { success: true };
+    } catch (error) {
+      Logger.error('Error toggling interactive mode:', error);
+      return { success: false };
     }
   }
 
@@ -921,6 +956,7 @@ class OverflowScoutContent {
       stats,
       elementCount: states.length,
       brokenCount: this.stateManager.getBrokenStates().length,
+      interactiveModeActive: this.interactiveMode.isActive(), // Phase 9
     };
   }
 

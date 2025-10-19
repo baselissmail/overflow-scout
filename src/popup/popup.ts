@@ -28,6 +28,10 @@ class PopupController {
   private viewportOnly: HTMLInputElement | null = null;
   private showBrokenOnly: HTMLInputElement | null = null;
   private presetButtons: NodeListOf<HTMLButtonElement> | null = null;
+  
+  // Phase 9: Interactive mode
+  private interactiveModeBtn: HTMLButtonElement | null = null;
+  private isInteractiveModeActive = false;
 
   constructor() {
     this.init();
@@ -64,6 +68,9 @@ class PopupController {
     this.viewportOnly = document.getElementById('viewport-only') as HTMLInputElement;
     this.showBrokenOnly = document.getElementById('show-broken-only') as HTMLInputElement;
     this.presetButtons = document.querySelectorAll('.preset-btn');
+    
+    // Phase 9: Interactive mode
+    this.interactiveModeBtn = document.getElementById('interactive-mode') as HTMLButtonElement;
   }
 
   private setupEventListeners(): void {
@@ -87,6 +94,9 @@ class PopupController {
     this.presetButtons?.forEach(btn => {
       btn.addEventListener('click', () => this.selectPreset(btn.dataset.preset || 'scan'));
     });
+    
+    // Phase 9: Interactive mode button
+    this.interactiveModeBtn?.addEventListener('click', () => this.toggleInteractiveMode());
   }
 
   /**
@@ -146,6 +156,17 @@ class PopupController {
         
         if (this.brokenCount) {
           this.brokenCount.textContent = String(response.brokenCount || 0);
+        }
+        
+        // Phase 9: Check if interactive mode is still active in content script
+        if (response.interactiveModeActive !== undefined) {
+          const wasActive = this.isInteractiveModeActive;
+          this.isInteractiveModeActive = response.interactiveModeActive;
+          
+          // Update button if state changed
+          if (wasActive !== this.isInteractiveModeActive) {
+            this.updateInteractiveModeButton();
+          }
         }
       }
     } catch (error) {
@@ -239,6 +260,46 @@ class PopupController {
     }
     
     Logger.info('Preset selected:', preset);
+  }
+  
+  /**
+   * Phase 9: Toggle interactive point & click mode
+   */
+  private async toggleInteractiveMode(): Promise<void> {
+    this.isInteractiveModeActive = !this.isInteractiveModeActive;
+    
+    // Update button state
+    this.updateInteractiveModeButton();
+    
+    // Send message to content script
+    await this.sendMessage(MessageType.TOGGLE_INTERACTIVE_MODE, {
+      active: this.isInteractiveModeActive
+    });
+    
+    Logger.info('Interactive mode:', this.isInteractiveModeActive ? 'activated' : 'deactivated');
+  }
+  
+  /**
+   * Phase 9: Update interactive mode button UI
+   */
+  private updateInteractiveModeButton(): void {
+    if (!this.interactiveModeBtn) return;
+    
+    if (this.isInteractiveModeActive) {
+      this.interactiveModeBtn.classList.add('active');
+      this.interactiveModeBtn.innerHTML = `
+        <span class="btn-icon">✋</span>
+        Exit Interactive Mode
+        <small>Press ESC or click here</small>
+      `;
+    } else {
+      this.interactiveModeBtn.classList.remove('active');
+      this.interactiveModeBtn.innerHTML = `
+        <span class="btn-icon">👆</span>
+        Point & Click Mode
+        <small>Click elements to test</small>
+      `;
+    }
   }
 }
 

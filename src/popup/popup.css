@@ -242,12 +242,11 @@ header .subtitle {
   border-radius: 6px;
   font-size: 14px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: inherit;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
 }
 
@@ -258,7 +257,34 @@ header .subtitle {
 
 .btn-icon {
   font-size: 16px;
-  line-height: 1;
+}
+
+.btn-interactive {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  flex-direction: column;
+  padding: 16px;
+  gap: 4px;
+}
+
+.btn-interactive small {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.btn-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.btn-interactive:active {
+  transform: translateY(0);
+}
+
+.btn-interactive.active {
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
 }
 
 .btn-primary {
@@ -266,29 +292,75 @@ header .subtitle {
   color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark);
+.btn-primary:hover {
+  background: #2563eb;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
-.btn-primary:active:not(:disabled) {
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-secondary);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
   transform: translateY(0);
 }
 
 .btn-danger {
-  background: var(--error);
+  background: var(--danger);
   color: white;
 }
 
-.btn-danger:hover:not(:disabled) {
+.btn-danger:hover {
   background: #dc2626;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
 
-.btn-danger:active:not(:disabled) {
+.btn-danger:active {
   transform: translateY(0);
+}
+
+/* Divider */
+.divider {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 8px;
+  position: relative;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 30%;
+  height: 1px;
+  background: var(--border);
+}
+
+.divider::before {
+  left: 0;
+}
+
+.divider::after {
+  right: 0;
 }
 
 /* Footer */

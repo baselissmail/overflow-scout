@@ -17,6 +17,7 @@ export enum MessageType {
   DETECT_OVERFLOW = 'DETECT_OVERFLOW',
   
   // Phase 4 - Batch Testing
+  TEST_ELEMENT = 'TEST_ELEMENT',
   TEST_ALL_SIMILAR = 'TEST_ALL_SIMILAR',
   TEST_ALL_BUTTONS = 'TEST_ALL_BUTTONS',
   TEST_ALL_HEADINGS = 'TEST_ALL_HEADINGS',
@@ -31,6 +32,7 @@ export enum MessageType {
   SET_MODE = 'SET_MODE',
   GET_SETTINGS = 'GET_SETTINGS',
   BATCH_TEST_PAGE = 'BATCH_TEST_PAGE',
+  TOGGLE_INTERACTIVE_MODE = 'TOGGLE_INTERACTIVE_MODE',  // Phase 9: Point & Click
 }
 
 export interface Message<T = unknown> {
