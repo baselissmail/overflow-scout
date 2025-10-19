@@ -53,12 +53,15 @@ export function injectDarkModeStyles(): void {
       background: #111827 !important;
     }
     
-    /* Dark mode cards */
+    /* Dark mode cards - keep severity border colors! */
     #overflow-scout-results-panel.${DARK_MODE_CLASS} [data-issue-card],
     #overflow-scout-results-panel.${DARK_MODE_CLASS} [data-manual-card] {
       background: #1f2937 !important;
-      border-color: #374151 !important;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+      /* Don't override border-left color - it shows severity! */
+      border-right-color: #374151 !important;
+      border-top-color: #374151 !important;
+      border-bottom-color: #374151 !important;
     }
     
     /* Card text */
