@@ -144,6 +144,12 @@ export class AutoScanner {
         return; // Skip hidden elements
       }
       
+      // Skip elements that are just containers for other elements
+      // (e.g., div containing mat-icon, span containing svg, etc.)
+      if (this.isContainerElement(element)) {
+        return;
+      }
+      
       const elementType = this.classifyElement(element);
       const originalText = this.getElementText(element);
       
@@ -163,6 +169,41 @@ export class AutoScanner {
     } catch (e) {
       // Silently skip problematic elements
     }
+  }
+  
+  /**
+   * Check if element is just a container for other interactive/styled elements
+   */
+  private isContainerElement(element: HTMLElement): boolean {
+    // Skip if element has child elements (not just text nodes)
+    const childElements = Array.from(element.children);
+    
+    if (childElements.length === 0) {
+      return false; // No children, it's a text element
+    }
+    
+    // Check if all text content comes from child elements
+    const directTextContent = Array.from(element.childNodes)
+      .filter(node => node.nodeType === Node.TEXT_NODE)
+      .map(node => node.textContent?.trim() || '')
+      .join('')
+      .trim();
+    
+    // If element has child elements and no direct text content, it's a container
+    if (childElements.length > 0 && !directTextContent) {
+      return true;
+    }
+    
+    // Skip specific container patterns (mat-icon parent, svg parent, etc.)
+    const hasSpecialChildren = childElements.some(child => {
+      const tagName = child.tagName.toLowerCase();
+      return tagName === 'svg' || 
+             tagName === 'mat-icon' || 
+             tagName === 'i' && child.className.includes('icon') ||
+             tagName === 'img';
+    });
+    
+    return hasSpecialChildren;
   }
 
   /**
