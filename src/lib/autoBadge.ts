@@ -210,6 +210,7 @@ const PRESET_POOLS = {
  */
 function createManualElementCard(element: HTMLElement, elementData: any, index: number): HTMLElement {
   const card = document.createElement('div');
+  card.setAttribute('data-manual-card', 'true');
   card.setAttribute('data-element-id', elementData.elementId);
   
   card.style.cssText = `
@@ -1155,6 +1156,7 @@ function expandPanelFromTab(): void {
  */
 function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
   const card = document.createElement('div');
+  card.setAttribute('data-issue-card', 'true');
   
   const severityColor = issue.severity === 'high' ? '#dc2626' : 
                        issue.severity === 'medium' ? '#f59e0b' : '#3b82f6';
