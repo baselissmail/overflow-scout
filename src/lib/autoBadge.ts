@@ -769,6 +769,70 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
         <span id="interactive-btn-text">Start</span>
       </button>
     </div>
+    <div style="
+      border-top: 1px solid rgba(255,255,255,0.2);
+      padding-top: 8px;
+      margin-top: 8px;
+      display: flex;
+      gap: 6px;
+    ">
+      <button id="test-all-btn" style="
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 600;
+        flex: 1;
+        transition: all 0.2s;
+      " title="Test all elements with random long text" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+        🧪 Test All
+      </button>
+      <button id="revert-all-btn" style="
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 600;
+        flex: 1;
+        transition: all 0.2s;
+      " title="Revert all elements to original" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+        ↩️ Revert All
+      </button>
+      <button id="export-all-btn" style="
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 600;
+        flex: 1;
+        transition: all 0.2s;
+      " title="Export all results as JSON" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+        📦 Export
+      </button>
+      <button id="clear-all-btn" style="
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 600;
+        flex: 1;
+        transition: all 0.2s;
+      " title="Clear all manual cards" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+        🗑️ Clear
+      </button>
+    </div>
   `;
   
   
@@ -909,6 +973,23 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
     
     // Send message to toggle interactive mode
     window.postMessage({ type: 'OVERFLOW_SCOUT_TOGGLE_INTERACTIVE' }, '*');
+  });
+  
+  // Batch operations handlers
+  panel.querySelector('#test-all-btn')?.addEventListener('click', () => {
+    testAllElements(panel);
+  });
+  
+  panel.querySelector('#revert-all-btn')?.addEventListener('click', () => {
+    revertAllElements(panel);
+  });
+  
+  panel.querySelector('#export-all-btn')?.addEventListener('click', () => {
+    exportAllResults(issues);
+  });
+  
+  panel.querySelector('#clear-all-btn')?.addEventListener('click', () => {
+    clearAllManualCards(panel);
   });
   
   document.body.appendChild(panel);
@@ -1661,53 +1742,6 @@ async function showScreenshotActionMenu(
 }
 
 /**
- * Show toast notification
- */
-function showToast(message: string, type: 'success' | 'error' = 'success'): void {
-  const toast = document.createElement('div');
-  toast.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: ${type === 'success' ? '#10b981' : '#ef4444'};
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    z-index: 2147483647;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    animation: slideInUp 0.3s ease-out;
-  `;
-  toast.textContent = message;
-  
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes slideInUp {
-      from {
-        transform: translateY(100px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-  
-  document.body.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.style.transition = 'all 0.3s';
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(20px)';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
-
-/**
  * Generate unique ID for an element based on its position in the DOM
  */
 function generateElementId(element: HTMLElement): string {
@@ -2049,4 +2083,217 @@ function showHiddenElementWarning(element: HTMLElement): void {
     warning.style.opacity = '0';
     setTimeout(() => warning.remove(), 300);
   }, 4000);
+}
+
+/**
+ * Test all elements with random long text
+ */
+function testAllElements(panel: HTMLElement): void {
+  const content = panel.querySelector('[data-content-area]') as HTMLElement;
+  if (!content) return;
+  
+  const cards = content.querySelectorAll('[data-issue-card], [data-manual-card]');
+  let tested = 0;
+  
+  const presetTypes: Array<keyof typeof PRESET_POOLS> = ['longName', 'product', 'url', 'email', 'longText'];
+  
+  cards.forEach((card, index) => {
+    setTimeout(() => {
+      const randomType = presetTypes[Math.floor(Math.random() * presetTypes.length)];
+      const randomPool = PRESET_POOLS[randomType];
+      const randomText = randomPool[Math.floor(Math.random() * randomPool.length)];
+      
+      const textarea = card.querySelector('textarea') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.value = randomText;
+        autoExpandTextarea(textarea);
+      }
+      
+      const isManualCard = card.hasAttribute('data-manual-card');
+      
+      if (isManualCard) {
+        const elementId = (card as HTMLElement).dataset.elementId;
+        const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
+        
+        if (element) {
+          testElementWithCustomText(element, randomText, card as HTMLElement);
+          tested++;
+        }
+      } else {
+        const issueElement = (card as any).__overflowScoutElement;
+        
+        if (issueElement) {
+          testElementWithCustomText(issueElement, randomText, card as HTMLElement);
+          tested++;
+        }
+      }
+      
+      if (index === cards.length - 1) {
+        setTimeout(() => {
+          if (tested > 0) {
+            showToast(`✅ Tested ${tested} elements with random text!`, 'success');
+          } else {
+            showToast('❌ No elements found to test', 'error');
+          }
+        }, 200);
+      }
+    }, index * 150);
+  });
+}
+
+/**
+ * Revert all elements to original text
+ */
+function revertAllElements(panel: HTMLElement): void {
+  const content = panel.querySelector('[data-content-area]') as HTMLElement;
+  if (!content) return;
+  
+  const cards = content.querySelectorAll('[data-issue-card], [data-manual-card]');
+  let reverted = 0;
+  
+  cards.forEach((card) => {
+    const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
+    if (revertBtn && !revertBtn.disabled) {
+      revertBtn.click();
+      
+      const textarea = card.querySelector('textarea') as HTMLTextAreaElement;
+      if (textarea) {
+        const isManualCard = card.hasAttribute('data-manual-card');
+        
+        if (isManualCard) {
+          const elementId = (card as HTMLElement).dataset.elementId;
+          const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
+          if (element && element.dataset.overflowScoutOriginal) {
+            textarea.value = element.dataset.overflowScoutOriginal;
+          }
+        } else {
+          const issueElement = (card as any).__overflowScoutElement;
+          if (issueElement && issueElement.dataset.overflowScoutOriginal) {
+            textarea.value = issueElement.dataset.overflowScoutOriginal;
+          }
+        }
+        
+        autoExpandTextarea(textarea);
+      }
+      
+      reverted++;
+    }
+  });
+  
+  if (reverted > 0) {
+    showToast(`↩️ Reverted ${reverted} elements!`, 'success');
+  } else {
+    showToast('No elements to revert', 'error');
+  }
+}
+
+/**
+ * Export all results as JSON
+ */
+function exportAllResults(issues: OverflowIssue[]): void {
+  const exportData = {
+    timestamp: new Date().toISOString(),
+    url: window.location.href,
+    totalIssues: issues.length + manuallyAddedElements.size,
+    autoScanIssues: issues.map(issue => ({
+      selector: issue.selector,
+      severity: issue.severity,
+      originalText: issue.originalText,
+      testText: issue.testText,
+      cssIssues: issue.cssIssues,
+      suggestedFixes: issue.suggestedFixes
+    })),
+    manualElements: Array.from(manuallyAddedElements.values()).map(el => ({
+      selector: el.selector,
+      elementId: el.elementId,
+      originalText: el.originalText
+    }))
+  };
+  
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+  link.download = `overflow-scout-results-${timestamp}.json`;
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+  
+  showToast('📦 Results exported!', 'success');
+}
+
+/**
+ * Clear all manual cards
+ */
+function clearAllManualCards(panel: HTMLElement): void {
+  const content = panel.querySelector('[data-content-area]') as HTMLElement;
+  if (!content) return;
+  
+  const manualCards = content.querySelectorAll('[data-manual-card]');
+  
+  if (manualCards.length === 0) {
+    showToast('No manual cards to clear', 'error');
+    return;
+  }
+  
+  const confirmed = confirm(`Clear all ${manualCards.length} manual cards? This cannot be undone.`);
+  if (!confirmed) return;
+  
+  manualCards.forEach((card, index) => {
+    setTimeout(() => {
+      const removeBtn = card.querySelector('.remove-manual-card-btn') as HTMLButtonElement;
+      if (removeBtn) {
+        removeBtn.click();
+      }
+    }, index * 50);
+  });
+  
+  showToast(`🗑️ Cleared ${manualCards.length} manual cards!`, 'success');
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message: string, type: 'success' | 'error' = 'success'): void {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#10b981' : '#ef4444'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 2147483647;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    animation: slideInUp 0.3s ease-out;
+  `;
+  toast.textContent = message;
+  
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInUp {
+      from {
+        transform: translateY(100px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.transition = 'all 0.3s';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(20px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
