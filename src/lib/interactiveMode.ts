@@ -233,10 +233,11 @@ export class InteractiveModeManager {
         return;
       }
       
-      // Ignore clicks on sidebar/panel and toggle tab - let them work normally!
+      // Ignore clicks on sidebar/panel, toggle tab, and screenshot modal - let them work normally!
       if (target.closest('#overflow-scout-results-panel') || 
           target.closest('#overflow-scout-toggle-tab') ||
-          target.closest('#overflow-scout-auto-badge')) {
+          target.closest('#overflow-scout-auto-badge') ||
+          target.closest('[data-screenshot-modal]')) {
         return;
       }
       

@@ -310,7 +310,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
         "
       >${elementData.originalText}</textarea>
       <div style="display: flex; gap: 4px;">
-        <button class="test-custom-btn-manual" data-issue-index="${index}" style="
+        <button class="test-btn-manual" data-issue-index="${index}" style="
           background: #10b981;
           color: white;
           border: none;
@@ -320,7 +320,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           font-weight: 600;
           cursor: pointer;
           flex: 1;
-        ">Test</button>
+        ">Test with New Text</button>
         <button class="revert-btn-manual" data-issue-index="${index}" style="
           background: #6b7280;
           color: white;
@@ -1639,7 +1639,14 @@ async function showScreenshotActionMenu(
   dataUrl: string,
   metadata: { selector: string; testText: string; severity: string }
 ): Promise<void> {
+  // Save interactive mode state and temporarily disable it
+  const wasInteractiveModeActive = document.body.classList.contains('overflow-scout-interactive-cursor');
+  if (wasInteractiveModeActive) {
+    window.postMessage({ type: 'OVERFLOW_SCOUT_TOGGLE_INTERACTIVE' }, '*');
+  }
+  
   const menu = document.createElement('div');
+  menu.setAttribute('data-screenshot-modal', 'true');
   menu.style.cssText = `
     position: fixed;
     top: 50%;
@@ -1714,14 +1721,25 @@ async function showScreenshotActionMenu(
   
   document.body.appendChild(menu);
   
+  // Helper to restore interactive mode when modal closes
+  const closeModal = () => {
+    menu.remove();
+    // Restore interactive mode if it was active before
+    if (wasInteractiveModeActive) {
+      setTimeout(() => {
+        window.postMessage({ type: 'OVERFLOW_SCOUT_TOGGLE_INTERACTIVE' }, '*');
+      }, 100);
+    }
+  };
+  
   // Copy to clipboard handler
   menu.querySelector('#copy-screenshot')?.addEventListener('click', async () => {
     try {
-      const blob = await (await fetch(dataUrl)).blob();
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
       await navigator.clipboard.write([
         new ClipboardItem({ 'image/png': blob })
       ]);
-      menu.remove();
       showToast('✅ Screenshot copied to clipboard!', 'success');
     } catch (error) {
       console.error('Copy failed:', error);
@@ -1736,14 +1754,11 @@ async function showScreenshotActionMenu(
     link.download = `overflow-issue-${timestamp}.png`;
     link.href = dataUrl;
     link.click();
-    menu.remove();
     showToast('✅ Screenshot downloaded!', 'success');
   });
   
   // Close handler
-  menu.querySelector('#close-screenshot-menu')?.addEventListener('click', () => {
-    menu.remove();
-  });
+  menu.querySelector('#close-screenshot-menu')?.addEventListener('click', closeModal);
 }
 
 /**
