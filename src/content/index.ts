@@ -49,7 +49,7 @@ class OverflowScoutContent {
   private elementIdCounter = 0;
   private stateManager = new StateManager();
   private currentMode = TextPatternType.DEFAULT; // Phase 7: Default to English
-  private interactiveMode = new InteractiveModeManager(); // Phase 9: Point & Click
+  public interactiveMode = new InteractiveModeManager(); // Phase 9: Point & Click
   private varietyCounter = 0; // Phase 9: For varied text generation
 
   constructor() {
@@ -1114,9 +1114,31 @@ class OverflowScoutContent {
   // Phase 8: Polish and edge cases
 }
 
-// Initialization moved up to be accessible by message listeners
+// Create instance and make accessible for sidebar messages
+let contentInstance: OverflowScoutContent;
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => new OverflowScoutContent());
+  document.addEventListener('DOMContentLoaded', () => {
+    contentInstance = new OverflowScoutContent();
+  });
 } else {
-  new OverflowScoutContent();
+  contentInstance = new OverflowScoutContent();
+}
+
+// Listen for messages from sidebar
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'OVERFLOW_SCOUT_RESCAN') {
+      // Re-run auto scan
+      if (contentInstance) {
+        contentInstance['runAutoScan']();
+      }
+    } else if (event.data?.type === 'OVERFLOW_SCOUT_TOGGLE_INTERACTIVE') {
+      // Toggle interactive mode
+      if (contentInstance) {
+        const isActive = contentInstance.interactiveMode.isActive();
+        contentInstance['toggleInteractiveMode']({ active: !isActive });
+      }
+    }
+  });
 }

@@ -681,66 +681,72 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     color: white;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 12px;
   `;
   
-  const hasManualElements = manuallyAddedElements.size > 0;
-  const totalCount = issues.length + manuallyAddedElements.size;
-  
   header.innerHTML = `
-    <div style="flex: 1;">
-      <div style="font-size: 18px; font-weight: 700;">
-        ${totalCount > 0 ? 'Overflow Testing' : 'Scan Complete'}
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+      <div style="flex: 1;">
+        <div style="font-size: 18px; font-weight: 700;">
+          <span style="font-size: 24px;">🔍</span>
+          Overflow Testing
+        </div>
       </div>
-      <div style="font-size: 12px; opacity: 0.9;">
-        ${totalCount > 0 ? `${issues.length} auto-scanned${hasManualElements ? ` + ${manuallyAddedElements.size} manual` : ''}` : 'No overflow issues found!'}
-      </div>
-    </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <button id="rescan-btn" style="
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      " title="Re-run auto scan">
-        🔄 Scan
-      </button>
-      <button id="toggle-interactive-btn" style="
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      " title="Toggle interactive mode">
-        👆 Interactive
-      </button>
       <button id="close-panel" style="
         background: rgba(255,255,255,0.2);
         border: none;
         color: white;
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 18px;
+        font-size: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-      ">×</button>
+        flex-shrink: 0;
+      " title="Collapse sidebar">×</button>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="rescan-btn" style="
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        flex: 1;
+        transition: all 0.2s;
+      " title="Re-run auto scan" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+        <span style="font-size: 14px;">🔄</span>
+        <span>Scan</span>
+      </button>
+      <button id="toggle-interactive-btn" style="
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        flex: 1;
+        transition: all 0.2s;
+      " title="Start interactive mode" data-active="false" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background=this.dataset.active === 'true' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)'">
+        <span style="font-size: 14px;">👆</span>
+        <span id="interactive-btn-text">Start</span>
+      </button>
     </div>
   `;
   
@@ -836,13 +842,50 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   // Add rescan handler
   const rescanBtn = panel.querySelector('#rescan-btn');
   rescanBtn?.addEventListener('click', () => {
+    const btnElement = rescanBtn as HTMLElement;
+    const originalHTML = btnElement.innerHTML;
+    
+    // Add loading state
+    btnElement.innerHTML = '<span style="font-size: 14px;">⏳</span><span>Scanning...</span>';
+    btnElement.style.pointerEvents = 'none';
+    btnElement.style.opacity = '0.7';
+    
     // Send message to re-run auto scan
     window.postMessage({ type: 'OVERFLOW_SCOUT_RESCAN' }, '*');
+    
+    // Reset button after scan
+    setTimeout(() => {
+      btnElement.innerHTML = originalHTML;
+      btnElement.style.pointerEvents = 'auto';
+      btnElement.style.opacity = '1';
+    }, 2000);
   });
   
   // Add toggle interactive mode handler
-  const interactiveBtn = panel.querySelector('#toggle-interactive-btn');
+  const interactiveBtn = panel.querySelector('#toggle-interactive-btn') as HTMLElement;
+  const interactiveBtnText = panel.querySelector('#interactive-btn-text');
+  
   interactiveBtn?.addEventListener('click', () => {
+    const isActive = interactiveBtn.dataset.active === 'true';
+    
+    // Toggle state
+    interactiveBtn.dataset.active = (!isActive).toString();
+    
+    // Update button appearance
+    if (!isActive) {
+      // Starting interactive mode
+      interactiveBtn.style.background = 'rgba(255,255,255,0.3)';
+      interactiveBtn.style.borderColor = 'rgba(255,255,255,0.4)';
+      if (interactiveBtnText) interactiveBtnText.textContent = 'Stop';
+      interactiveBtn.title = 'Stop interactive mode';
+    } else {
+      // Stopping interactive mode
+      interactiveBtn.style.background = 'rgba(255,255,255,0.15)';
+      interactiveBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+      if (interactiveBtnText) interactiveBtnText.textContent = 'Start';
+      interactiveBtn.title = 'Start interactive mode';
+    }
+    
     // Send message to toggle interactive mode
     window.postMessage({ type: 'OVERFLOW_SCOUT_TOGGLE_INTERACTIVE' }, '*');
   });
@@ -1390,41 +1433,6 @@ function showTestResult(isOverflowing: boolean, customText: string, card: HTMLEl
 export function updateResultsPanel(issues: OverflowIssue[]): void {
   const panel = document.getElementById(PANEL_ID);
   if (!panel) return;
-  
-  // Update header
-  const header = panel.querySelector('div:first-child');
-  if (header) {
-    const hasManualElements = manuallyAddedElements.size > 0;
-    const totalCount = issues.length + manuallyAddedElements.size;
-    
-    header.innerHTML = `
-      <div>
-        <div style="font-size: 18px; font-weight: 700;">
-          ${totalCount > 0 ? 'Overflow Testing' : 'Scan Complete'}
-        </div>
-        <div style="font-size: 12px; opacity: 0.9;">
-          ${totalCount > 0 ? `${issues.length} auto-scanned${hasManualElements ? ` + ${manuallyAddedElements.size} manual` : ''}` : 'No overflow issues found!'}
-        </div>
-      </div>
-      <button id="close-panel" style="
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">×</button>
-    `;
-    
-    // Re-attach close handler
-    const closeBtn = header.querySelector('#close-panel');
-    closeBtn?.addEventListener('click', () => removeResultsPanel());
-  }
   
   // Update content
   const content = panel.querySelector('[data-content-area]') as HTMLElement;
