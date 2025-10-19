@@ -25,15 +25,52 @@
     </section>
 
     <section class="mode-section">
-      <label class="section-label">Test Mode</label>
-      <select id="mode-selector" class="mode-select">
-        <option value="default">English</option>
-        <option value="german">German (Übersetzung)</option>
-        <option value="arabic">Arabic (RTL)</option>
-        <option value="cjk">CJK (中文/日本語)</option>
-        <option value="ugc">UGC (Emojis & Caps)</option>
-        <option value="mixed">Mixed (All Languages)</option>
-      </select>
+      <label class="section-label">Testing Mode</label>
+      <div class="mode-presets">
+        <button class="preset-btn active" data-preset="scan">
+          <span class="preset-icon">🔍</span>
+          <span class="preset-label">Scan</span>
+          <small>Fast & Clean</small>
+        </button>
+        <button class="preset-btn" data-preset="deep">
+          <span class="preset-icon">🔬</span>
+          <span class="preset-label">Deep</span>
+          <small>Full Test</small>
+        </button>
+      </div>
+    </section>
+
+    <section class="options-section">
+      <button class="options-toggle" id="options-toggle">
+        ⚙️ Options
+        <span class="toggle-arrow">▼</span>
+      </button>
+      <div class="options-content" id="options-content" style="display: none;">
+        <label class="option-item">
+          <input type="checkbox" id="viewport-only" checked>
+          <span>Viewport only (faster)</span>
+        </label>
+        <label class="option-item">
+          <input type="checkbox" id="show-broken-only" checked>
+          <span>Show broken only</span>
+        </label>
+        <label class="option-item">
+          <span>Text length: <span id="length-value">2.5x</span></span>
+          <input type="range" id="length-multiplier" 
+                 min="1.5" max="5" value="2.5" step="0.5">
+        </label>
+        <label class="option-item">
+          <span>Language:</span>
+          <select id="mode-selector" class="mode-select-small">
+            <option value="default">English</option>
+            <option value="german">German</option>
+            <option value="arabic">Arabic (RTL)</option>
+            <option value="cjk">CJK</option>
+            <option value="ugc">UGC</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </label>
+      </div>
     </section>
 
     <section class="actions-section">

@@ -19,6 +19,15 @@ class PopupController {
   private testAllLinksBtn: HTMLButtonElement | null = null;
   private revertAllBtn: HTMLButtonElement | null = null;
   private updateInterval: number | null = null;
+  
+  // Phase 9: New controls
+  private optionsToggle: HTMLButtonElement | null = null;
+  private optionsContent: HTMLElement | null = null;
+  private lengthMultiplier: HTMLInputElement | null = null;
+  private lengthValue: HTMLElement | null = null;
+  private viewportOnly: HTMLInputElement | null = null;
+  private showBrokenOnly: HTMLInputElement | null = null;
+  private presetButtons: NodeListOf<HTMLButtonElement> | null = null;
 
   constructor() {
     this.init();
@@ -46,6 +55,15 @@ class PopupController {
     this.testAllInputsBtn = document.getElementById('test-all-inputs') as HTMLButtonElement;
     this.testAllLinksBtn = document.getElementById('test-all-links') as HTMLButtonElement;
     this.revertAllBtn = document.getElementById('revert-all') as HTMLButtonElement;
+    
+    // Phase 9: New UI controls
+    this.optionsToggle = document.getElementById('options-toggle') as HTMLButtonElement;
+    this.optionsContent = document.getElementById('options-content');
+    this.lengthMultiplier = document.getElementById('length-multiplier') as HTMLInputElement;
+    this.lengthValue = document.getElementById('length-value');
+    this.viewportOnly = document.getElementById('viewport-only') as HTMLInputElement;
+    this.showBrokenOnly = document.getElementById('show-broken-only') as HTMLInputElement;
+    this.presetButtons = document.querySelectorAll('.preset-btn');
   }
 
   private setupEventListeners(): void {
@@ -60,6 +78,15 @@ class PopupController {
     
     // Revert all
     this.revertAllBtn?.addEventListener('click', () => this.sendMessage(MessageType.REVERT_ALL));
+    
+    // Phase 9: New UI controls
+    this.optionsToggle?.addEventListener('click', () => this.toggleOptions());
+    this.lengthMultiplier?.addEventListener('input', () => this.updateLengthValue());
+    
+    // Preset buttons
+    this.presetButtons?.forEach(btn => {
+      btn.addEventListener('click', () => this.selectPreset(btn.dataset.preset || 'scan'));
+    });
   }
 
   /**
@@ -166,6 +193,52 @@ class PopupController {
       clearInterval(this.updateInterval);
       this.updateInterval = null;
     }
+  }
+  
+  /**
+   * Phase 9: Toggle options panel
+   */
+  private toggleOptions(): void {
+    if (!this.optionsContent || !this.optionsToggle) return;
+    
+    const isVisible = this.optionsContent.style.display !== 'none';
+    this.optionsContent.style.display = isVisible ? 'none' : 'block';
+    this.optionsToggle.classList.toggle('active');
+  }
+  
+  /**
+   * Phase 9: Update length value display
+   */
+  private updateLengthValue(): void {
+    if (!this.lengthMultiplier || !this.lengthValue) return;
+    this.lengthValue.textContent = `${this.lengthMultiplier.value}x`;
+  }
+  
+  /**
+   * Phase 9: Select preset mode
+   */
+  private selectPreset(preset: string): void {
+    // Update active state
+    this.presetButtons?.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.preset === preset);
+    });
+    
+    // Apply preset settings
+    if (preset === 'scan') {
+      // Fast & clean mode
+      if (this.viewportOnly) this.viewportOnly.checked = true;
+      if (this.showBrokenOnly) this.showBrokenOnly.checked = true;
+      if (this.lengthMultiplier) this.lengthMultiplier.value = '2.5';
+      this.updateLengthValue();
+    } else if (preset === 'deep') {
+      // Full test mode
+      if (this.viewportOnly) this.viewportOnly.checked = false;
+      if (this.showBrokenOnly) this.showBrokenOnly.checked = false;
+      if (this.lengthMultiplier) this.lengthMultiplier.value = '3';
+      this.updateLengthValue();
+    }
+    
+    Logger.info('Preset selected:', preset);
   }
 }
 
