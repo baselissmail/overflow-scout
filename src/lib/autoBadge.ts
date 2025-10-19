@@ -147,10 +147,10 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           color: #1e40af;
         ">Product</button>
       </div>
-      <input 
-        type="text" 
+      <textarea 
         id="custom-input-manual-${index}" 
         placeholder="Type your own text..." 
+        rows="1"
         style="
           width: 100%;
           border: 1px solid #93c5fd;
@@ -158,8 +158,12 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           padding: 6px 8px;
           font-size: 11px;
           margin-bottom: 6px;
+          resize: none;
+          overflow: hidden;
+          font-family: inherit;
+          line-height: 1.4;
         "
-      />
+      ></textarea>
       <div style="display: flex; gap: 4px;">
         <button class="test-custom-btn-manual" data-issue-index="${index}" style="
           background: #10b981;
@@ -187,18 +191,29 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
       </div>
     </div>
     
-    <button class="jump-btn-manual" data-issue-index="${index}" style="
-      margin-top: 8px;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-    ">Jump to Element</button>
+    <div style="display: flex; gap: 4px; margin-top: 8px;">
+      <button class="jump-btn-manual" data-issue-index="${index}" style="
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        flex: 1;
+      ">Jump to Element</button>
+      <button class="remove-manual-card-btn" data-element-id="${elementData.elementId}" style="
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+      ">Remove</button>
+    </div>
   `;
   
   // Wire up handlers
@@ -211,23 +226,30 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
  * Setup manual card handlers
  */
 function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index: number): void {
-  const inputId = `custom-input-manual-${index}`;
+  const textareaId = `custom-input-manual-${index}`;
   
   // Preset buttons
   card.querySelectorAll(`.preset-btn-manual-${index}`).forEach(btn => {
     btn.addEventListener('click', () => {
       const text = (btn as HTMLElement).dataset.text;
-      const input = document.getElementById(inputId) as HTMLInputElement;
-      if (input && text) {
-        input.value = text;
+      const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
+      if (textarea && text) {
+        textarea.value = text;
+        autoExpandTextarea(textarea);
       }
     });
   });
   
+  // Auto-expand textarea on input
+  const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
+  if (textarea) {
+    textarea.addEventListener('input', () => autoExpandTextarea(textarea));
+  }
+  
   // Test button
   card.querySelector('.test-custom-btn-manual')?.addEventListener('click', () => {
-    const input = document.getElementById(inputId) as HTMLInputElement;
-    const customText = input?.value.trim();
+    const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
+    const customText = textarea?.value.trim();
     
     if (customText) {
       testElementWithCustomText(element, customText, card);
@@ -246,6 +268,17 @@ function setupManualCardHandlers(card: HTMLElement, element: HTMLElement, index:
   card.querySelector('.jump-btn-manual')?.addEventListener('click', () => {
     highlightAndJumpToElement(element);
   });
+  
+  // Remove button
+  const removeBtn = card.querySelector('.remove-manual-card-btn');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', () => {
+      const elementId = (removeBtn as HTMLElement).dataset.elementId;
+      if (elementId) {
+        removeManualCard(card, elementId);
+      }
+    });
+  }
 }
 
 /**
@@ -263,7 +296,7 @@ if (typeof window !== 'undefined') {
  * Add manually clicked element to the list
  */
 function addManualElement(elementData: any): void {
-  // Check if already added
+  // Check if already added - prevent duplicates
   if (manuallyAddedElements.has(elementData.elementId)) {
     // Flash existing card and ensure panel is open
     ensurePanelIsOpen();
@@ -313,6 +346,70 @@ function ensurePanelIsOpen(): void {
       removeResultsPanel();
     });
   }
+}
+
+/**
+ * Remove a card from sidebar
+ */
+function removeCard(card: HTMLElement, issue: OverflowIssue): void {
+  // Revert element if it was modified
+  if (issue.element.dataset.overflowScoutOriginal) {
+    issue.element.textContent = issue.element.dataset.overflowScoutOriginal;
+    delete issue.element.dataset.overflowScoutOriginal;
+    delete issue.element.dataset.overflowScoutTested;
+  }
+  
+  // Remove card with animation
+  card.style.transition = 'opacity 0.3s, transform 0.3s';
+  card.style.opacity = '0';
+  card.style.transform = 'translateX(100%)';
+  
+  setTimeout(() => {
+    card.remove();
+    
+    // Close panel if no more cards
+    const panel = document.getElementById(PANEL_ID);
+    if (panel) {
+      const content = panel.querySelector('[data-content-area]') as HTMLElement;
+      if (content && content.children.length === 0) {
+        removeResultsPanel();
+      }
+    }
+  }, 300);
+}
+
+/**
+ * Remove a manual card from sidebar
+ */
+function removeManualCard(card: HTMLElement, elementId: string): void {
+  // Remove from tracked elements
+  manuallyAddedElements.delete(elementId);
+  
+  // Revert element if it was modified
+  const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
+  if (element && element.dataset.overflowScoutOriginal) {
+    element.textContent = element.dataset.overflowScoutOriginal;
+    delete element.dataset.overflowScoutOriginal;
+    delete element.dataset.overflowScoutTested;
+  }
+  
+  // Remove card with animation
+  card.style.transition = 'opacity 0.3s, transform 0.3s';
+  card.style.opacity = '0';
+  card.style.transform = 'translateX(100%)';
+  
+  setTimeout(() => {
+    card.remove();
+    
+    // Close panel if no more cards
+    const panel = document.getElementById(PANEL_ID);
+    if (panel) {
+      const content = panel.querySelector('[data-content-area]') as HTMLElement;
+      if (content && content.children.length === 0) {
+        removeResultsPanel();
+      }
+    }
+  }, 300);
 }
 
 /**
@@ -531,10 +628,10 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           color: #1e40af;
         ">Email</button>
       </div>
-      <input 
-        type="text" 
+      <textarea 
         id="custom-input-${index}" 
         placeholder="Or type your own..." 
+        rows="1"
         style="
           width: 100%;
           border: 1px solid #d1d5db;
@@ -542,8 +639,12 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           padding: 6px 8px;
           font-size: 11px;
           margin-bottom: 6px;
+          resize: none;
+          overflow: hidden;
+          font-family: inherit;
+          line-height: 1.4;
         "
-      />
+      ></textarea>
       <div style="display: flex; gap: 4px;">
         <button class="test-custom-btn" data-issue-index="${index}" style="
           background: #10b981;
@@ -571,35 +672,53 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
       </div>
     </div>
     
-    <button class="jump-btn" data-issue-index="${index}" style="
-      margin-top: 8px;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-    ">Jump to Element</button>
+    <div style="display: flex; gap: 4px; margin-top: 8px;">
+      <button class="jump-btn" data-issue-index="${index}" style="
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        flex: 1;
+      ">Jump to Element</button>
+      <button class="remove-card-btn" data-issue-index="${index}" style="
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+      ">Remove</button>
+    </div>
   `;
   
   // Preset buttons handler
   card.querySelectorAll(`.preset-btn-${index}`).forEach(btn => {
     btn.addEventListener('click', () => {
       const text = (btn as HTMLElement).dataset.text;
-      const input = document.getElementById(`custom-input-${index}`) as HTMLInputElement;
-      if (input && text) {
-        input.value = text;
+      const textarea = document.getElementById(`custom-input-${index}`) as HTMLTextAreaElement;
+      if (textarea && text) {
+        textarea.value = text;
+        autoExpandTextarea(textarea);
       }
     });
   });
   
+  // Auto-expand textarea on input
+  const textarea = document.getElementById(`custom-input-${index}`) as HTMLTextAreaElement;
+  if (textarea) {
+    textarea.addEventListener('input', () => autoExpandTextarea(textarea));
+  }
+  
   // Test with custom text handler
   card.querySelector('.test-custom-btn')?.addEventListener('click', () => {
-    const input = document.getElementById(`custom-input-${index}`) as HTMLInputElement;
-    const customText = input?.value.trim();
+    const textarea = document.getElementById(`custom-input-${index}`) as HTMLTextAreaElement;
+    const customText = textarea?.value.trim();
     
     if (customText) {
       testElementWithCustomText(issue.element, customText, card);
@@ -616,7 +735,20 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
     highlightAndJumpToElement(issue.element);
   });
   
+  // Remove card handler
+  card.querySelector('.remove-card-btn')?.addEventListener('click', () => {
+    removeCard(card, issue);
+  });
+  
   return card;
+}
+
+/**
+ * Auto-expand textarea based on content
+ */
+function autoExpandTextarea(textarea: HTMLTextAreaElement): void {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
 }
 
 /**

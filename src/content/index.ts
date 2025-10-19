@@ -225,7 +225,10 @@ class OverflowScoutContent {
       
       if (active) {
         // Activate interactive mode - click to add element to sidebar
-        this.interactiveMode.activate((element: HTMLElement) => {
+        this.interactiveMode.activate((element: HTMLElement, isDoubleClick: boolean) => {
+          // Only process single clicks (ignore double clicks for now)
+          if (isDoubleClick) return;
+          
           Logger.info('Interactive click on element:', element.tagName);
           
           // Send element to sidebar (don't modify it yet)

@@ -272,20 +272,30 @@ class PopupController {
   }
   
   /**
-   * Phase 9: Toggle interactive point & click mode
+   * Phase 9: Toggle interactive mode
    */
   private async toggleInteractiveMode(): Promise<void> {
     this.isInteractiveModeActive = !this.isInteractiveModeActive;
     
-    // Update button state
-    this.updateInteractiveModeButton();
-    
-    // Send message to content script
-    await this.sendMessage(MessageType.TOGGLE_INTERACTIVE_MODE, {
-      active: this.isInteractiveModeActive
-    });
-    
-    Logger.info('Interactive mode:', this.isInteractiveModeActive ? 'activated' : 'deactivated');
+    try {
+      await this.sendMessage(MessageType.TOGGLE_INTERACTIVE_MODE, {
+        active: this.isInteractiveModeActive,
+      });
+      
+      this.updateInteractiveModeButton();
+      Logger.info('Interactive mode toggled:', this.isInteractiveModeActive);
+      
+      // Close popup when activating (not deactivating)
+      // Add longer delay to prevent clicking element behind popup
+      if (this.isInteractiveModeActive) {
+        setTimeout(() => {
+          window.close();
+        }, 300);
+      }
+    } catch (error) {
+      Logger.error('Failed to toggle interactive mode:', error);
+      this.isInteractiveModeActive = !this.isInteractiveModeActive; // Revert on error
+    }
   }
   
   /**
@@ -328,19 +338,12 @@ class PopupController {
     try {
       await this.sendMessage(MessageType.AUTO_SCAN);
       
-      // Reset button after a delay
-      setTimeout(() => {
-        if (this.autoScanBtn) {
-          this.autoScanBtn.disabled = false;
-          this.autoScanBtn.innerHTML = `
-            <span class="btn-icon">🤖</span>
-            Auto-Scan Page
-            <small>Find all overflow issues instantly</small>
-          `;
-        }
-      }, 1000);
-      
       Logger.info('Auto-scan triggered successfully');
+      
+      // Close popup after a short delay to ensure message is sent
+      setTimeout(() => {
+        window.close();
+      }, 100);
     } catch (error) {
       Logger.error('Failed to trigger auto-scan:', error);
       
