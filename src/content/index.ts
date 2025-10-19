@@ -238,10 +238,18 @@ class OverflowScoutContent {
           
           Logger.info('Interactive click on element:', element.tagName);
           
+          // Find the actual text element (not a container)
+          const textElement = this.findTextElement(element);
+          
+          if (!textElement) {
+            Logger.warn('Clicked element is a container with no direct text');
+            return;
+          }
+          
           // Send element to sidebar (don't modify it yet)
           window.postMessage({ 
             type: 'OVERFLOW_SCOUT_ADD_ELEMENT',
-            element: this.serializeElement(element)
+            element: this.serializeElement(textElement)
           }, '*');
         });
         Logger.info('Interactive mode activated');
@@ -256,6 +264,46 @@ class OverflowScoutContent {
       Logger.error('Error toggling interactive mode:', error);
       return { success: false };
     }
+  }
+  
+  /**
+   * Find the actual text element (not a container with children)
+   */
+  private findTextElement(element: HTMLElement): HTMLElement | null {
+    // If element has no children, it's a text element
+    if (element.children.length === 0) {
+      // Check if it has text content
+      const text = element.textContent?.trim();
+      if (text) {
+        return element;
+      }
+      return null;
+    }
+    
+    // Check if element has direct text content (not just from children)
+    const directTextContent = Array.from(element.childNodes)
+      .filter(node => node.nodeType === Node.TEXT_NODE)
+      .map(node => node.textContent?.trim() || '')
+      .join('')
+      .trim();
+    
+    // If has direct text content, it's a text element
+    if (directTextContent) {
+      return element;
+    }
+    
+    // Otherwise, it's a container - try to find innermost text element
+    // Look for the first child element with actual text
+    for (const child of Array.from(element.children)) {
+      if (child instanceof HTMLElement) {
+        const textEl = this.findTextElement(child);
+        if (textEl) {
+          return textEl;
+        }
+      }
+    }
+    
+    return null;
   }
   
   /**
