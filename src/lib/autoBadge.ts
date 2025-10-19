@@ -708,12 +708,12 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
     width: 400px;
     height: 100vh;
     background: white;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+    box-shadow: -2px 0 20px rgba(0, 0, 0, 0.15);
     z-index: 2147483648;
     display: flex;
     flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     animation: slideInRight 0.3s ease-out;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   `;
   
   // Header
@@ -1161,15 +1161,33 @@ function ensureToggleTab(): void {
     updateToggleTabContent(tab, false);
   }
   
-  // Hide tab when panel is open
+  // Hide tab when panel is open (redundant but explicit)
   tab.style.display = 'none';
 }
 
 /**
- * Update toggle tab content with current count
+ * Update toggle tab content with current count (includes manual + auto-scan)
  */
 function updateToggleTabContent(tab: HTMLElement, shouldShow: boolean = false): void {
-  const manualCount = manuallyAddedElements.size;
+  // Count cards in the panel (not elements on page)
+  const panel = document.getElementById('overflow-scout-results-panel');
+  let totalCount = 0;
+  
+  if (panel) {
+    const issueCards = panel.querySelectorAll('[data-issue-card]');
+    const manualCards = panel.querySelectorAll('[data-manual-card]');
+    totalCount = issueCards.length + manualCards.length;
+  } else {
+    // If panel is closed, count tracked elements
+    const manualElements = document.querySelectorAll('[data-overflow-scout-manual="true"]');
+    const autoScanElements = document.querySelectorAll('[data-overflow-scout-id]');
+    
+    const allElements = new Set<Element>();
+    manualElements.forEach(el => allElements.add(el));
+    autoScanElements.forEach(el => allElements.add(el));
+    
+    totalCount = allElements.size;
+  }
   
   tab.innerHTML = `
     <div style="
@@ -1184,7 +1202,7 @@ function updateToggleTabContent(tab: HTMLElement, shouldShow: boolean = false): 
       gap: 8px;
     ">
       <span>OVERFLOW SCOUT</span>
-      ${manualCount > 0 ? `<span style="
+      ${totalCount > 0 ? `<span style="
         background: rgba(255, 255, 255, 0.3);
         border-radius: 12px;
         padding: 4px 8px;
@@ -1193,9 +1211,19 @@ function updateToggleTabContent(tab: HTMLElement, shouldShow: boolean = false): 
         min-width: 20px;
         text-align: center;
         writing-mode: horizontal-tb;
-      ">${manualCount}</span>` : ''}
+      ">${totalCount}</span>` : ''}
     </div>
   `;
+  
+  // Show/hide based on count AND panel state
+  const isPanelOpen = panel && panel.getAttribute('data-panel-open') === 'true';
+  
+  if ((totalCount > 0 || shouldShow) && !isPanelOpen) {
+    // Only show tab if panel is NOT open
+    tab.style.display = 'block';
+  } else {
+    tab.style.display = 'none';
+  }
   
   // Set styles but don't override display - manage it separately
   if (!tab.style.position) {
@@ -1240,6 +1268,9 @@ function collapsePanelToTab(): void {
   }
   
   if (tab) {
+    // Update the tab content with current count
+    updateToggleTabContent(tab, false);
+    
     setTimeout(() => {
       tab.style.display = 'block';
     }, 300);
@@ -2004,16 +2035,14 @@ export function updateResultsPanel(issues: OverflowIssue[]): void {
 export function removeResultsPanel(): void {
   const panel = document.getElementById(PANEL_ID);
   if (panel) panel.remove();
-  
-  const tab = document.getElementById('overflow-scout-toggle-tab');
-  if (tab) tab.remove();
 }
 
 /**
  * Check if panel is open
  */
 export function isPanelOpen(): boolean {
-  return document.getElementById(PANEL_ID) !== null;
+  const panel = document.getElementById(PANEL_ID);
+  return panel !== null && panel.getAttribute('data-panel-open') === 'true';
 }
 
 /**
