@@ -226,7 +226,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
   
   card.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-      <div style="font-weight: 600; color: #1e40af; flex: 1;">
+      <div style="font-weight: 600; color: #2563eb; flex: 1;">
         #${index + 1} ${elementData.selector}
       </div>
       <div style="
@@ -239,12 +239,12 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
       ">👆 Manual</div>
     </div>
     
-    <div style="color: #1e40af; font-size: 12px; margin-bottom: 12px;">
+    <div style="color: #3b82f6; font-size: 12px; margin-bottom: 12px;">
       "${elementData.originalText}..."
     </div>
     
     <div style="padding-top: 12px; border-top: 1px solid #bfdbfe;">
-      <div style="font-weight: 600; color: #1e40af; font-size: 11px; margin-bottom: 6px;">
+      <div style="font-weight: 600; color: #2563eb; font-size: 11px; margin-bottom: 6px;">
         🧪 Test with Text:
       </div>
       <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
@@ -255,7 +255,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">Long Name</button>
         <button class="preset-btn-manual-${index}" data-preset-type="product" style="
           background: white;
@@ -264,7 +264,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">Product</button>
         <button class="preset-btn-manual-${index}" data-preset-type="url" style="
           background: white;
@@ -273,7 +273,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">URL</button>
         <button class="preset-btn-manual-${index}" data-preset-type="email" style="
           background: white;
@@ -282,7 +282,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">Email</button>
         <button class="preset-btn-manual-${index}" data-preset-type="longText" style="
           background: white;
@@ -291,7 +291,7 @@ function createManualElementCard(element: HTMLElement, elementData: any, index: 
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">Long Text</button>
       </div>
       <textarea 
@@ -1255,7 +1255,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
   
   card.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-      <div style="font-weight: 600; color: #1f2937; flex: 1;">
+      <div style="font-weight: 600; color: #111827; flex: 1;">
         #${index + 1} 
         <span class="selector-text" style="font-family: monospace; font-size: 11px; color: #6b7280;">${issue.selector}</span>
         <button class="copy-selector-btn" title="Copy selector" style="
@@ -1303,7 +1303,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           border-radius: 4px;
           padding: 6px 8px;
           font-size: 11px;
-          color: #1f2937;
+          color: #374151;
           margin-bottom: 4px;
           font-family: 'SF Mono', Monaco, monospace;
         ">${fix}</div>
@@ -1322,7 +1322,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">Long Name</button>
         <button class="preset-btn-${index}" data-preset-type="product" style="
           background: #eff6ff;
@@ -1331,7 +1331,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">Product</button>
         <button class="preset-btn-${index}" data-preset-type="url" style="
           background: #eff6ff;
@@ -1340,7 +1340,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">URL</button>
         <button class="preset-btn-${index}" data-preset-type="email" style="
           background: #eff6ff;
@@ -1349,7 +1349,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">Email</button>
         <button class="preset-btn-${index}" data-preset-type="longText" style="
           background: #eff6ff;
@@ -1358,7 +1358,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
           border-radius: 3px;
           font-size: 10px;
           cursor: pointer;
-          color: #1e40af;
+          color: #2563eb;
         ">Long Text</button>
       </div>
       <textarea 
@@ -1766,7 +1766,7 @@ async function showScreenshotActionMenu(
   
   menu.innerHTML = `
     <div style="margin-bottom: 16px;">
-      <div style="font-size: 16px; font-weight: 700; color: #1f2937; margin-bottom: 8px;">
+      <div style="font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 8px;">
         📸 Screenshot Captured
       </div>
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
@@ -2290,30 +2290,21 @@ function revertAllElements(panel: HTMLElement): void {
     return;
   }
   
-  // Click all revert buttons and update textareas
+  // Click all revert buttons and restore textareas to original text
   cards.forEach((card) => {
     const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
     if (revertBtn && !revertBtn.disabled) {
+      // Get original text before reverting
+      const cardElement = (card as any).__overflowScoutElement;
+      const originalText = cardElement?.dataset.overflowScoutOriginal || '';
+      
       revertBtn.click();
       
+      // Restore textarea to show original text
       const textarea = card.querySelector('textarea') as HTMLTextAreaElement;
-      if (textarea) {
-        const isManualCard = card.hasAttribute('data-manual-card');
-        
-        if (isManualCard) {
-          const elementId = (card as HTMLElement).dataset.elementId;
-          const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
-          if (element && element.dataset.overflowScoutOriginal) {
-            textarea.value = element.dataset.overflowScoutOriginal;
-          }
-        } else {
-          const issueElement = (card as any).__overflowScoutElement;
-          if (issueElement && issueElement.dataset.overflowScoutOriginal) {
-            textarea.value = issueElement.dataset.overflowScoutOriginal;
-          }
-        }
-        
-        autoExpandTextarea(textarea);
+      if (textarea && originalText) {
+        textarea.value = originalText;
+        textarea.placeholder = 'Original text restored';
       }
     }
   });

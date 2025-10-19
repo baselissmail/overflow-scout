@@ -41,6 +41,8 @@ export function injectDarkModeStyles(): void {
     #overflow-scout-results-panel.${DARK_MODE_CLASS} {
       background: #111827 !important;
       color: #f3f4f6 !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     
     /* Header in dark mode */
@@ -68,10 +70,50 @@ export function injectDarkModeStyles(): void {
     #overflow-scout-results-panel.${DARK_MODE_CLASS} [data-issue-card] > div,
     #overflow-scout-results-panel.${DARK_MODE_CLASS} [data-manual-card] > div {
       color: #f3f4f6 !important;
+      font-weight: 500 !important;
     }
     
+    /* Selector text - improve readability */
     #overflow-scout-results-panel.${DARK_MODE_CLASS} .selector-text {
       color: #9ca3af !important;
+      font-weight: 400 !important;
+      letter-spacing: 0.01em !important;
+    }
+    
+    /* Small text in dark mode - improve readability */
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="font-size: 11px"],
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="font-size: 12px"],
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="font-size: 10px"] {
+      font-weight: 500 !important;
+      letter-spacing: 0.01em !important;
+    }
+    
+    /* Blue headings/text in dark mode - improve contrast */
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #2563eb"],
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #3b82f6"] {
+      color: #60a5fa !important;
+    }
+    
+    /* Dark headings in light mode - make lighter in dark mode */
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #111827"] {
+      color: #f9fafb !important;
+      font-weight: 600 !important;
+    }
+    
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #374151"] {
+      color: #e5e7eb !important;
+      font-weight: 500 !important;
+    }
+    
+    /* Gray text colors - slightly lighter for better contrast */
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #6b7280"] {
+      color: #9ca3af !important;
+      font-weight: 400 !important;
+    }
+    
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #9ca3af"] {
+      color: #d1d5db !important;
+      font-weight: 400 !important;
     }
     
     /* Textareas */
