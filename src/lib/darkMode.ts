@@ -18,11 +18,31 @@ function getSystemPreference(): boolean {
 }
 
 /**
- * Check if dark mode is enabled (user preference or system default)
+ * Check if dark mode is enabled (from chrome.storage or system default)
  */
-export function isDarkModeEnabled(): boolean {
+export async function isDarkModeEnabled(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.get(['overflowScoutDarkMode'], (result) => {
+        if (result.overflowScoutDarkMode === undefined) {
+          resolve(getSystemPreference());
+        } else {
+          resolve(result.overflowScoutDarkMode);
+        }
+      });
+    } else {
+      // Fallback for non-extension contexts
+      const stored = localStorage.getItem(DARK_MODE_KEY);
+      resolve(stored === null ? getSystemPreference() : stored === 'true');
+    }
+  });
+}
+
+/**
+ * Synchronous version for immediate checks
+ */
+export function isDarkModeEnabledSync(): boolean {
   const stored = localStorage.getItem(DARK_MODE_KEY);
-  // If user has set a preference, use it; otherwise use system preference
   if (stored === null) {
     return getSystemPreference();
   }
@@ -30,12 +50,18 @@ export function isDarkModeEnabled(): boolean {
 }
 
 export function setDarkMode(enabled: boolean): void {
+  // Save to both localStorage and chrome.storage
   localStorage.setItem(DARK_MODE_KEY, enabled.toString());
+  
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    chrome.storage.local.set({ overflowScoutDarkMode: enabled });
+  }
+  
   applyDarkMode(enabled);
 }
 
 export function toggleDarkMode(): boolean {
-  const newState = !isDarkModeEnabled();
+  const newState = !isDarkModeEnabledSync();
   setDarkMode(newState);
   return newState;
 }
@@ -70,8 +96,12 @@ export function injectDarkModeStyles(): void {
     const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
     darkModeQuery.addEventListener('change', (e) => {
       // Only apply if user hasn't set manual preference
-      if (localStorage.getItem(DARK_MODE_KEY) === null) {
-        setDarkMode(e.matches);
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get(['overflowScoutDarkMode'], (result) => {
+          if (result.overflowScoutDarkMode === undefined) {
+            setDarkMode(e.matches);
+          }
+        });
       }
     });
   }

@@ -5,7 +5,7 @@
 
 import type { OverflowIssue } from './autoScanner';
 import { showOnboardingTooltip } from './onboarding';
-import { toggleDarkMode, applyDarkMode, isDarkModeEnabled, injectDarkModeStyles } from './darkMode';
+import { injectDarkModeStyles, applyDarkMode, toggleDarkMode } from './darkMode';
 
 const BADGE_ID = 'overflow-scout-auto-badge';
 const PANEL_ID = 'overflow-scout-results-panel';
@@ -749,7 +749,7 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-        " title="Toggle dark mode">${isDarkModeEnabled() ? '☀️' : '🌙'}</button>
+        " title="Toggle dark mode">🌙</button>
         <button id="close-panel" style="
           background: rgba(255,255,255,0.2);
           border: none;
@@ -957,17 +957,32 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
   // Inject dark mode styles and apply theme
   injectDarkModeStyles();
   
-  // Apply dark mode if enabled (uses system preference if no user setting)
-  const shouldUseDarkMode = isDarkModeEnabled();
-  applyDarkMode(shouldUseDarkMode);
+  // Initialize theme from chrome.storage
+  const initializeTheme = () => {
+    chrome.storage.local.get(['overflowScoutDarkMode'], (result) => {
+      let isDark = false;
+      
+      if (result.overflowScoutDarkMode === undefined) {
+        // First time - use system preference
+        isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        chrome.storage.local.set({ overflowScoutDarkMode: isDark });
+        localStorage.setItem('overflow-scout-dark-mode', isDark.toString());
+      } else {
+        isDark = result.overflowScoutDarkMode;
+        localStorage.setItem('overflow-scout-dark-mode', isDark.toString());
+      }
+      
+      applyDarkMode(isDark);
+      
+      // Update toggle button
+      const darkModeToggle = panel.querySelector('#dark-mode-toggle');
+      if (darkModeToggle) {
+        darkModeToggle.textContent = isDark ? '☀️' : '🌙';
+      }
+    });
+  };
   
-  // Initialize toggle button to match current theme
-  setTimeout(() => {
-    const darkModeToggle = panel.querySelector('#dark-mode-toggle');
-    if (darkModeToggle) {
-      darkModeToggle.textContent = shouldUseDarkMode ? '☀️' : '🌙';
-    }
-  }, 0);
+  initializeTheme();
   
   // Add close handler
   const closeBtn = panel.querySelector('#close-panel');
@@ -982,12 +997,19 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
     if (darkModeToggle) {
       darkModeToggle.textContent = isDark ? '☀️' : '🌙';
     }
-    
-    // Notify other contexts (like popup) that theme changed
-    window.postMessage({ 
-      type: 'OVERFLOW_SCOUT_THEME_CHANGED',
-      payload: { isDark }
-    }, '*');
+  });
+  
+  // Listen for theme changes from chrome.storage (popup or other tabs)
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.overflowScoutDarkMode) {
+      const isDark = changes.overflowScoutDarkMode.newValue;
+      applyDarkMode(isDark);
+      
+      const toggle = panel.querySelector('#dark-mode-toggle');
+      if (toggle) {
+        toggle.textContent = isDark ? '☀️' : '🌙';
+      }
+    }
   });
   
   // Add rescan handler

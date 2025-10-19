@@ -89,25 +89,48 @@ class PopupController {
     const themeToggle = document.getElementById('theme-toggle');
     const themeIcon = themeToggle?.querySelector('.theme-icon');
     
-    // Check user preference or system preference
-    const savedTheme = localStorage.getItem('overflow-scout-dark-mode');
-    const prefersDark = savedTheme === null 
-      ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      : savedTheme === 'true';
+    // Function to update UI
+    const updateUI = (isDark: boolean) => {
+      if (isDark) {
+        document.body.classList.add('dark-mode');
+        if (themeIcon) themeIcon.textContent = '☀️';
+      } else {
+        document.body.classList.remove('dark-mode');
+        if (themeIcon) themeIcon.textContent = '🌙';
+      }
+    };
     
-    if (prefersDark) {
-      document.body.classList.add('dark-mode');
-      if (themeIcon) themeIcon.textContent = '☀️';
-    }
+    // Initialize from chrome.storage (synced across all contexts)
+    chrome.storage.local.get(['overflowScoutDarkMode'], (result) => {
+      let isDark = false;
+      
+      if (result.overflowScoutDarkMode === undefined) {
+        // First time - use system preference
+        isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        chrome.storage.local.set({ overflowScoutDarkMode: isDark });
+      } else {
+        isDark = result.overflowScoutDarkMode;
+      }
+      
+      updateUI(isDark);
+    });
+    
+    // Listen for storage changes from other contexts
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && changes.overflowScoutDarkMode) {
+        updateUI(changes.overflowScoutDarkMode.newValue);
+      }
+    });
     
     // Toggle handler
     themeToggle?.addEventListener('click', async () => {
-      const isDark = document.body.classList.toggle('dark-mode');
-      if (themeIcon) themeIcon.textContent = isDark ? '☀️' : '🌙';
-      // Use same key as sidebar for sync
-      localStorage.setItem('overflow-scout-dark-mode', isDark.toString());
+      const isDark = !document.body.classList.contains('dark-mode');
+      updateUI(isDark);
       
-      // Notify sidebar to update its theme
+      // Save to chrome.storage (automatically syncs to all contexts)
+      chrome.storage.local.set({ overflowScoutDarkMode: isDark });
+      
+      // Also notify content script immediately
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab?.id) {
@@ -117,8 +140,7 @@ class PopupController {
           });
         }
       } catch (error) {
-        // Content script may not be loaded, that's ok
-        Logger.debug('Failed to sync theme to sidebar:', error);
+        Logger.debug('Failed to notify content script:', error);
       }
     });
   }
