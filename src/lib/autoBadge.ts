@@ -691,8 +691,11 @@ function removeManualCard(card: HTMLElement, elementId: string): void {
 export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => void): void {
   removeResultsPanel();
   
-  // Show onboarding on first use
-  setTimeout(() => showOnboardingTooltip(), 500);
+  // Show onboarding on first use (after panel is fully rendered)
+  setTimeout(() => {
+    console.log('[Overflow Scout] Attempting to show onboarding...');
+    showOnboardingTooltip();
+  }, 600);
   
   const panel = document.createElement('div');
   panel.id = PANEL_ID;

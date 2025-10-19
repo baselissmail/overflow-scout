@@ -18,7 +18,16 @@ export function resetOnboarding(): void {
 }
 
 export function showOnboardingTooltip(): void {
-  if (!shouldShowOnboarding()) return;
+  if (!shouldShowOnboarding()) {
+    console.log('[Overflow Scout] Onboarding already completed');
+    return;
+  }
+
+  // Remove any existing onboarding tooltips
+  const existing = document.getElementById('overflow-scout-onboarding');
+  if (existing) existing.remove();
+
+  console.log('[Overflow Scout] Showing onboarding modal');
 
   const tooltip = document.createElement('div');
   tooltip.id = 'overflow-scout-onboarding';
@@ -69,7 +78,7 @@ export function showOnboardingTooltip(): void {
         <div style="display: flex; gap: 12px; align-items: start;">
           <div style="flex-shrink: 0; width: 28px; height: 28px; background: rgba(255,255,255,0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700;">1</div>
           <div style="flex: 1; padding-top: 4px;">
-            Click <strong>🔄 Scan</strong> to automatically detect overflow issues
+            Click <strong>🔄 Scan</strong> to detect overflow issues
           </div>
         </div>
         <div style="display: flex; gap: 12px; align-items: start;">
@@ -81,7 +90,7 @@ export function showOnboardingTooltip(): void {
         <div style="display: flex; gap: 12px; align-items: start;">
           <div style="flex-shrink: 0; width: 28px; height: 28px; background: rgba(255,255,255,0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700;">3</div>
           <div style="flex: 1; padding-top: 4px;">
-            Use <strong>📸 Capture</strong> to screenshot issues for bug reports
+            Use <strong>📸 Capture</strong> to screenshot issues
           </div>
         </div>
       </div>
