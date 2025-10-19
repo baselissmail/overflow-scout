@@ -1129,7 +1129,8 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
           const elementId = cardElement.dataset.elementId;
           if (elementId) {
             const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
-            if (element && element.dataset.overflowScoutOriginal) {
+            // Skip if element is inside the extension panel
+            if (element && element.dataset.overflowScoutOriginal && !element.closest('#overflow-scout-results-panel')) {
               // Only revert the text
               element.textContent = element.dataset.overflowScoutOriginal;
               revertedCount++;
@@ -1179,7 +1180,8 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
         } else if (cardElement.hasAttribute('data-issue-card')) {
           // Revert auto-scan issue
           const issue = (cardElement as any).__overflowScoutIssue;
-          if (issue?.element && issue.element.dataset.overflowScoutOriginal) {
+          // Skip if element is inside the extension panel
+          if (issue?.element && issue.element.dataset.overflowScoutOriginal && !issue.element.closest('#overflow-scout-results-panel')) {
             issue.element.textContent = issue.element.dataset.overflowScoutOriginal;
             revertedCount++;
             
@@ -2511,14 +2513,16 @@ function testAllElements(panel: HTMLElement): void {
         const elementId = (card as HTMLElement).dataset.elementId;
         const element = document.querySelector(`[data-overflow-scout-id="${elementId}"]`) as HTMLElement;
         
-        if (element) {
+        // Skip if element is inside the extension panel
+        if (element && !element.closest('#overflow-scout-results-panel')) {
           testElementWithCustomText(element, randomText, card as HTMLElement);
           tested++;
         }
       } else {
         const issueElement = (card as any).__overflowScoutElement;
         
-        if (issueElement) {
+        // Skip if element is inside the extension panel
+        if (issueElement && !issueElement.closest('#overflow-scout-results-panel')) {
           testElementWithCustomText(issueElement, randomText, card as HTMLElement);
           tested++;
         }
