@@ -6,6 +6,15 @@
   box-sizing: border-box;
 }
 
+/* LinkedIn hover effect */
+#linkedin-link:hover {
+  color: #0a66c2 !important;
+}
+
+#linkedin-link:hover svg {
+  fill: #0a66c2;
+}
+
 :root {
   /* Light mode colors */
   --primary: #3b82f6;
