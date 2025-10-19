@@ -939,7 +939,7 @@ export function createResultsPanel(issues: OverflowIssue[], _onClose?: () => voi
       background: rgba(255,255,255,0.1) !important;
       border: 1px solid rgba(255,255,255,0.15) !important;
       color: white !important;
-      padding: 6px 10px !important;
+      padding: 6px 8px !important;
       border-radius: 4px !important;
       font-size: 10px !important;
       font-weight: 600 !important;
