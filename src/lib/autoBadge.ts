@@ -1588,25 +1588,25 @@ function revertElement(element: HTMLElement, card: HTMLElement): void {
     card.querySelectorAll('.test-result').forEach(r => r.remove());
     
     // Show success message
-    const message = document.createElement('div');
-    message.style.cssText = `
+    const result = document.createElement('div');
+    result.style.cssText = `
       background: #f0fdf4;
       border: 1px solid #bbf7d0;
       border-radius: 4px;
       padding: 8px;
       margin-top: 8px;
       font-size: 11px;
-      color: #16a34a;
       font-weight: 600;
+      color: #16a34a;
     `;
-    message.textContent = '✅ Reverted to original text';
-    message.className = 'test-result';
-    card.appendChild(message);
+    result.textContent = '✅ Reverted to original text';
+    result.className = 'test-result';
+    card.appendChild(result);
     
     setTimeout(() => {
-      message.style.transition = 'opacity 0.3s';
-      message.style.opacity = '0';
-      setTimeout(() => message.remove(), 300);
+      result.style.transition = 'opacity 0.3s';
+      result.style.opacity = '0';
+      setTimeout(() => result.remove(), 300);
     }, 2000);
   }
 }

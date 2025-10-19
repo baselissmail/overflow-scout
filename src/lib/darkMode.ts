@@ -121,9 +121,9 @@ export function injectDarkModeStyles(): void {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3) !important;
     }
     
-    /* Card text - optimal readability */
-    #overflow-scout-results-panel.${DARK_MODE_CLASS} [data-issue-card] > div,
-    #overflow-scout-results-panel.${DARK_MODE_CLASS} [data-manual-card] > div {
+    /* Card text - optimal readability (exclude test-result) */
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [data-issue-card] > div:not(.test-result),
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [data-manual-card] > div:not(.test-result) {
       color: #f1f5f9 !important; /* slate-100 */
       font-weight: 500 !important;
     }
@@ -144,29 +144,29 @@ export function injectDarkModeStyles(): void {
     }
     
     /* Blue accent colors - WCAG AAA compliant */
-    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #2563eb"],
-    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #3b82f6"] {
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #2563eb"]:not(.test-result):not(.test-result *),
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #3b82f6"]:not(.test-result):not(.test-result *) {
       color: #93c5fd !important; /* blue-300 - 8.6:1 contrast */
     }
     
     /* Headings - maximum contrast and readability */
-    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #111827"] {
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #111827"]:not(.test-result):not(.test-result *) {
       color: #f8fafc !important; /* slate-50 - 16:1 contrast */
       font-weight: 600 !important;
     }
     
-    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #374151"] {
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #374151"]:not(.test-result):not(.test-result *) {
       color: #e2e8f0 !important; /* slate-200 - 12:1 contrast */
       font-weight: 500 !important;
     }
     
     /* Gray text hierarchy - all meeting WCAG AAA */
-    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #6b7280"] {
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #6b7280"]:not(.test-result):not(.test-result *) {
       color: #cbd5e1 !important; /* slate-300 - 8.5:1 */
       font-weight: 400 !important;
     }
     
-    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #9ca3af"] {
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="color: #9ca3af"]:not(.test-result):not(.test-result *) {
       color: #e2e8f0 !important; /* slate-200 - 12:1 */
       font-weight: 400 !important;
     }
@@ -256,13 +256,17 @@ export function injectDarkModeStyles(): void {
     #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="background: #fef2f2"] {
       background: #7f1d1d !important; /* red-900 */
       border-color: #dc2626 !important; /* red-600 */
-      color: #fecaca !important; /* red-200 */
     }
     
     #overflow-scout-results-panel.${DARK_MODE_CLASS} [style*="background: #f0fdf4"] {
       background: #14532d !important; /* green-900 */
       border-color: #22c55e !important; /* green-500 */
-      color: #bbf7d0 !important; /* green-200 */
+    }
+    
+    /* Test result colors - keep ALL original light mode colors */
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} .test-result,
+    #overflow-scout-results-panel.${DARK_MODE_CLASS} .test-result * {
+      /* Don't override any colors in test results - preserve semantic meaning */
     }
     
     /* Empty state */
