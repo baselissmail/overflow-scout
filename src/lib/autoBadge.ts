@@ -184,16 +184,16 @@ const PRESET_POOLS = {
     'investor.relations@corporate-finance-group.invest'
   ],
   longText: [
-    'This is an exceptionally long piece of text designed to test how user interfaces handle extended content that spans multiple lines and may cause layout issues.',
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.',
-    'In a world where information flows rapidly and continuously, the ability to process and display extensive textual content efficiently becomes increasingly important for modern applications.',
-    'The quick brown fox jumps over the lazy dog multiple times while demonstrating how various typographic systems handle extended sequences of characters in different contextual scenarios.',
-    'Product Description: Our revolutionary new device features cutting-edge technology, advanced capabilities, premium materials, exceptional performance, and an innovative design that sets new industry standards.',
-    'Customer testimonial: I have been using this service for several years now and I must say that the quality, reliability, and customer support have consistently exceeded my expectations time and time again.',
-    'Legal disclaimer: By using this software, you acknowledge and agree to the terms and conditions set forth herein, including but not limited to limitations of liability, warranty disclaimers, and dispute resolution procedures.',
-    'Technical specifications: Processor speed 3.5GHz base frequency, 5.0GHz turbo boost, 8 cores, 16 threads, 32MB cache, integrated graphics, support for DDR5-4800 memory, PCIe 5.0 compatibility.',
-    'Breaking news update: Researchers at the international scientific conference announced groundbreaking discoveries that could potentially revolutionize our understanding of fundamental principles.',
-    'Installation instructions: Before beginning the setup process, please ensure that all prerequisite software components are properly installed and configured according to the detailed documentation provided.',
+    'This is an exceptionally long piece of text specifically designed to rigorously test how user interfaces handle extended content that spans multiple lines, potentially causing overflow, truncation, or other layout issues in constrained spaces with limited width or height restrictions.',
+    'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident.',
+    'In a world where information flows rapidly and continuously across multiple channels and platforms, the ability to process, display, and manage extensive textual content efficiently and elegantly becomes increasingly important for modern web applications, mobile interfaces, and desktop software solutions.',
+    'The quick brown fox jumps over the lazy dog multiple times in succession while simultaneously demonstrating how various typographic rendering systems and layout algorithms handle extended sequences of alphanumeric characters in different contextual scenarios, edge cases, and viewport configurations.',
+    'Product Description: Our revolutionary new flagship device features cutting-edge quantum processing technology, advanced machine learning capabilities, military-grade premium aerospace materials, exceptional real-world performance metrics, innovative ergonomic industrial design, breakthrough battery efficiency, professional-grade camera systems, and sets entirely new industry standards for excellence.',
+    'Customer testimonial: I have been continuously using this exceptional service platform for several years now across multiple projects and deployments, and I must enthusiastically say that the outstanding quality, unwavering reliability, comprehensive documentation, responsive customer support team, and innovative feature releases have consistently exceeded my highest expectations time and time again without fail.',
+    'Legal disclaimer: By accessing, downloading, installing, or using this software application or any of its associated services, you explicitly acknowledge that you have read, understood, and agree to be legally bound by all terms and conditions set forth herein, including but not limited to comprehensive limitations of liability, express and implied warranty disclaimers, mandatory arbitration clauses, and alternative dispute resolution procedures.',
+    'Technical specifications: Multi-core processor with 3.5GHz base frequency and intelligent 5.0GHz turbo boost technology, 8 high-performance cores with simultaneous multithreading supporting 16 parallel threads, 32MB shared L3 cache memory, integrated advanced graphics processing unit, native support for high-speed DDR5-4800 memory modules, PCIe 5.0 compatibility for next-generation peripherals.',
+    'Breaking news update: Distinguished researchers and leading scientists at the prestigious international scientific conference and symposium announced multiple groundbreaking discoveries and revolutionary findings that could potentially and fundamentally revolutionize our comprehensive understanding of core scientific principles, theoretical frameworks, and practical applications across numerous disciplines.',
+    'Installation instructions: Before beginning the comprehensive step-by-step setup and configuration process, please carefully ensure that all mandatory prerequisite software components, system libraries, runtime environments, and dependency packages are properly downloaded, installed, verified, and correctly configured according to the detailed technical documentation, troubleshooting guides, and best practices provided.',
     'Company mission statement: We strive to deliver innovative solutions that empower individuals and organizations to achieve their goals through technology, collaboration, and sustainable practices.',
     'Error message details: An unexpected exception occurred during the execution of the requested operation due to insufficient system resources or conflicting configuration settings that require immediate attention.',
     'Privacy policy notice: We are committed to protecting your personal information and will only collect, process, and store data in accordance with applicable regulations and industry best practices.',
@@ -2509,13 +2509,11 @@ function testAllElements(panel: HTMLElement): void {
   }
   
   let tested = 0;
-  const presetTypes: Array<keyof typeof PRESET_POOLS> = ['longName', 'product', 'url', 'email', 'longText'];
   
   cards.forEach((card, index) => {
     setTimeout(() => {
-      const randomType = presetTypes[Math.floor(Math.random() * presetTypes.length)];
-      const randomPool = PRESET_POOLS[randomType];
-      const randomText = randomPool[Math.floor(Math.random() * randomPool.length)];
+      // Always use longText for "Test All" to stress test properly
+      const randomText = PRESET_POOLS.longText[Math.floor(Math.random() * PRESET_POOLS.longText.length)];
       
       const textarea = card.querySelector('textarea') as HTMLTextAreaElement;
       if (textarea) {
