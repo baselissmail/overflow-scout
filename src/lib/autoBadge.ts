@@ -1425,6 +1425,9 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
     });
   });
   
+  // Store element reference on card for batch operations
+  (card as any).__overflowScoutElement = issue.element;
+  
   return card;
 }
 
@@ -2095,8 +2098,14 @@ function testAllElements(panel: HTMLElement): void {
   if (!content) return;
   
   const cards = content.querySelectorAll('[data-issue-card], [data-manual-card]');
-  let tested = 0;
+  const totalCards = cards.length;
   
+  if (totalCards === 0) {
+    showToast('❌ No elements found to test', 'error');
+    return;
+  }
+  
+  let tested = 0;
   const presetTypes: Array<keyof typeof PRESET_POOLS> = ['longName', 'product', 'url', 'email', 'longText'];
   
   cards.forEach((card, index) => {
@@ -2130,13 +2139,10 @@ function testAllElements(panel: HTMLElement): void {
         }
       }
       
+      // Show toast after the last card is processed
       if (index === cards.length - 1) {
         setTimeout(() => {
-          if (tested > 0) {
-            showToast(`✅ Tested ${tested} elements with random text!`, 'success');
-          } else {
-            showToast('❌ No elements found to test', 'error');
-          }
+          showToast(`✅ Tested ${totalCards} elements with random text!`, 'success');
         }, 200);
       }
     }, index * 150);
@@ -2151,8 +2157,22 @@ function revertAllElements(panel: HTMLElement): void {
   if (!content) return;
   
   const cards = content.querySelectorAll('[data-issue-card], [data-manual-card]');
-  let reverted = 0;
+  const revertableCards: HTMLButtonElement[] = [];
   
+  // Find all cards that can be reverted
+  cards.forEach((card) => {
+    const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
+    if (revertBtn && !revertBtn.disabled) {
+      revertableCards.push(revertBtn);
+    }
+  });
+  
+  if (revertableCards.length === 0) {
+    showToast('No elements to revert', 'error');
+    return;
+  }
+  
+  // Click all revert buttons and update textareas
   cards.forEach((card) => {
     const revertBtn = card.querySelector('.revert-btn, .revert-btn-manual') as HTMLButtonElement;
     if (revertBtn && !revertBtn.disabled) {
@@ -2177,16 +2197,10 @@ function revertAllElements(panel: HTMLElement): void {
         
         autoExpandTextarea(textarea);
       }
-      
-      reverted++;
     }
   });
   
-  if (reverted > 0) {
-    showToast(`↩️ Reverted ${reverted} elements!`, 'success');
-  } else {
-    showToast('No elements to revert', 'error');
-  }
+  showToast(`↩️ Reverted ${revertableCards.length} elements!`, 'success');
 }
 
 /**
