@@ -52,6 +52,24 @@ class BackgroundService {
         };
 
       default:
+        // Check for custom message types (like screenshot capture)
+        if ((message as any).type === 'CAPTURE_SCREENSHOT' && sender.tab?.id) {
+          return new Promise((resolve) => {
+            chrome.tabs.captureVisibleTab(
+              sender.tab!.windowId,
+              { format: 'png' },
+              (dataUrl) => {
+                if (chrome.runtime.lastError) {
+                  Logger.error('Screenshot error:', chrome.runtime.lastError);
+                  resolve({ error: chrome.runtime.lastError.message });
+                } else {
+                  resolve({ dataUrl });
+                }
+              }
+            );
+          });
+        }
+        
         Logger.warn('Unknown message type:', message.type);
         return { error: 'Unknown message type' };
     }

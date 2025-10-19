@@ -1210,8 +1210,8 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
     </div>
     
     <div style="display: flex; gap: 4px; margin-top: 8px;">
-      <button class="jump-btn" data-issue-index="${index}" style="
-        background: #3b82f6;
+      <button class="screenshot-btn" style="
+        background: #8b5cf6;
         color: white;
         border: none;
         padding: 6px 12px;
@@ -1220,8 +1220,19 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
         font-weight: 600;
         cursor: pointer;
         flex: 1;
-      ">Jump to Element</button>
-      <button class="remove-card-btn" data-issue-index="${index}" style="
+      ">📸 Capture</button>
+      <button class="jump-btn" style="
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        flex: 1;
+      ">Jump</button>
+      <button class="remove-card-btn" style="
         background: #ef4444;
         color: white;
         border: none;
@@ -1230,6 +1241,7 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
         font-size: 11px;
         font-weight: 600;
         cursor: pointer;
+        flex: 1;
       ">Remove</button>
     </div>
   `;
@@ -1298,6 +1310,15 @@ function createIssueCard(issue: OverflowIssue, index: number): HTMLElement {
   // Remove card handler
   card.querySelector('.remove-card-btn')?.addEventListener('click', () => {
     removeCard(card, issue);
+  });
+  
+  // Screenshot handler
+  card.querySelector('.screenshot-btn')?.addEventListener('click', async () => {
+    await captureElementScreenshot(issue.element, {
+      selector: issue.selector,
+      testText: issue.element.textContent?.substring(0, 40) || '',
+      severity: issue.severity
+    });
   });
   
   return card;
@@ -1425,6 +1446,244 @@ function showTestResult(isOverflowing: boolean, customText: string, card: HTMLEl
   result.className = 'test-result';
   
   card.appendChild(result);
+}
+
+/**
+ * Capture screenshot of element with visual indicator
+ */
+async function captureElementScreenshot(
+  element: HTMLElement, 
+  metadata: { selector: string; testText: string; severity: string }
+): Promise<void> {
+  try {
+    // Scroll element into view (use auto for instant scroll)
+    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Create visual indicator overlay
+    const indicator = document.createElement('div');
+    indicator.id = 'overflow-scout-screenshot-indicator';
+    indicator.style.cssText = `
+      position: absolute;
+      border: 4px solid #dc2626;
+      background: rgba(220, 38, 38, 0.1);
+      pointer-events: none;
+      z-index: 2147483645;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+      transition: all 0.2s;
+    `;
+    
+    const rect = element.getBoundingClientRect();
+    indicator.style.top = `${rect.top + window.scrollY}px`;
+    indicator.style.left = `${rect.left + window.scrollX}px`;
+    indicator.style.width = `${rect.width}px`;
+    indicator.style.height = `${rect.height}px`;
+    
+    // Add label
+    const label = document.createElement('div');
+    label.style.cssText = `
+      position: absolute;
+      top: -32px;
+      left: 0;
+      background: #dc2626;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    `;
+    label.textContent = `⚠️ Overflow Issue`;
+    indicator.appendChild(label);
+    
+    document.body.appendChild(indicator);
+    
+    // Wait for render and any animations to complete
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Capture screenshot using Chrome API
+    chrome.runtime.sendMessage(
+      { type: 'CAPTURE_SCREENSHOT' },
+      async (response) => {
+        if (response?.dataUrl) {
+          // Remove indicator
+          indicator.remove();
+          
+          // Show action menu
+          await showScreenshotActionMenu(response.dataUrl, metadata);
+        } else {
+          indicator.remove();
+          showToast('❌ Screenshot failed. Please try again.', 'error');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Screenshot error:', error);
+    showToast('❌ Screenshot failed. Please try again.', 'error');
+  }
+}
+
+/**
+ * Show action menu for screenshot
+ */
+async function showScreenshotActionMenu(
+  dataUrl: string,
+  metadata: { selector: string; testText: string; severity: string }
+): Promise<void> {
+  const menu = document.createElement('div');
+  menu.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    z-index: 2147483647;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-width: 320px;
+  `;
+  
+  menu.innerHTML = `
+    <div style="margin-bottom: 16px;">
+      <div style="font-size: 16px; font-weight: 700; color: #1f2937; margin-bottom: 8px;">
+        📸 Screenshot Captured
+      </div>
+      <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
+        Element: <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px;">${metadata.selector}</code>
+      </div>
+      <img src="${dataUrl}" style="width: 100%; border-radius: 6px; border: 1px solid #e5e7eb;">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <button id="copy-screenshot" style="
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      ">
+        📋 Copy to Clipboard
+      </button>
+      <button id="download-screenshot" style="
+        background: #8b5cf6;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      ">
+        💾 Download PNG
+      </button>
+      <button id="close-screenshot-menu" style="
+        background: transparent;
+        color: #6b7280;
+        border: 1px solid #e5e7eb;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      ">
+        Cancel
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(menu);
+  
+  // Copy to clipboard handler
+  menu.querySelector('#copy-screenshot')?.addEventListener('click', async () => {
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      menu.remove();
+      showToast('✅ Screenshot copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Copy failed:', error);
+      showToast('❌ Copy failed. Try download instead.', 'error');
+    }
+  });
+  
+  // Download handler
+  menu.querySelector('#download-screenshot')?.addEventListener('click', () => {
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.download = `overflow-issue-${timestamp}.png`;
+    link.href = dataUrl;
+    link.click();
+    menu.remove();
+    showToast('✅ Screenshot downloaded!', 'success');
+  });
+  
+  // Close handler
+  menu.querySelector('#close-screenshot-menu')?.addEventListener('click', () => {
+    menu.remove();
+  });
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message: string, type: 'success' | 'error' = 'success'): void {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#10b981' : '#ef4444'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 2147483647;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    animation: slideInUp 0.3s ease-out;
+  `;
+  toast.textContent = message;
+  
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInUp {
+      from {
+        transform: translateY(100px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.transition = 'all 0.3s';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(20px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 /**
