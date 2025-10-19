@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Overflow Scout",
   "version": "0.1.0",
-  "description": "Professional text overflow testing tool. Auto-scan pages or test elements interactively with realistic content.",
+  "description": "Detect and document text-overflow issues with auto-scan and interactive testing.",
   "author": "Basel Issmail",
   "homepage_url": "https://www.linkedin.com/in/basel-issmail/",
   "permissions": [
