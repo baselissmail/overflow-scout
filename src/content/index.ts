@@ -25,7 +25,11 @@ import { PerformanceMonitor } from '@/lib/performanceMonitor';
 import { InteractiveModeManager } from '@/lib/interactiveMode';
 import { generateIntelligentText } from '@/lib/intelligentTextGenerator';
 import { AutoScanner } from '@/lib/autoScanner';
-import { createAutoBadge, createResultsPanel, removeResultsPanel, isPanelOpen } from '@/lib/autoBadge';
+import {
+  createResultsPanel,
+  updateResultsPanel,
+  removeResultsPanel,
+} from '@/lib/autoBadge';
 
 /**
  * Cache structure for storing original element state
@@ -47,7 +51,6 @@ class OverflowScoutContent {
   private currentMode = TextPatternType.DEFAULT; // Phase 7: Default to English
   private interactiveMode = new InteractiveModeManager(); // Phase 9: Point & Click
   private varietyCounter = 0; // Phase 9: For varied text generation
-  private autoScanner = new AutoScanner(); // Phase 10: Auto-scan
 
   constructor() {
     this.init();
@@ -170,49 +173,32 @@ class OverflowScoutContent {
   }
 
   /**
-   * Phase 10: Run auto-scan and show results
+   * Phase 10: Run auto-scan for overflow issues
    */
-  private async runAutoScan(): Promise<{ success: boolean; issueCount: number }> {
+  private async runAutoScan(): Promise<void> {
     try {
-      Logger.info('Running auto-scan...');
+      Logger.info('Starting auto-scan...');
       
-      // Run the scan
-      const issues = await this.autoScanner.scan({
-        sampleSize: 100,
-        includeHidden: false,
-      });
+      // Run scanner
+      const scanner = new AutoScanner();
+      const issues = await scanner.scan();
       
-      Logger.info(`Auto-scan complete: ${issues.length} issues found`);
+      Logger.info(`Auto-scan complete: found ${issues.length} issues`);
       
-      // Show badge with count
-      createAutoBadge(issues.length, () => {
-        // Toggle panel on click
-        if (isPanelOpen()) {
-          removeResultsPanel();
-        } else {
-          createResultsPanel(issues, () => {
-            removeResultsPanel();
-          });
-        }
-      });
+      // Check if panel is already open
+      const panelExists = document.getElementById('overflow-scout-results-panel');
       
-      // Auto-open panel if issues found
-      if (issues.length > 0) {
+      if (panelExists) {
+        // Panel is already open, just update the content without animation
+        updateResultsPanel(issues);
+      } else {
+        // Create new panel with animation
         createResultsPanel(issues, () => {
           removeResultsPanel();
         });
       }
-      
-      return {
-        success: true,
-        issueCount: issues.length,
-      };
     } catch (error) {
       Logger.error('Auto-scan failed:', error);
-      return {
-        success: false,
-        issueCount: 0,
-      };
     }
   }
 
@@ -224,6 +210,14 @@ class OverflowScoutContent {
       const active = payload?.active || false;
       
       if (active) {
+        // Open sidebar immediately when activating interactive mode (only if not already open)
+        const panelExists = document.getElementById('overflow-scout-results-panel');
+        if (!panelExists) {
+          createResultsPanel([], () => {
+            removeResultsPanel();
+          });
+        }
+        
         // Activate interactive mode - click to add element to sidebar
         this.interactiveMode.activate((element: HTMLElement, isDoubleClick: boolean) => {
           // Only process single clicks (ignore double clicks for now)

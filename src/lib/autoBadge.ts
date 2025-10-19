@@ -323,6 +323,12 @@ function addManualElement(elementData: any): void {
   if (panel) {
     const content = panel.querySelector('[data-content-area]') as HTMLElement;
     if (content) {
+      // Remove "All Good" empty state if it exists
+      const emptyState = content.querySelector('[data-empty-state]');
+      if (emptyState) {
+        emptyState.remove();
+      }
+      
       // Find actual element
       const element = document.querySelector(`[data-overflow-scout-id="${elementData.elementId}"]`) as HTMLElement;
       if (element) {
@@ -447,10 +453,17 @@ export function createResultsPanel(issues: OverflowIssue[], onClose: () => void)
     align-items: center;
   `;
   
+  const hasManualElements = manuallyAddedElements.size > 0;
+  const totalCount = issues.length + manuallyAddedElements.size;
+  
   header.innerHTML = `
     <div>
-      <div style="font-size: 18px; font-weight: 700;">Overflow Issues</div>
-      <div style="font-size: 12px; opacity: 0.9;">${issues.length} found on this page</div>
+      <div style="font-size: 18px; font-weight: 700;">
+        ${totalCount > 0 ? 'Overflow Testing' : 'Scan Complete'}
+      </div>
+      <div style="font-size: 12px; opacity: 0.9;">
+        ${totalCount > 0 ? `${issues.length} auto-scanned${hasManualElements ? ` + ${manuallyAddedElements.size} manual` : ''}` : 'No overflow issues found!'}
+      </div>
     </div>
     <button id="close-panel" style="
       background: rgba(255,255,255,0.2);
@@ -491,6 +504,29 @@ export function createResultsPanel(issues: OverflowIssue[], onClose: () => void)
     const card = createIssueCard(issue, index + manuallyAddedElements.size);
     content.appendChild(card);
   });
+  
+  // If no issues and no manual elements, show success message
+  if (issues.length === 0 && manuallyAddedElements.size === 0) {
+    const emptyState = document.createElement('div');
+    emptyState.setAttribute('data-empty-state', 'true');
+    emptyState.style.cssText = `
+      padding: 40px 20px;
+      text-align: center;
+      color: #10b981;
+    `;
+    
+    emptyState.innerHTML = `
+      <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #059669;">
+        All Good!
+      </div>
+      <div style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+        No overflow issues detected on this page.<br/>
+        Your text elements are handling long content properly!
+      </div>
+    `;
+    
+    content.appendChild(emptyState);
+  }
   
   panel.appendChild(header);
   panel.appendChild(content);
@@ -865,6 +901,93 @@ function showTestResult(isOverflowing: boolean, customText: string, card: HTMLEl
   result.className = 'test-result';
   
   card.appendChild(result);
+}
+
+/**
+ * Update existing results panel with new issues (no animation)
+ */
+export function updateResultsPanel(issues: OverflowIssue[]): void {
+  const panel = document.getElementById(PANEL_ID);
+  if (!panel) return;
+  
+  // Update header
+  const header = panel.querySelector('div:first-child');
+  if (header) {
+    const hasManualElements = manuallyAddedElements.size > 0;
+    const totalCount = issues.length + manuallyAddedElements.size;
+    
+    header.innerHTML = `
+      <div>
+        <div style="font-size: 18px; font-weight: 700;">
+          ${totalCount > 0 ? 'Overflow Testing' : 'Scan Complete'}
+        </div>
+        <div style="font-size: 12px; opacity: 0.9;">
+          ${totalCount > 0 ? `${issues.length} auto-scanned${hasManualElements ? ` + ${manuallyAddedElements.size} manual` : ''}` : 'No overflow issues found!'}
+        </div>
+      </div>
+      <button id="close-panel" style="
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">×</button>
+    `;
+    
+    // Re-attach close handler
+    const closeBtn = header.querySelector('#close-panel');
+    closeBtn?.addEventListener('click', () => removeResultsPanel());
+  }
+  
+  // Update content
+  const content = panel.querySelector('[data-content-area]') as HTMLElement;
+  if (content) {
+    // Clear all auto-scan cards (keep manual ones)
+    const autoCards = content.querySelectorAll('[data-issue-card]');
+    autoCards.forEach(card => card.remove());
+    
+    // Clear empty state
+    const emptyState = content.querySelector('[data-empty-state]');
+    if (emptyState) {
+      emptyState.remove();
+    }
+    
+    // Add new auto-scan results after manual cards
+    issues.forEach((issue, index) => {
+      const card = createIssueCard(issue, index + manuallyAddedElements.size);
+      card.setAttribute('data-issue-card', 'true');
+      content.appendChild(card);
+    });
+    
+    // If no issues and no manual elements, show success message
+    if (issues.length === 0 && manuallyAddedElements.size === 0) {
+      const newEmptyState = document.createElement('div');
+      newEmptyState.setAttribute('data-empty-state', 'true');
+      newEmptyState.style.cssText = `
+        padding: 40px 20px;
+        text-align: center;
+        color: #10b981;
+      `;
+      
+      newEmptyState.innerHTML = `
+        <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #059669;">
+          All Good!
+        </div>
+        <div style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+          No overflow issues detected on this page.<br/>
+          Your text elements are handling long content properly!
+        </div>
+      `;
+      
+      content.appendChild(newEmptyState);
+    }
+  }
 }
 
 /**
