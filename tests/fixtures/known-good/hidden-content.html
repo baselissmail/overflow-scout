@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Content that is not rendered</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="display: none; width: 50px; white-space: nowrap; overflow: hidden">
+      Hidden with display none and very long text
+    </div>
+    <div
+      class="case"
+      style="visibility: hidden; width: 50px; white-space: nowrap; overflow: hidden"
+    >
+      Invisible but laid out, with very long text
+    </div>
+    <div class="case" style="position: relative; width: 100px; overflow: hidden">
+      <div style="opacity: 0; white-space: nowrap">Transparent tooltip text that is too long</div>
+    </div>
+    <details class="case" style="width: 200px">
+      <summary>More</summary>
+      <div style="white-space: nowrap; overflow: hidden; width: 60px">
+        Details content that is long and collapsed
+      </div>
+    </details>
+    <div hidden>Hidden attribute content that is long</div>
+    <!-- Collapsed accordion panel -->
+    <div class="case" style="height: 0; overflow: hidden; width: 100px">
+      <p style="margin: 0">Collapsed accordion panel with a long paragraph of text inside it.</p>
+    </div>
+  </body>
+</html>

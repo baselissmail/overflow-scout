@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>content-visibility: auto</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Below the fold, rendering of this section is skipped until it scrolls into view.</p>
+    <section
+      style="margin-top: 1500px; content-visibility: auto; contain-intrinsic-size: auto 200px"
+    >
+      <div class="truncate" style="width: 150px" data-expect="truncated">
+        Offscreen section title that is long
+      </div>
+    </section>
+  </body>
+</html>

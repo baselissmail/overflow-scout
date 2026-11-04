@@ -141,6 +141,8 @@ export default defineConfig(
     files: ['**/*.test.{ts,tsx}', 'tests/**'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
+      // Suites print metrics (precision/recall, timings) on purpose.
+      'no-console': 'off',
     },
   },
 

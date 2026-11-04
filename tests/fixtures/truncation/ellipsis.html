@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ellipsis truncation</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case truncate" style="width: 150px" data-expect="truncated">
+      Quarterly revenue report for all regions
+    </div>
+    <div class="case truncate" style="width: 300px" data-expect="ok">Revenue report</div>
+    <p class="case">
+      <span
+        class="truncate"
+        style="display: inline-block; max-width: 140px; vertical-align: top"
+        data-expect="truncated"
+        >jean-baptiste.delacroix@example.com</span
+      >
+    </p>
+    <!-- Fixed header -->
+    <header style="position: fixed; top: 0; right: 0; width: 180px; background: #fff">
+      <h1 class="truncate" style="font-size: 18px; margin: 0" data-expect="truncated">
+        Project Phoenix — sprint planning board
+      </h1>
+    </header>
+  </body>
+</html>

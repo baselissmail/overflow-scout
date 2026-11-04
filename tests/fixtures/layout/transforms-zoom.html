@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Transforms and zoom</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case" style="transform: scale(0.8); transform-origin: top left; width: 300px">
+      <div class="truncate" style="width: 150px" data-expect="truncated">
+        Scaled container with a long title
+      </div>
+    </div>
+    <div class="case" style="zoom: 1.25; width: 300px">
+      <div class="truncate" style="width: 120px" data-expect="truncated">
+        Zoomed container with a long title
+      </div>
+    </div>
+    <div
+      class="case"
+      style="transform: scale(1.5); transform-origin: top left; width: 300px; margin-bottom: 60px"
+    >
+      <div class="truncate" style="width: 250px" data-expect="ok">Fits</div>
+    </div>
+  </body>
+</html>

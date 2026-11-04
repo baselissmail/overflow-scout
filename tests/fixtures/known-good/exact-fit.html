@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Boxes sized to their content</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case" style="width: max-content; white-space: nowrap; overflow: hidden">
+      Exactly as wide as its text
+    </div>
+    <div
+      class="case"
+      style="width: fit-content; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+    >
+      Fit content with ellipsis but no overflow
+    </div>
+    <p class="case">
+      <span style="display: inline-block; white-space: nowrap; overflow: hidden"
+        >Inline block that shrinks to fit</span
+      >
+    </p>
+    <div class="case" style="display: flex; width: 400px">
+      <div class="truncate" style="flex: 1; min-width: 0">Fits in flexible space</div>
+      <button>Action</button>
+    </div>
+  </body>
+</html>

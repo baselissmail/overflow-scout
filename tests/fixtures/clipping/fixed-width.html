@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixed width on the element</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .label {
+        width: 120px;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Width set inline on the element itself -->
+    <div
+      class="case"
+      style="width: 100px; white-space: nowrap; overflow: hidden"
+      data-expect="hidden"
+    >
+      Accept and continue with all the features
+    </div>
+    <div class="case" style="width: 200px; white-space: nowrap; overflow: hidden" data-expect="ok">
+      Save
+    </div>
+    <!-- Width from a class rule -->
+    <div class="case label" data-expect="hidden">Notification preferences and settings</div>
+    <!-- overflow: clip behaves like hidden -->
+    <div
+      class="case"
+      style="width: 120px; overflow: clip; white-space: nowrap"
+      data-expect="hidden"
+    >
+      Download the quarterly report
+    </div>
+    <!-- Only the x axis clips -->
+    <div
+      class="case"
+      style="width: 110px; overflow-x: hidden; white-space: nowrap"
+      data-expect="hidden"
+    >
+      Continue to the checkout page
+    </div>
+  </body>
+</html>

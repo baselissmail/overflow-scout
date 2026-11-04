@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CJK and Thai text</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case truncate" style="width: 120px" lang="ja" data-expect="truncated">
+      四半期ごとの売上レポートと地域別の分析
+    </div>
+    <!-- Thai has no spaces; the browser breaks lines by dictionary -->
+    <div
+      class="case"
+      style="width: 120px; height: 40px; overflow: hidden; line-height: 20px"
+      lang="th"
+      data-expect="hidden"
+    >
+      รายงานรายได้รายไตรมาสสำหรับทุกภูมิภาคและการวิเคราะห์เชิงลึก
+    </div>
+    <div class="case" style="width: 600px" lang="zh" data-expect="ok">季度收入报告</div>
+  </body>
+</html>

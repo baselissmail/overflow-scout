@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Line clamp</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .clamp-2 {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+      }
+      .clamp-3 {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="case clamp-2" style="width: 240px" data-expect="truncated">
+      This article summary is long enough to need more than two lines, so the clamp hides the rest
+      of the sentence from readers.
+    </p>
+    <p class="case clamp-2" style="width: 400px" data-expect="ok">Short summary on one line.</p>
+    <p class="case clamp-3" style="width: 200px" data-expect="truncated">
+      A three line clamp still hides content when the description runs on for five or six lines in a
+      narrow card layout.
+    </p>
+  </body>
+</html>

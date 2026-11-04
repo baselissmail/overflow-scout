@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ordinary flowing content</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        max-width: 900px;
+      }
+      .card {
+        border: 1px solid #ddd;
+        padding: 12px;
+        border-radius: 8px;
+      }
+      nav a {
+        margin-right: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="#">Home</a><a href="#">Products</a><a href="#">Pricing</a
+        ><a href="#">Documentation</a><a href="#">Contact</a>
+      </nav>
+      <h1>Welcome to the dashboard</h1>
+      <p>
+        Paragraphs wrap freely across lines, which is how most text on the web behaves. Nothing here
+        should ever be reported.
+      </p>
+    </header>
+    <section class="cards">
+      <article class="card">
+        <h2>Analytics</h2>
+        <p>Track visits, conversions and retention across every channel you run campaigns in.</p>
+        <button>Open analytics</button>
+      </article>
+      <article class="card">
+        <h2>Billing</h2>
+        <p>Invoices, payment methods and tax settings for your whole organization.</p>
+        <button>Manage billing</button>
+      </article>
+      <article class="card">
+        <h2>Team</h2>
+        <p>Invite colleagues, assign roles and review recent activity.</p>
+        <button>Invite people</button>
+      </article>
+    </section>
+    <ul>
+      <li>First list item with a few words</li>
+      <li>Second list item that is a little longer than the first one</li>
+    </ul>
+    <ol>
+      <li>Numbered step one</li>
+      <li>Numbered step two</li>
+    </ol>
+    <blockquote>Quotes indent and wrap just like paragraphs do.</blockquote>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>María José Fernández</td>
+          <td>Administrator</td>
+          <td>Active</td>
+        </tr>
+        <tr>
+          <td>Oluwaseun Adebayo</td>
+          <td>Editor</td>
+          <td>Invited</td>
+        </tr>
+      </tbody>
+    </table>
+    <dl>
+      <dt>Plan</dt>
+      <dd>Professional, billed annually</dd>
+    </dl>
+    <footer><small>© 2026 Example Company. All rights reserved.</small></footer>
+  </body>
+</html>

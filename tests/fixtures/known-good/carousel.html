@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Carousel with off-screen slides</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case" style="width: 300px; overflow: hidden">
+      <div style="display: flex; width: 900px">
+        <div style="flex: 0 0 300px">First slide with a heading</div>
+        <div style="flex: 0 0 300px">Second slide, fully out of view</div>
+        <div style="flex: 0 0 300px">Third slide, fully out of view</div>
+      </div>
+    </div>
+  </body>
+</html>

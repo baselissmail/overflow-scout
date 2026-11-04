@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Shadow DOM</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <card-x>
+      <template shadowrootmode="open">
+        <style>
+          .title {
+            width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .slot-box {
+            width: 100px;
+            overflow: hidden;
+            white-space: nowrap;
+          }
+        </style>
+        <div class="title" data-expect="truncated">Quarterly revenue report for all regions</div>
+        <div class="slot-box"><slot></slot></div>
+      </template>
+      <span data-expect="hidden">Slotted label that is far too long</span>
+    </card-x>
+    <card-y class="case">
+      <template shadowrootmode="open">
+        <p style="width: 300px" data-expect="ok">
+          Shadow content that wraps normally inside its component.
+        </p>
+      </template>
+    </card-y>
+  </body>
+</html>

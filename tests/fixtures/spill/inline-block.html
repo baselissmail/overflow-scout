@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixed-width button without clipping</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="case">
+      <button
+        style="width: 100px; white-space: nowrap; font: 16px sans-serif"
+        data-expect="spilling"
+      >
+        Continue to payment details
+      </button>
+    </p>
+    <p class="case"><button style="font: 16px sans-serif" data-expect="ok">Continue</button></p>
+  </body>
+</html>

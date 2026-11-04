@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Menus and tooltips</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case" style="position: relative; display: inline-block">
+      <button>Menu</button>
+      <ul
+        style="
+          position: absolute;
+          top: 100%;
+          left: 0;
+          width: 260px;
+          margin: 0;
+          padding: 8px;
+          list-style: none;
+          background: #fff;
+          border: 1px solid #ccc;
+        "
+      >
+        <li>Account settings and preferences</li>
+        <li>Billing and invoices for this workspace</li>
+      </ul>
+    </div>
+    <div class="case" style="position: relative; display: inline-block; margin: 120px 0 0 300px">
+      <span>Info</span>
+      <span
+        role="tooltip"
+        style="
+          position: absolute;
+          bottom: 100%;
+          left: 0;
+          white-space: nowrap;
+          background: #333;
+          color: #fff;
+          padding: 4px;
+        "
+        >This tooltip is wider than its anchor</span
+      >
+    </div>
+  </body>
+</html>
