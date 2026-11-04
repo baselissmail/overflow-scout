@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vertical writing modes</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 24px 24px 0;
+        display: inline-block;
+        vertical-align: top;
+      }
+      /* MDN compatibility table: rotated vertical labels with a tight line-height (MDN fonts leave ~2px of slack at line-height: 1) */
+      .vertical-label {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        line-height: 0.8;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <table class="case">
+      <tr>
+        <th><div class="vertical-label" data-expect="ok">Chrome</div></th>
+        <th><div class="vertical-label" data-expect="ok">Firefox for Android</div></th>
+        <th><div class="vertical-label" data-expect="ok">Safari on iOS</div></th>
+      </tr>
+    </table>
+    <!-- Vertical text cut along its line direction -->
+    <div
+      class="case"
+      style="writing-mode: vertical-rl; height: 80px; overflow: hidden; white-space: nowrap"
+      data-expect="hidden"
+    >
+      Vertical heading that is far too long
+    </div>
+    <div
+      class="case"
+      lang="ja"
+      style="writing-mode: vertical-rl; height: 300px; overflow: hidden"
+      data-expect="ok"
+    >
+      縦書きの見出し
+    </div>
+  </body>
+</html>

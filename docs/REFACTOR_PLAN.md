@@ -433,9 +433,10 @@ Each phase ends with explicit exit criteria. Phases 1 and 2 (engine) can run in 
 
 - [x] Spike first: verify that `Range` rects and ancestor clip rects agree with what's visually clipped across the corpus categories. (The corpus is the spike: its first run found one real flaw, spill detection stopping at clipping boxes, which was fixed.)
 - [x] `collect`, `measure`, `diagnose` (cause only), `group`, `select` (`src/core`).
-- [x] Corpus of 34 fixture pages (55 expected findings, 35 explicit "ok" cases, 9 known-good pages, 2 documented limitations), precision/recall harness, performance harness, API tests.
+- [x] Corpus of 37 fixture pages (59 expected findings, 41 explicit "ok" cases, 10 known-good pages, 2 documented limitations), precision/recall harness, performance harness, API tests.
+- [x] Early reality check on 9 live sites (pulled forward from Phase 6). Six patterns caused false positives and became fixtures plus fixes: `clip`/`clip-path` visually-hidden text, off-screen skip links, negative-margin full-bleed blocks, floats hanging below their parent, vertical writing modes, and overflow into a scroll container's scrollable area (plus rowspan cells vs. table rows). After the fixes, 6 sites report nothing and the other 3 report only real truncation or their own overflow demos.
 
-**Exit:** gates from §7 met for scan mode; budgets met. _Met 2026-11-04: precision 96.5% (the 2 misses are documented limitations: peek carousels and "Read more" previews), recall 100%, zero findings on known-good pages; 5,000 text nodes in ~68 ms of work with an 8 ms longest slice (budgets: 300 ms, 50 ms)._
+**Exit:** gates from §7 met for scan mode; budgets met. _Met 2026-11-04: precision 96.7% (the 2 misses are documented limitations: peek carousels and "Read more" previews), recall 100%, zero findings on known-good pages; 5,000 text nodes in ~68 ms of work with an 8 ms longest slice (budgets: 300 ms, 50 ms); real pages scan in 16–90 ms._
 
 ### Phase 2 — Stress engine
 

@@ -28,18 +28,30 @@ import type {
 } from './types';
 import { SEVERITY_BY_KIND } from './types';
 
-/** Horizontal overflow below this many CSS px is rounding noise. */
-const TOLERANCE_X = 1;
+/** Overflow along the line direction below this many CSS px is rounding noise. */
+const LINE_TOLERANCE = 1;
 /** Canvas and layout text widths differ slightly. */
 const PLACEHOLDER_TOLERANCE = 2;
 /** Clip boxes smaller than this hide text on purpose (visually-hidden patterns). */
 const TINY_BOX = 2;
 /**
- * Vertical overflow must exceed a quarter of the font size: line boxes with a
- * tight line-height routinely overflow by a few pixels of empty ascender or
- * descender space without hiding anything readable.
+ * Across lines, overflow must exceed a quarter of the font size: line boxes
+ * with a tight line-height routinely overflow by a few pixels of empty
+ * ascender or descender space without hiding anything readable.
  */
-const minVerticalOverflow = (fontSize: number) => Math.max(2, fontSize * 0.25);
+const crossTolerance = (fontSize: number) => Math.max(2, fontSize * 0.25);
+
+/** Minimum overflow per axis. Vertical writing modes stack lines horizontally. */
+interface Tolerance {
+  x: number;
+  y: number;
+}
+
+function toleranceFor(style: CSSStyleDeclaration): Tolerance {
+  const across = crossTolerance(px(style.fontSize));
+  const vertical = /^(vertical|sideways)/.test(style.writingMode);
+  return vertical ? { x: across, y: LINE_TOLERANCE } : { x: LINE_TOLERANCE, y: across };
+}
 
 /** Subtrees that don't render page text we can measure. */
 const SKIPPED_SUBTREES = new Set([
@@ -58,6 +70,15 @@ const SKIPPED_SUBTREES = new Set([
   'audio',
 ]);
 const FRAME_TAGS = new Set(['iframe', 'frame', 'object', 'embed']);
+/** Internal table boxes: cells may legitimately extend past them (rowspan, colspan). */
+const INTERNAL_TABLE_DISPLAYS = new Set([
+  'table-row',
+  'table-row-group',
+  'table-header-group',
+  'table-footer-group',
+  'table-column',
+  'table-column-group',
+]);
 const TEXT_INPUT_TYPES = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
 
 /** When one element has several text problems, report the most serious one. */
@@ -222,16 +243,21 @@ class ScanSession {
     }
     const geometry = measureText(this.range, node);
     if (!geometry) return;
+    if (this.isUnreachable(geometry.bounds)) {
+      // Parked where no one can scroll to, e.g. skip links waiting for focus.
+      this.stats.skippedInvisible += 1;
+      return;
+    }
     this.stats.textNodes += 1;
 
-    const minY = minVerticalOverflow(px(this.layout.style(host).fontSize));
+    const tolerance = toleranceFor(this.layout.style(host));
     const clip = clipOverflow(geometry, this.clips.forContent(layoutParent));
     if (clip) {
       // Text that is entirely out of view is hidden on purpose: off-canvas
       // panels, collapsed sections, carousel slides, visually-hidden labels.
       if (clip.visibleFraction === 0) return;
-      const x = clip.x > TOLERANCE_X ? clip.x : 0;
-      const y = clip.y > minY ? clip.y : 0;
+      const x = clip.x > tolerance.x ? clip.x : 0;
+      const y = clip.y > tolerance.y ? clip.y : 0;
       const clipperX = x > 0 ? clip.xBy : null;
       const clipperY = y > 0 ? clip.yBy : null;
       if (clipperX ?? clipperY) {
@@ -249,7 +275,7 @@ class ScanSession {
       }
     }
 
-    const spill = this.findSpill(geometry.bounds, layoutParent, minY);
+    const spill = this.findSpill(geometry.bounds, layoutParent, tolerance);
     if (spill) {
       this.recordText(host, {
         kind: 'spilling',
@@ -280,6 +306,16 @@ class ScanSession {
     return null;
   }
 
+  /** Above or before the page origin, where scrolling can't reach (LTR: left; RTL: right). */
+  private isUnreachable(bounds: Bounds): boolean {
+    const { scrollX, scrollY } = this.layout.view;
+    if (bounds.bottom + scrollY <= 0) return true;
+    const root = this.doc.documentElement;
+    return this.layout.style(root).direction === 'rtl'
+      ? bounds.left + scrollX >= root.clientWidth
+      : bounds.right + scrollX <= 0;
+  }
+
   private isTinyBox(element: Element): boolean {
     const box = this.layout.paddingBox(element);
     return box.right - box.left < TINY_BOX || box.bottom - box.top < TINY_BOX;
@@ -289,25 +325,26 @@ class ScanSession {
    * Text spills when its visible part extends past the box of an in-flow
    * ancestor that lets overflow show. Boxes that clip or scroll don't end the
    * walk: they trim what can be seen, and the clipping box itself may still be
-   * pushed out of its parent (a flex child without `min-width: 0`). The walk
-   * stops at out-of-flow boxes (menus and tooltips may outgrow their anchor)
-   * and at the page root (handled as page overflow).
+   * pushed out of its parent (a flex child without `min-width: 0`). Deliberate
+   * overhang is allowed: negative margins (full-bleed blocks) and floats
+   * hanging below their container. The walk stops at out-of-flow boxes (menus
+   * and tooltips may outgrow their anchor) and at the page root (handled as
+   * page overflow). Overflow that runs into a scroll container's scrollable
+   * area, right at its edge, is reachable and overlaps nothing.
    */
   private findSpill(
     bounds: Bounds,
     start: Element,
-    minY: number,
+    tolerance: Tolerance,
   ): { container: Element; overflow: { x: number; y: number } } | null {
-    const { scrollX, scrollY } = this.layout.view;
-    // Text parked in unreachable negative space (off-canvas panels) is deliberate.
-    if (bounds.right + scrollX <= 0 || bounds.bottom + scrollY <= 0) return null;
-
     const visible = { ...bounds };
+    const overhang = { left: 0, right: 0, top: 0, bottom: 0 };
+    let checkY = true;
     let isLineContainer = true;
     for (let element: Element | null = start; element; element = flatParent(element)) {
       if (isRootElement(element)) break;
       const style = this.layout.style(element);
-      if (style.display !== 'contents' && style.display !== 'inline') {
+      if (this.isComparableBox(style)) {
         const rect = this.layout.rect(element);
         // Text moved entirely outside its own box (text-indent tricks) is deliberate.
         if (
@@ -325,13 +362,22 @@ class ScanSession {
 
         const clipsX = style.overflowX !== 'visible';
         const clipsY = style.overflowY !== 'visible';
-        const x = clipsX ? 0 : Math.max(0, visible.right - rect.right, rect.left - visible.left);
-        const y = clipsY ? 0 : Math.max(0, visible.bottom - rect.bottom, rect.top - visible.top);
-        if (x > TOLERANCE_X || y > minY) {
-          return {
-            container: element,
-            overflow: { x: x > TOLERANCE_X ? x : 0, y: y > minY ? y : 0 },
-          };
+        const past = {
+          left: rect.left - overhang.left - visible.left,
+          right: visible.right - (rect.right + overhang.right),
+          top: rect.top - overhang.top - visible.top,
+          bottom: visible.bottom - (rect.bottom + overhang.bottom),
+        };
+        const sideX = past.right >= past.left ? 'right' : 'left';
+        const sideY = past.bottom >= past.top ? 'bottom' : 'top';
+        const x = clipsX ? 0 : Math.max(0, past[sideX]);
+        const y = clipsY || !checkY ? 0 : Math.max(0, past[sideY]);
+        if (x > tolerance.x || y > tolerance.y) {
+          const keptX = x > tolerance.x && !this.endsAtScrollEdge(element, sideX) ? x : 0;
+          const keptY = y > tolerance.y && !this.endsAtScrollEdge(element, sideY) ? y : 0;
+          return keptX > 0 || keptY > 0
+            ? { container: element, overflow: { x: keptX, y: keptY } }
+            : null;
         }
         if (clipsX || clipsY) {
           const box = this.layout.paddingBox(element);
@@ -345,10 +391,49 @@ class ScanSession {
           }
           if (visible.right <= visible.left || visible.bottom <= visible.top) return null;
         }
+        // Negative margins pull a box outside its parent on purpose.
+        overhang.left += Math.max(0, -px(style.marginLeft));
+        overhang.right += Math.max(0, -px(style.marginRight));
+        overhang.top += Math.max(0, -px(style.marginTop));
+        overhang.bottom += Math.max(0, -px(style.marginBottom));
+        // Floats may hang below their container; the content after them flows around.
+        if (style.float !== 'none') checkY = false;
       }
       if (style.position === 'absolute' || style.position === 'fixed') break;
     }
     return null;
+  }
+
+  /** Boxes that text is compared against; inline, `contents` and table-internal boxes are not. */
+  private isComparableBox(style: CSSStyleDeclaration): boolean {
+    return (
+      style.display !== 'contents' &&
+      style.display !== 'inline' &&
+      !INTERNAL_TABLE_DISPLAYS.has(style.display)
+    );
+  }
+
+  /**
+   * True when the element's edge on `side` coincides with the scrollport edge
+   * of an enclosing scroll container: whatever spills past it is simply that
+   * container's scrollable content (code editors, chat logs).
+   */
+  private endsAtScrollEdge(element: Element, side: keyof Bounds): boolean {
+    const edge = this.layout.rect(element)[side];
+    const horizontal = side === 'left' || side === 'right';
+    for (
+      let ancestor = flatParent(element);
+      ancestor && !isRootElement(ancestor);
+      ancestor = flatParent(ancestor)
+    ) {
+      const style = this.layout.style(ancestor);
+      if (!this.isComparableBox(style)) continue;
+      if (Math.abs(this.layout.paddingBox(ancestor)[side] - edge) > 1) return false;
+      const overflow = horizontal ? style.overflowX : style.overflowY;
+      if (overflow === 'auto' || overflow === 'scroll') return true;
+      if (overflow !== 'visible') return false;
+    }
+    return false;
   }
 
   // ── Inputs ────────────────────────────────────────────────────────────────
@@ -378,7 +463,7 @@ class ScanSession {
     // Editable values scroll by design; read-only values can't be scrolled to.
     if (input.value !== '' && (input.readOnly || input.disabled)) {
       const hidden = input.scrollWidth - input.clientWidth;
-      if (hidden > TOLERANCE_X) {
+      if (hidden > LINE_TOLERANCE) {
         this.record({
           kind: 'input',
           mechanism: 'value',
@@ -418,7 +503,7 @@ class ScanSession {
     if (viewportOverflow === 'hidden' || viewportOverflow === 'clip') return;
 
     const viewportWidth = root.clientWidth;
-    if (root.scrollWidth - viewportWidth <= TOLERANCE_X) return;
+    if (root.scrollWidth - viewportWidth <= LINE_TOLERANCE) return;
 
     const rtl = rootStyle.direction === 'rtl';
     const { scrollX } = this.layout.view;
@@ -433,13 +518,13 @@ class ScanSession {
       yield;
       if (isRootElement(element)) continue;
       const excess = beyond(element);
-      if (excess <= TOLERANCE_X) continue;
+      if (excess <= LINE_TOLERANCE) continue;
       const context = this.clips.forBox(element);
       if (context.containedX || context.viewportFixed) continue;
       if (!this.layout.isRendered(element)) continue;
       // Report only where the overflow starts, not every descendant of a wide box.
       const parent = this.parentBox(element);
-      if (parent && !isRootElement(parent) && beyond(parent) > TOLERANCE_X) continue;
+      if (parent && !isRootElement(parent) && beyond(parent) > LINE_TOLERANCE) continue;
       this.record({
         kind: 'page-scroll',
         mechanism: 'page-overflow',
@@ -457,7 +542,7 @@ class ScanSession {
       if (!spill?.bounds || byKind.has('page-scroll')) continue;
       if (this.clips.forContent(host).containedX) continue;
       const excess = pastEdge(spill.bounds.left, spill.bounds.right);
-      if (excess > TOLERANCE_X) {
+      if (excess > LINE_TOLERANCE) {
         this.record({ ...spill, kind: 'page-scroll', mechanism: 'page-overflow', container: host });
       }
       yield;

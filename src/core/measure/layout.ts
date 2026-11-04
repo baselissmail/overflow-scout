@@ -14,6 +14,40 @@ export function px(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/** Expands a 1–4 value box shorthand into [top, right, bottom, left]. */
+function boxSides(values: readonly string[]): [string, string, string, string] {
+  const [top = '0', right = top, bottom = top, left = right] = values;
+  return [top, right, bottom, left];
+}
+
+/**
+ * True when `clip` or `clip-path` leaves nothing of the element visible, as in
+ * visually-hidden utilities: `clip: rect(1px, 1px, 1px, 1px)`,
+ * `clip-path: inset(50%)` or `inset(100%)`, `clip-path: circle(0)`.
+ */
+export function isClippedAway(style: CSSStyleDeclaration): boolean {
+  if (style.position === 'absolute' || style.position === 'fixed') {
+    // `clip` is deprecated but still common in visually-hidden utilities.
+    const rect = /^rect\(([^)]*)\)$/.exec(style.getPropertyValue('clip'));
+    if (rect?.[1]) {
+      const [top, right, bottom, left] = boxSides(rect[1].split(/[\s,]+/).filter(Boolean));
+      const numeric = (value: string) => value !== 'auto';
+      if (numeric(left) && numeric(right) && px(right) - px(left) <= 1) return true;
+      if (numeric(top) && numeric(bottom) && px(bottom) - px(top) <= 1) return true;
+    }
+  }
+  const clipPath = style.clipPath;
+  const inset = /^inset\(([^)]*?)(?:\s+round\b[^)]*)?\)$/.exec(clipPath);
+  if (inset?.[1]) {
+    const sides = boxSides(inset[1].split(/\s+/).filter(Boolean));
+    if (sides.every((side) => side.endsWith('%'))) {
+      const [top, right, bottom, left] = sides.map(px) as [number, number, number, number];
+      if (top + bottom >= 100 || left + right >= 100) return true;
+    }
+  }
+  return /^circle\(0(px|%)?(\s|\))/.test(clipPath);
+}
+
 /**
  * Reads computed style and geometry with per-scan caching. Caches are only
  * valid while the page doesn't change, so `reset()` runs after every pause in
@@ -24,6 +58,7 @@ export class LayoutReader {
   private readonly styles = new Map<Element, CSSStyleDeclaration>();
   private readonly rects = new Map<Element, DOMRect>();
   private readonly rendered = new Map<Element, boolean>();
+  private readonly clippedAway = new Map<Element, boolean>();
 
   constructor(doc: Document) {
     this.view = windowOf(doc);
@@ -80,8 +115,20 @@ export class LayoutReader {
         visibilityProperty: true,
         contentVisibilityAuto: false,
       }) ?? false;
+    result &&= target !== null && !this.isClippedAway(target);
 
     this.rendered.set(element, result);
+    return result;
+  }
+
+  /** Whether the element or an ancestor is clipped to nothing (visually hidden). */
+  private isClippedAway(element: Element): boolean {
+    const cached = this.clippedAway.get(element);
+    if (cached !== undefined) return cached;
+    const parent = flatParent(element);
+    const result =
+      isClippedAway(this.style(element)) || (parent ? this.isClippedAway(parent) : false);
+    this.clippedAway.set(element, result);
     return result;
   }
 
@@ -89,5 +136,6 @@ export class LayoutReader {
     this.styles.clear();
     this.rects.clear();
     this.rendered.clear();
+    this.clippedAway.clear();
   }
 }

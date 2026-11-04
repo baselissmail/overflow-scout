@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Patterns found on real sites</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      /* BBC News: visually hidden label on a full-size box */
+      .visually-hidden-label {
+        position: absolute;
+        width: 218px;
+        height: 80px;
+        overflow: hidden;
+        clip: rect(1px, 1px, 1px, 1px);
+        clip-path: inset(100%);
+        white-space: nowrap;
+      }
+      /* developer.chrome.com: skip link parked off-screen until focused */
+      .skip-link {
+        position: absolute;
+        left: -6400px;
+        top: -4000px;
+        width: 84px;
+        height: 28px;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      /* Full-bleed code block: negative margins, scrolling pre */
+      .article {
+        width: 300px;
+      }
+      .code {
+        margin: 0 -40px;
+        overflow: hidden;
+      }
+      .code pre {
+        margin: 0;
+        overflow: auto;
+        white-space: pre;
+        background: #f4f4f4;
+      }
+      /* Wikipedia: floats taller than their section, and floated footer links */
+      .section-with-float figure {
+        float: right;
+        width: 160px;
+        margin: 0 0 0 16px;
+      }
+      .footer-links {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .footer-links li {
+        float: left;
+        margin-right: 16px;
+      }
+      /* react.dev (Sandpack): fixed-height wrapper exactly inside a scroll container */
+      .editor {
+        width: 300px;
+        height: 120px;
+        overflow: auto;
+        border: 1px solid #ccc;
+      }
+      .editor .surface {
+        height: 120px;
+      }
+      .editor pre {
+        margin: 0;
+        line-height: 24px;
+      }
+      /* W3C specs: a header cell spanning two rows is taller than its row */
+      .spec-table th {
+        vertical-align: top;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case" style="position: relative; height: 40px">
+      <span aria-hidden="true">DEM 54</span>
+      <div class="visually-hidden-label">Democrats. 54 seats. 7 seats gained.</div>
+    </div>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <article class="case article">
+      <p>Example usage:</p>
+      <div class="code">
+        <pre>chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });</pre>
+      </div>
+    </article>
+    <section class="case section-with-float">
+      <figure>
+        <div style="height: 120px; background: #ddd"></div>
+        <figcaption>Movable type being assembled on a composing stick.</figcaption>
+      </figure>
+      <p>A short section whose text ends before the floated figure does.</p>
+    </section>
+    <div style="clear: both"></div>
+    <div class="case editor">
+      <div class="surface">
+        <pre>
+function Profile() {
+  return (
+    &lt;img
+      src="https://i.example/avatar.jpg"
+      alt="Avatar"
+    /&gt;
+  );
+}</pre>
+      </div>
+    </div>
+    <table class="case spec-table">
+      <tr>
+        <th rowspan="2">Applies to<br />all elements<br />and more</th>
+        <td>Value</td>
+      </tr>
+      <tr>
+        <td>Initial</td>
+      </tr>
+    </table>
+    <ul class="case footer-links">
+      <li><a href="#">Privacy policy</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">Disclaimers</a></li>
+    </ul>
+  </body>
+</html>
