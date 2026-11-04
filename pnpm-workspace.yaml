@@ -1,0 +1,11 @@
+# pnpm settings for this single-package repo (pnpm 10 reads them from here).
+
+peerDependencyRules:
+  allowedVersions:
+    # Loaded through @eslint/compat on ESLint 10; see docs/adr/0006-toolchain-versions.md.
+    eslint-plugin-jsx-a11y>eslint: '10'
+
+# Dependency install scripts are blocked by default. lefthook ships prebuilt binaries
+# and its hooks are installed by our own `prepare` script.
+ignoredBuiltDependencies:
+  - lefthook

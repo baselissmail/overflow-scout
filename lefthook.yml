@@ -1,0 +1,23 @@
+# Git hooks (https://lefthook.dev). Installed by `pnpm install` via the `prepare` script.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint
+      glob: '*.{ts,tsx,js,mjs}'
+      run: pnpm exec eslint --no-warn-ignored {staged_files}
+    - name: format
+      glob: '*.{ts,tsx,js,mjs,json,md,css,html,yml,yaml}'
+      run: pnpm exec prettier --check --ignore-unknown {staged_files}
+
+commit-msg:
+  jobs:
+    - name: conventional commit
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: typecheck
+      run: pnpm typecheck
+    - name: unit tests
+      run: pnpm test
