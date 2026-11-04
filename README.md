@@ -1,124 +1,64 @@
 # Overflow Scout
 
-> Stress-test text overflow on live web applications without opening DevTools
+Find text that gets cut off, before your users or translators do.
 
-A Chrome extension for UI engineers and QA testers that finds overflow failures instantly and systematically before they reach production.
+> **Status:** v1 rebuild in progress on `refactor/v1`. The v0.1 prototype is tagged
+> `v0.1.0-legacy`. The roadmap lives in [docs/REFACTOR_PLAN.md](docs/REFACTOR_PLAN.md).
 
-## 🚀 Current Status: Phase 9 Started
+Overflow Scout is a Chrome extension for frontend engineers, QA and designers. It will:
 
-**Professional UX Modules (Ready for Integration)** ✅
-- Ghost Overlay mode (CSS-based, non-destructive testing)
-- Clone measurement (detect without DOM modification)
-- Smart text generation (varied, length-banded, role-appropriate)
-- Badge indicators (small corner badges vs. full borders)
-- Viewport filtering & sampling utilities
-- Enhanced type system (InjectionMode, BatchMode)
+- **Scan** a page for text that is clipped, truncated or causing horizontal scroll, without changing it.
+- **Stress-test** every string at realistic translation lengths (or pseudo-locale) and show what breaks.
+- **Inspect** an element to find its exact breaking point, and suggest CSS fixes it has verified on the live page.
 
-See [PHASE9_IMPLEMENTATION.md](./PHASE9_IMPLEMENTATION.md) for details.
+Everything runs locally in your browser. No data leaves your device.
 
-## 📋 Development Phases
+## Development
 
-- ✅ **Phase 0** - Foundation & Scaffolding
-- ✅ **Phase 1** - Single Element Injection
-- ✅ **Phase 2** - Smart Text Generation
-- ✅ **Phase 3** - Overflow Detection & Highlighting
-- ✅ **Phase 4** - Batch Testing "Test All Similar"
-- ✅ **Phase 5** - State & Revert All
-- ✅ **Phase 6** - Advanced Support (Shadow DOM, SPAs)
-- ✅ **Phase 7** - Popup UI & Controls
-- ✅ **Phase 8** - Polish, Edge Cases, Stability
-- 🔜 **Phase 9** - Packaging & Marketing
-- 🔜 **Phase 10** - Launch & Feedback
+Requirements: Node (version in [.nvmrc](.nvmrc)) and pnpm (version pinned in `package.json`).
 
-## 🛠️ Development
-
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Chrome browser
-
-### Tech Stack
-- **TypeScript** - Type-safe development
-- **Vite** - Lightning-fast builds
-- **CRXJS** - Chrome extension Vite plugin with HMR
-- **Manifest v3** - Latest extension platform
-
-### Setup
-```bash
-# Install dependencies
-npm install
-
-# Development build (watch mode with HMR)
-npm run dev
-
-# Production build
-npm run build
-
-# Type checking
-npm run type-check
+```sh
+pnpm install                           # also installs git hooks
+pnpm exec playwright install chromium  # once, for engine and e2e tests
+pnpm dev                               # Chrome with the extension loaded and hot reload
 ```
 
-### Loading the Extension
+| Command             | What it does                                               |
+| ------------------- | ---------------------------------------------------------- |
+| `pnpm build`        | Production build in `.output/chrome-mv3`                   |
+| `pnpm zip`          | Store-ready zip                                            |
+| `pnpm check`        | Types, lint, formatting, unit and engine tests             |
+| `pnpm test`         | Unit tests (Node)                                          |
+| `pnpm test:browser` | Engine tests in real Chromium (layout-dependent)           |
+| `pnpm test:e2e`     | End-to-end tests against the built extension (build first) |
+| `pnpm size`         | Bundle size budgets (build first)                          |
 
-1. Run `npm run build` to create the `dist/` folder
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" (top right)
-4. Click "Load unpacked"
-5. Select the `dist/` folder
-6. The extension icon should appear in your toolbar
+To load a build manually, open `chrome://extensions`, enable Developer mode, choose
+**Load unpacked** and select `.output/chrome-mv3`.
 
-## 🏗️ Architecture
+### Project layout
 
 ```
 src/
-├── background/          # Service worker (context menus, messaging)
-├── content/             # DOM manipulation, injection, detection
-├── popup/               # Extension UI (HTML, CSS, TS)
-└── types/               # Shared TypeScript types and utilities
-
-public/
-└── icons/               # Extension icons (16, 48, 128px)
+  entrypoints/  background service worker, side panel (and later the page runtime)
+  core/         pure detection and text logic: no extension or UI APIs
+  ui/           design tokens and components
+  locales/      UI strings (en)
+tests/
+  engine/       Vitest browser-mode tests (real layout)
+  e2e/          Playwright tests with the built extension
+docs/
+  REFACTOR_PLAN.md   roadmap and specification
+  adr/               architecture decision records
 ```
 
-### Key Design Patterns
+Layer rules are enforced by ESLint (`eslint-plugin-boundaries`); see
+[docs/REFACTOR_PLAN.md §2.4](docs/REFACTOR_PLAN.md).
 
-- **Message-based architecture**: Background ↔ Content ↔ Popup communication
-- **Type-safe messaging**: Strongly-typed message enums and payloads
-- **Dependency injection ready**: Modular services for testing
-- **Phase-based implementation**: Clear separation of concerns for incremental development
+## Contributing
 
-## 🎯 Core Features (Planned)
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Usage
+## License
 
-### Quick Start
-
-1. **Click the extension icon** to open the popup
-2. **Click "🤖 Auto-Scan Page"** to find all overflow issues instantly
-3. **View results** in the detailed side panel
-4. **Test individual elements** with custom text
-5. **Jump to elements** to see exactly where issues are
-6. **Apply suggested fixes** to your CSS
-
-### Features
-
-- **🤖 Auto-Scan**: Automatically detect all overflow issues on the page
-- **👆 Point & Click Mode**: Click any element to test it interactively
-- **🧪 Custom Text Testing**: Test each element with real data from your app
-- **💡 Actionable Fixes**: Get specific CSS suggestions for each issue
-- **🎯 Jump to Element**: Visual highlighting shows exactly which element
-- **↩️ Revert All**: Restore page to original state
-- **SPA support**: Works with React, Vue, modern frameworks
-- **Shadow DOM**: Handles Web Components where possible
-
-## 📝 License
-
-MIT
-
-## 🤝 Contributing
-
-Contributions welcome! Please open an issue first to discuss changes.
-
----
-
-**Built with ❤️ for UI/QA engineers**
+[MIT](LICENSE) © Basel Issmail
