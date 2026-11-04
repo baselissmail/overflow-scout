@@ -1,0 +1,24 @@
+# 0004. Side panel UI with React, Tailwind and Radix primitives
+
+- Status: Accepted
+- Date: 2026-11-04
+
+## Context
+
+v0.1 injected a 400 px fixed panel into the page. It covered page content, fought host-page CSS with `!important` resets, and built markup from page text with `innerHTML`. Its UI code was a single 2,600-line file of inline styles.
+
+## Decision
+
+- The app lives in Chrome's Side Panel (`chrome.sidePanel`). It is isolated from page CSS and doesn't cover the page. There is no popup.
+- Stack: React 19, TypeScript, Tailwind CSS v4 with semantic design tokens (`src/ui/styles.css`), Radix primitives via shadcn/ui (added in Phase 4), Lucide icons, TanStack Virtual for long lists.
+- The page overlay (highlights, picker) stays vanilla TypeScript inside one shadow root. React is never injected into user pages.
+
+## Consequences
+
+- Accessible primitives (focus management, ARIA) come with Radix rather than being hand-written.
+- The side panel bundle is larger than vanilla. It's capped by a size budget (200 kB gzip), and it loads locally from the extension package.
+- Opening the side panel narrows the page viewport. The overlay approach hid content instead, so we accept this.
+
+## Alternatives considered
+
+- **Svelte 5 / Preact:** smaller bundles, but less mature accessible primitive libraries and weaker tooling support for our UI skills. Bundle size matters little for a locally loaded panel.
