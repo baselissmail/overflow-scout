@@ -66,6 +66,8 @@ jobs:
         with:
           name: overflow-scout-chrome
           path: .output/*.zip
+          # WXT writes to the hidden .output/ folder, which upload-artifact skips by default.
+          include-hidden-files: true
           if-no-files-found: error
 
       - name: Upload Playwright report
