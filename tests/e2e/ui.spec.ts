@@ -38,7 +38,12 @@ const STATES: readonly { name: string; enter: (panel: Page) => Promise<void> }[]
   {
     name: 'detail',
     enter: async (panel) => {
-      await panel.getByRole('listbox', { name: 'Results' }).getByRole('option').first().click();
+      // A result with text, so the detail shows where it is cut.
+      await panel
+        .getByRole('listbox', { name: 'Results' })
+        .getByRole('option')
+        .filter({ hasText: 'Waterproof hiking jacket' })
+        .click();
       await expect(panel.getByRole('img', { name: /^Needs / })).toBeVisible();
     },
   },
@@ -62,8 +67,16 @@ const STATES: readonly { name: string; enter: (panel: Page) => Promise<void> }[]
     name: 'shortcuts',
     enter: async (panel) => {
       await panel.getByRole('button', { name: 'Back to results' }).click();
-      await panel.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+      await panel.keyboard.press('?');
       await expect(panel.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible();
+    },
+  },
+  {
+    name: 'commands',
+    enter: async (panel) => {
+      await panel.keyboard.press('Escape');
+      await panel.keyboard.press('ControlOrMeta+k');
+      await expect(panel.getByRole('dialog', { name: 'Commands' })).toBeVisible();
     },
   },
 ];
@@ -153,6 +166,28 @@ test('works with the keyboard alone', async ({ openTab, openPanel, extensionId }
   await expect(panel.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible();
   await press('Escape');
   await expect(panel.getByRole('dialog')).toBeHidden();
+});
+
+test('runs actions from the command palette', async ({ openTab, openPanel, extensionId }) => {
+  const { panel } = await openOnDemo(openTab, openPanel, extensionId);
+  await panel.keyboard.press('ControlOrMeta+k');
+  const palette = panel.getByRole('dialog', { name: 'Commands' });
+  await expect(palette).toBeVisible();
+
+  await panel.keyboard.type('stress');
+  await expect(palette.getByRole('option', { name: /^Run stress test/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await panel.keyboard.press('Enter');
+  await expect(palette).toBeHidden();
+  await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
+
+  // Only commands that apply right now: Revert appears once stress is on.
+  await panel.keyboard.press('ControlOrMeta+k');
+  await panel.keyboard.type('revert');
+  await panel.keyboard.press('Enter');
+  await expect(panel.getByRole('button', { name: 'Revert' })).toBeHidden();
 });
 
 /**
