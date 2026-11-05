@@ -10,5 +10,11 @@
     "path": ".output/chrome-mv3/background.js",
     "limit": "20 kB",
     "gzip": true
+  },
+  {
+    "name": "Page runtime (injected)",
+    "path": ".output/chrome-mv3/content-scripts/scout.js",
+    "limit": "35 kB",
+    "gzip": true
   }
 ]

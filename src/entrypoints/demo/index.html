@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Overflow Scout demo</title>
+  </head>
+  <body>
+    <p class="note" role="note">
+      This page has text overflow bugs on purpose. Open Overflow Scout, choose
+      <strong>Scan page</strong>, then try a <strong>Stress test</strong> to see what breaks with
+      longer text.
+    </p>
+
+    <header class="topbar">
+      <a class="brand" href="#top">Fernhill Supply</a>
+      <nav class="tabs" aria-label="Sections">
+        <a class="tab" href="#overview">Overview</a>
+        <a class="tab" href="#collections">Seasonal collections and limited editions</a>
+        <a class="tab" href="#orders">Orders</a>
+        <a class="tab" href="#account">Account</a>
+      </nav>
+      <input class="search" type="search" placeholder="Search products, orders and help articles" />
+    </header>
+
+    <main id="top">
+      <p class="promo">
+        Free delivery on every order over 40 euros this week only, no code needed at checkout
+      </p>
+
+      <section class="grid" aria-label="Products">
+        <article class="card">
+          <span class="badge">New</span>
+          <h2 class="title">Waterproof hiking jacket with detachable insulated hood</h2>
+          <p class="price">129 €</p>
+          <button class="buy" type="button">Add to cart</button>
+        </article>
+        <article class="card">
+          <span class="badge">Sale</span>
+          <h2 class="title">Trail shoes</h2>
+          <p class="price">89 €</p>
+          <button class="buy" type="button">Add to cart</button>
+        </article>
+        <article class="card">
+          <span class="badge">New</span>
+          <h2 class="title">Merino base layer, long sleeve, recycled packaging</h2>
+          <p class="price">64 €</p>
+          <button class="buy" type="button">Add to cart</button>
+        </article>
+      </section>
+
+      <aside class="shipping">
+        <span class="chip">Ships in 2–3 business days from our regional warehouse</span>
+      </aside>
+
+      <section class="about">
+        <h2>About this page</h2>
+        <p>
+          Paragraphs like this one wrap onto more lines when their text gets longer, so they never
+          get cut off. Overflow Scout doesn't report them.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -2,7 +2,95 @@
 extName: Overflow Scout
 extDescription: Find clipped and truncated text before users do. Stress-test with translation-length text and get verified CSS fixes.
 actionTitle: Open Overflow Scout
+contextMenuInspect: Inspect text overflow here
+
+# Drawn on the page while stress text is applied
+overlay:
+  stressActive: Stress test active
+  revert: Revert
 
 # Side panel
 tagline: Find text that gets cut off, before your users do.
-rebuildNotice: The scanner is being rebuilt from the ground up. Scanning, stress testing and inspection arrive in the next milestones.
+actions:
+  scan: Scan page
+  scanAgain: Scan again
+  stress: Stress test
+  stressAgain: Run again
+  inspect: Inspect element
+  stopInspecting: Stop inspecting
+  demo: Try the demo page
+  revert: Revert
+  reapply: Re-apply
+  alwaysAllow: Always allow on this site
+  retry: Try again
+busy:
+  connecting: Connecting to the page…
+  scanning: Scanning…
+  stressing: Stress testing…
+  reverting: Reverting…
+page:
+  restricted: Chrome doesn't allow extensions on this page.
+  noAccess: Click the Overflow Scout button in the toolbar to work on this page.
+  noAccessShortcut: Click the Overflow Scout button in the toolbar, or press $1, to work on this page.
+  alwaysAllowed: Always allowed on this site
+  fileAccess: To scan local files, turn on “Allow access to file URLs” for Overflow Scout on the Extensions page.
+  error: 'Couldn’t reach the page: $1'
+  stale: Results are from the previous page.
+  reset:
+    1: 1 string was reset by the page.
+    n: $1 strings were reset by the page.
+results:
+  heading: Results
+  brokenNow: Broken now
+  atRisk: With longer text
+  none: No overflow in $1 text nodes at $2.
+  noneNow: Nothing was broken before the stress test.
+  noneAtRisk: Nothing else breaks with longer text.
+  footer: $1 text nodes · $2 ms · $3
+  footerStress: $1 text nodes · $2 ms
+  places:
+    1: 1 place
+    n: $1 places
+kind:
+  hidden: Hidden
+  pageScroll: Page scroll
+  truncated: Truncated
+  spilling: Spilling
+  input: Input
+stress:
+  heading: Stress test
+  strategy: Strategy
+  intensity: Intensity
+  language: Language
+  rtl: Right-to-left layout
+  apply: Apply and scan
+  active: Stress text is on the page. Revert to restore it exactly.
+  growth: $1 strings, $2× longer
+strategy:
+  translation: Translation length
+  pseudo: Pseudo-locale
+  longWords: Long words
+  language: Language samples
+intensity:
+  realistic: Realistic
+  worst: Worst case
+  extreme: Extreme
+language:
+  de: German
+  fi: Finnish
+  ru: Russian
+  ar: Arabic
+  ja: Japanese
+  th: Thai
+inspect:
+  heading: Inspect
+  hint: Click an element on the page. Press Esc to cancel.
+  noText: This element has no text to grow.
+  fitsUpTo: Fits up to $1 characters.
+  fitsAll: Still fits at $1 characters.
+  needs: Now $1 characters; a translation needs about $2–$3.
+  verdict:
+    fits: Room for translation
+    atRisk: May break in translation
+    willBreak: Will break in translation
+    broken: Already broken
