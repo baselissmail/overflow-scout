@@ -32,6 +32,22 @@ export function kindLabel(kind: Kind): string {
   }
 }
 
+/** One plain sentence on what the problem is, for tooltips and the detail view. */
+export function kindDescription(kind: Kind): string {
+  switch (kind) {
+    case 'hidden':
+      return i18n.t('kindDescription.hidden');
+    case 'page-scroll':
+      return i18n.t('kindDescription.pageScroll');
+    case 'truncated':
+      return i18n.t('kindDescription.truncated');
+    case 'spilling':
+      return i18n.t('kindDescription.spilling');
+    case 'input':
+      return i18n.t('kindDescription.input');
+  }
+}
+
 const KIND_ICONS = {
   hidden: EyeOff,
   'page-scroll': MoveHorizontal,

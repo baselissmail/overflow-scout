@@ -14,6 +14,7 @@ import { Popover } from '@/ui/Popover';
 import { Segmented } from '@/ui/Segmented';
 import { SeverityBar } from '@/ui/SeverityBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/Tabs';
+import { Tooltip } from '@/ui/Tooltip';
 import { useCountUp } from '@/ui/use-count-up';
 
 import { IssueDetail } from './IssueDetail';
@@ -21,7 +22,15 @@ import { ResultList } from './ResultList';
 import type { ResultFilter, SortOrder } from './filter';
 import { NO_FILTER, applyFilter, countByKind } from './filter';
 import type { Kind } from './labels';
-import { KINDS, KindIcon, NBSP, SEVERITY_TONE, formatCount, kindLabel } from './labels';
+import {
+  KINDS,
+  KindIcon,
+  NBSP,
+  SEVERITY_TONE,
+  formatCount,
+  kindDescription,
+  kindLabel,
+} from './labels';
 
 type Stats = ScanResultDto['stats'];
 type Tab = 'atRisk' | 'brokenNow';
@@ -57,17 +66,37 @@ function KindChip({
 }) {
   const shown = useCountUp(count);
   return (
-    <Chip
-      tone={SEVERITY_TONE[TONE_OF_KIND[kind]]}
-      icon={<KindIcon kind={kind} />}
-      label={kindLabel(kind)}
-      count={shown}
-      pressed={pressed}
-      onClick={() => {
-        onToggle(kind);
-      }}
-    />
+    <Tooltip content={kindDescription(kind)}>
+      <Chip
+        tone={SEVERITY_TONE[TONE_OF_KIND[kind]]}
+        icon={<KindIcon kind={kind} />}
+        label={kindLabel(kind)}
+        count={shown}
+        pressed={pressed}
+        onClick={() => {
+          onToggle(kind);
+        }}
+      />
+    </Tooltip>
   );
+}
+
+const SEVERITIES = ['critical', 'warning', 'notice'] as const;
+
+/** "3 critical · 2 warnings", leaving out severities with nothing in them. */
+function severityLine(issues: readonly IssueDto[]): string {
+  const count = (severity: IssueDto['severity']) =>
+    issues.filter((issue) => issue.severity === severity).length;
+  const parts: string[] = [];
+  const critical = count('critical');
+  const warning = count('warning');
+  const notice = count('notice');
+  if (critical > 0)
+    parts.push(i18n.t('results.severityCount.critical', critical, [formatCount(critical)]));
+  if (warning > 0)
+    parts.push(i18n.t('results.severityCount.warning', warning, [formatCount(warning)]));
+  if (notice > 0) parts.push(i18n.t('results.severityCount.notice', notice, [formatCount(notice)]));
+  return parts.join(' · ');
 }
 
 function severitySummary(issues: readonly IssueDto[]): string {
@@ -189,6 +218,7 @@ function ResultsBody({
   }, [controller, swap]);
 
   if (issues.length === 0) return <>{empty}</>;
+  const filtering = filter.kinds.size > 0 || filter.query !== '';
 
   const toggleKind = (kind: Kind) => {
     setFilter((current) => {
@@ -203,6 +233,7 @@ function ResultsBody({
     <ResultList
       key={resultsKey}
       issues={shown}
+      viewportWidth={viewport.width}
       selectedId={selectedId}
       label={i18n.t('results.heading')}
       onSelect={(issue) => {
@@ -249,61 +280,87 @@ function ResultsBody({
         }
       }}
     >
-      <SeverityBar
-        label={severitySummary(issues)}
-        segments={(['critical', 'warning', 'notice'] as const).map((severity) => ({
-          key: severity,
-          count: issues.filter((issue) => issue.severity === severity).length,
-          colorClass: TONE_BG[SEVERITY_TONE[severity]],
-        }))}
-      />
-      <div role="group" aria-label={i18n.t('results.filters')} className="flex flex-wrap gap-1.5">
-        {KINDS.filter((kind) => counts.has(kind)).map((kind) => (
-          <KindChip
-            key={kind}
-            kind={kind}
-            count={counts.get(kind) ?? 0}
-            pressed={filter.kinds.has(kind)}
-            onToggle={toggleKind}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="relative min-w-48 flex-1">
-          <span className="sr-only">{i18n.t('results.search')}</span>
-          <Search
-            size={14}
-            strokeWidth={1.5}
-            aria-hidden="true"
-            className="pointer-events-none absolute start-2 top-1/2 -translate-y-1/2 text-fg-muted"
-          />
-          <input
-            ref={searchRef}
-            type="search"
-            name="search"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder={i18n.t('results.searchPlaceholder')}
-            value={filter.query}
-            onChange={(event) => {
-              const value = event.target.value;
-              setFilter((current) => ({ ...current, query: value }));
-            }}
-            className="min-h-8 w-full rounded-control border border-line-strong bg-raised ps-7 pe-2"
-          />
-        </label>
-        <Segmented<SortOrder>
-          label={i18n.t('results.sort')}
-          value={filter.sort}
-          onChange={(sort) => {
-            setFilter((current) => ({ ...current, sort }));
-          }}
-          options={[
-            { value: 'severity', label: i18n.t('results.sortSeverity') },
-            { value: 'page', label: i18n.t('results.sortPage') },
-          ]}
-        />
-      </div>
+      {/* List controls step aside while a narrow detail is open; they don't affect it. */}
+      {(wide || !open) && (
+        <>
+          <div className="flex flex-col gap-1">
+            <SeverityBar
+              label={severitySummary(issues)}
+              segments={SEVERITIES.map((severity) => ({
+                key: severity,
+                count: issues.filter((issue) => issue.severity === severity).length,
+                colorClass: TONE_BG[SEVERITY_TONE[severity]],
+              }))}
+            />
+            <p className="text-small text-fg-muted tabular-nums" aria-hidden="true">
+              {severityLine(issues)}
+            </p>
+          </div>
+          <div
+            role="group"
+            aria-label={i18n.t('results.filters')}
+            className="flex flex-wrap items-center gap-1.5"
+          >
+            <span className="text-small text-fg-muted">{i18n.t('results.filterLabel')}</span>
+            {KINDS.filter((kind) => counts.has(kind)).map((kind) => (
+              <KindChip
+                key={kind}
+                kind={kind}
+                count={counts.get(kind) ?? 0}
+                pressed={filter.kinds.has(kind)}
+                onToggle={toggleKind}
+              />
+            ))}
+            {filtering && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setFilter((current) => ({ ...current, kinds: new Set(), query: '' }));
+                }}
+              >
+                {i18n.t('results.clearFilters')}
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="relative min-w-48 flex-1">
+              <span className="sr-only">{i18n.t('results.search')}</span>
+              <Search
+                size={14}
+                strokeWidth={1.5}
+                aria-hidden="true"
+                className="pointer-events-none absolute start-2 top-1/2 -translate-y-1/2 text-fg-muted"
+              />
+              <input
+                ref={searchRef}
+                type="search"
+                name="search"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={i18n.t('results.searchPlaceholder')}
+                value={filter.query}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setFilter((current) => ({ ...current, query: value }));
+                }}
+                className="min-h-8 w-full rounded-control border border-line-strong bg-raised ps-7 pe-2"
+              />
+            </label>
+            <Segmented<SortOrder>
+              label={i18n.t('results.sort')}
+              value={filter.sort}
+              onChange={(sort) => {
+                setFilter((current) => ({ ...current, sort }));
+              }}
+              options={[
+                { value: 'severity', label: i18n.t('results.sortSeverity') },
+                { value: 'page', label: i18n.t('results.sortPage') },
+              ]}
+            />
+          </div>
+        </>
+      )}
       {shown.length === 0 ? (
         <EmptyState title={i18n.t('results.noMatches')} />
       ) : wide ? (
@@ -373,6 +430,18 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
           }}
           className="flex min-h-0 flex-1 flex-col gap-2"
         >
+          {!state.stressActive && (
+            <p className="rounded-card bg-raised px-3 py-2 shadow-raised" role="status">
+              {i18n.t('results.restored')}
+            </p>
+          )}
+          <p className="text-small text-fg-muted tabular-nums">
+            {i18n.t('results.stressSummary', [
+              String(stress.stats.stress.growth),
+              formatCount(stress.atRisk.length),
+              formatCount(stress.brokenNow.length),
+            ])}
+          </p>
           <TabsList label={i18n.t('results.heading')}>
             <TabsTrigger value="atRisk">
               {i18n.t('results.atRisk')}

@@ -29,6 +29,17 @@ export function strategyDescription(strategy: StressStrategy): string {
   }
 }
 
+export function intensityDescription(intensity: StressIntensity): string {
+  switch (intensity) {
+    case 'realistic':
+      return i18n.t('intensityDescription.realistic');
+    case 'worst':
+      return i18n.t('intensityDescription.worst');
+    case 'extreme':
+      return i18n.t('intensityDescription.extreme');
+  }
+}
+
 export function intensityLabel(intensity: StressIntensity): string {
   switch (intensity) {
     case 'realistic':

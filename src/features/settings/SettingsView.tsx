@@ -5,7 +5,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 
 import { useOpenShortcut } from '@/features/page/use-open-shortcut';
-import { intensityOptions, languageOptions, strategyOptions } from '@/features/stress/options';
+import {
+  intensityDescription,
+  intensityOptions,
+  languageOptions,
+  strategyDescription,
+  strategyOptions,
+} from '@/features/stress/options';
 import type { Settings, Theme } from '@/storage/settings';
 import { Button } from '@/ui/Button';
 import { SelectField } from '@/ui/Field';
@@ -124,15 +130,21 @@ export function SettingsView({ settings, onSettings, onBack }: SettingsViewProps
               onSettings({ intensity });
             }}
           />
-          <SelectField
-            label={i18n.t('stress.language')}
-            value={settings.language}
-            options={languageOptions()}
-            onChange={(language) => {
-              onSettings({ language });
-            }}
-          />
+          {settings.strategy === 'language' && (
+            <SelectField
+              label={i18n.t('stress.language')}
+              value={settings.language}
+              options={languageOptions()}
+              onChange={(language) => {
+                onSettings({ language });
+              }}
+            />
+          )}
         </div>
+        <p className="text-small text-fg-muted">
+          {strategyDescription(settings.strategy)}
+          {settings.strategy !== 'language' && ` ${intensityDescription(settings.intensity)}`}
+        </p>
         <Switch
           label={i18n.t('stress.rtl')}
           description={i18n.t('stress.rtlDescription')}
@@ -178,13 +190,16 @@ export function SettingsView({ settings, onSettings, onBack }: SettingsViewProps
       </Group>
 
       <Group title={i18n.t('settings.shortcut')}>
-        <p>
-          {shortcut
-            ? interpolate(
-                (slot) => i18n.t('settings.shortcutCurrent', [slot]),
-                <Kbd>{shortcut}</Kbd>,
-              )
-            : i18n.t('settings.shortcutNone')}
+        {/* Nothing until Chrome answers, so it never claims "no shortcut" by mistake. */}
+        <p className="min-h-[1lh]">
+          {shortcut === undefined
+            ? null
+            : shortcut
+              ? interpolate(
+                  (slot) => i18n.t('settings.shortcutCurrent', [slot]),
+                  <Kbd>{shortcut}</Kbd>,
+                )
+              : i18n.t('settings.shortcutNone')}
         </p>
         <Button
           size="sm"

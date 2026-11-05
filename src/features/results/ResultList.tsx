@@ -1,6 +1,6 @@
 import { i18n } from '#i18n';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { IssueDto } from '@/messaging/protocol';
@@ -8,10 +8,12 @@ import { Badge, TONE_TEXT } from '@/ui/Chip';
 import { CutText } from '@/ui/CutText';
 import { cx } from '@/ui/cx';
 
-import { KindIcon, SEVERITY_TONE, formatCount, kindLabel } from './labels';
+import { KindIcon, SEVERITY_TONE, formatCount, formatPx, kindLabel } from './labels';
 
 export interface ResultListProps {
   issues: readonly IssueDto[];
+  /** Width of the scanned page's window, for "reaches 34 px past the 800 px window". */
+  viewportWidth: number;
   selectedId: string | null;
   label: string;
   onSelect: (issue: IssueDto) => void;
@@ -21,12 +23,47 @@ export interface ResultListProps {
 
 const rowId = (issue: IssueDto) => `result-${issue.id}`;
 
-/** One issue: its kind, where it is, and the text, cut where readers lose it. */
-function ResultRow({ issue, selected }: { issue: IssueDto; selected: boolean }) {
+/** One issue: its kind, then the text cut where readers lose it, then where it is. */
+function ResultRow({
+  issue,
+  selected,
+  viewportWidth,
+}: {
+  issue: IssueDto;
+  selected: boolean;
+  viewportWidth: number;
+}) {
   const [first] = issue.instances;
   if (!first) return null;
   const places = issue.instances.length;
   const tone = SEVERITY_TONE[issue.severity];
+  let body: ReactNode = null;
+  if (first.cut) {
+    body = (
+      <CutText
+        className="line-clamp-2"
+        title={`${first.cut.visible}${first.cut.hidden}`}
+        visible={first.cut.visible}
+        hidden={first.cut.hidden}
+        visibleLabel={i18n.t('detail.visible')}
+        hiddenLabel={i18n.t('detail.lost')}
+        toneClass={TONE_TEXT[tone]}
+      />
+    );
+  } else if (issue.kind === 'page-scroll') {
+    // Wide boxes may have no text of their own; say how far past the window they reach.
+    body = (
+      <span className="tabular-nums">
+        {i18n.t('detail.pageWider', [formatPx(first.overflow.x), formatPx(viewportWidth)])}
+      </span>
+    );
+  } else if (first.text !== '') {
+    body = (
+      <span className="line-clamp-2 break-words" title={first.text}>
+        {first.text}
+      </span>
+    );
+  }
   return (
     <div
       className={cx(
@@ -35,50 +72,28 @@ function ResultRow({ issue, selected }: { issue: IssueDto; selected: boolean }) 
         selected ? 'bg-accent-soft' : 'hover:bg-surface',
       )}
     >
-      {/* Wraps rather than squeezing: badge, place and count each keep their text. */}
-      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <Badge tone={tone} icon={<KindIcon kind={issue.kind} />}>
           {kindLabel(issue.kind)}
         </Badge>
-        <span
-          className="min-w-0 flex-1 basis-24 truncate font-mono text-small text-fg-muted"
-          title={first.element.label}
-          translate="no"
-        >
-          {first.element.label}
-        </span>
         {places > 1 && (
-          <span className="shrink-0 text-small text-fg-muted tabular-nums">
+          <span className="text-small text-fg-muted tabular-nums">
             {i18n.t('results.places', places, [formatCount(places)])}
           </span>
         )}
       </span>
-      {first.cut ? (
-        <CutText
-          className="line-clamp-2"
-          title={`${first.cut.visible}${first.cut.hidden}`}
-          visible={first.cut.visible}
-          hidden={first.cut.hidden}
-          visibleLabel={i18n.t('detail.visible')}
-          hiddenLabel={i18n.t('detail.lost')}
-          toneClass={TONE_TEXT[tone]}
-        />
-      ) : (
-        first.text !== '' && (
-          <span className="line-clamp-2 break-words" title={first.text}>
-            {first.text}
-          </span>
-        )
-      )}
+      {body}
+      <span
+        className="truncate font-mono text-small text-fg-muted"
+        title={first.element.label}
+        translate="no"
+      >
+        {first.element.label}
+      </span>
     </div>
   );
 }
 
-/**
- * A virtualized listbox: thousands of results stay fast, and the selection
- * moves with j/k or the arrow keys (plan §5.7). Moving the selection
- * highlights the element on the page, like hovering does.
- */
 /** Rows animate in only on arrival: never again while scrolling the virtual list. */
 const ARRIVAL_MS = 500;
 const STAGGERED_ROWS = 8;
@@ -89,6 +104,7 @@ const STAGGERED_ROWS = 8;
  */
 export function ResultList({
   issues,
+  viewportWidth,
   selectedId,
   label,
   onSelect,
@@ -211,7 +227,11 @@ export function ResultList({
                     : undefined
                 }
               >
-                <ResultRow issue={issue} selected={issue.id === selectedId} />
+                <ResultRow
+                  issue={issue}
+                  selected={issue.id === selectedId}
+                  viewportWidth={viewportWidth}
+                />
               </div>
             </div>
           );

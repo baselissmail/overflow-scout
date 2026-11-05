@@ -80,7 +80,8 @@ export function OverflowDemo() {
         width={BOX.width}
         height={BOX.height}
         rx="6"
-        className="fill-accent"
+        className="fill-surface stroke-line-strong"
+        strokeWidth="1"
       />
       {overflow > 0 && (
         <rect
@@ -96,7 +97,7 @@ export function OverflowDemo() {
         ref={textRef}
         x={TEXT_X}
         y={BOX.y + 22}
-        className="fill-accent-fg font-sans text-[13px] font-semibold"
+        className="fill-fg font-sans text-[13px] font-medium"
         clipPath="url(#os-inside)"
       >
         {text}
@@ -104,7 +105,7 @@ export function OverflowDemo() {
       <text
         x={TEXT_X}
         y={BOX.y + 22}
-        className="fill-fg-muted font-sans text-[13px] font-semibold"
+        className="fill-fg-muted font-sans text-[13px] font-medium"
         clipPath="url(#os-outside)"
         aria-hidden="true"
       >

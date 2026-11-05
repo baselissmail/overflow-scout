@@ -9,7 +9,16 @@ import { CutText } from '@/ui/CutText';
 import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
 
-import { KindIcon, SEVERITY_TONE, formatPx, kindLabel, severityLabel } from './labels';
+import type { AdviceKey } from './advice';
+import { adviseFor } from './advice';
+import {
+  KindIcon,
+  SEVERITY_TONE,
+  formatPx,
+  kindDescription,
+  kindLabel,
+  severityLabel,
+} from './labels';
 
 type Details = ResultOf<'details'>;
 
@@ -24,6 +33,53 @@ export interface IssueDetailProps {
 }
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
+
+function adviceText(key: AdviceKey): string {
+  switch (key) {
+    case 'whiteSpace':
+      return i18n.t('advice.whiteSpace');
+    case 'overflowWrap':
+      return i18n.t('advice.overflowWrap');
+    case 'lineClamp':
+      return i18n.t('advice.lineClamp');
+    case 'textOverflow':
+      return i18n.t('advice.textOverflow');
+    case 'maxWidth':
+      return i18n.t('advice.maxWidth');
+    case 'minWidth':
+      return i18n.t('advice.minWidth');
+    case 'height':
+      return i18n.t('advice.height');
+    case 'maxHeight':
+      return i18n.t('advice.maxHeight');
+    case 'width':
+      return i18n.t('advice.width');
+    case 'flex':
+      return i18n.t('advice.flex');
+    case 'grid':
+      return i18n.t('advice.grid');
+    case 'pageWidth':
+      return i18n.t('advice.pageWidth');
+    case 'field':
+      return i18n.t('advice.field');
+    case 'overflow':
+      return i18n.t('advice.overflow');
+  }
+}
+
+/** A copy button that confirms inline for 1.2 s (no toast for a local action). */
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, markCopied] = useCopied();
+  return (
+    <IconButton
+      label={copied ? i18n.t('actions.copied') : label}
+      icon={copied ? <Check {...ICON} className="text-ok" /> : <Copy {...ICON} />}
+      onClick={() => {
+        void navigator.clipboard.writeText(text).then(markCopied);
+      }}
+    />
+  );
+}
 
 /** What the box offers and what the text needs, on the axis that overflows. */
 function measurement(finding: FindingDto, viewport: { width: number }) {
@@ -69,7 +125,6 @@ export function IssueDetail({
   const details = loaded?.id === finding?.id ? loaded?.details : undefined;
   const selector = finding?.element.selector ?? details?.selector ?? null;
   const cut = finding?.cut !== undefined ? finding.cut : (details?.cut ?? null);
-  const [copied, markCopied] = useCopied();
 
   useEffect(() => {
     if (!finding) return;
@@ -86,6 +141,7 @@ export function IssueDetail({
   }, [finding, loadDetails, onHighlight]);
 
   if (!finding) return null;
+  const advice = adviseFor(finding);
   const tone = SEVERITY_TONE[issue.severity];
   const { has, needs, axis } = measurement(finding, viewport);
   const short = needs - has;
@@ -136,6 +192,8 @@ export function IssueDetail({
         )}
       </header>
 
+      <p className="-mt-2 text-pretty text-fg-muted">{kindDescription(issue.kind)}</p>
+
       {/* The proof: the text cut where readers lose it, measured underneath. */}
       <section
         className="flex flex-col gap-4 rounded-card bg-raised p-3 shadow-raised"
@@ -172,7 +230,47 @@ export function IssueDetail({
             formatPx(short),
           ])}
         />
+        <Button
+          variant="primary"
+          size="sm"
+          className="self-start"
+          icon={<LocateFixed size={14} strokeWidth={1.5} />}
+          onClick={() => {
+            onReveal(finding.id);
+          }}
+        >
+          {i18n.t('actions.jump')}
+        </Button>
       </section>
+
+      {/* The next step comes first; the evidence follows. */}
+      {advice.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-medium">{i18n.t('detail.whatToDo')}</h2>
+          <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-card bg-raised shadow-raised">
+            {advice.map((item) => (
+              <li key={item.key} className="flex flex-col gap-1.5 p-2.5">
+                <span>{adviceText(item.key)}</span>
+                {item.css && (
+                  <span className="flex items-start justify-between gap-2">
+                    <code
+                      className="min-w-0 rounded-[4px] bg-surface px-1.5 py-1 font-mono text-small break-all whitespace-pre-wrap"
+                      translate="no"
+                    >
+                      {item.css}
+                    </code>
+                    <CopyButton text={item.css} label={i18n.t('actions.copyCss')} />
+                  </span>
+                )}
+                <span className="font-mono text-small break-all text-fg-muted" translate="no">
+                  {i18n.t('detail.on', [item.element])}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-small text-fg-muted">{i18n.t('detail.suggestionNote')}</p>
+        </section>
+      )}
 
       {finding.before && (
         <section className="flex flex-col gap-1">
@@ -186,23 +284,17 @@ export function IssueDetail({
         </section>
       )}
 
-      <section className="flex flex-col gap-1">
-        <h2 className="text-small text-fg-muted">{i18n.t('detail.selector')}</h2>
-        <div className="flex items-start justify-between gap-2">
-          <code className="min-w-0 font-mono text-small break-all" translate="no">
-            {selector ?? finding.element.label}
-          </code>
-          <IconButton
-            label={copied ? i18n.t('actions.copied') : i18n.t('actions.copySelector')}
-            icon={copied ? <Check {...ICON} className="text-ok" /> : <Copy {...ICON} />}
-            disabled={!selector}
-            onClick={() => {
-              if (!selector) return;
-              void navigator.clipboard.writeText(selector).then(markCopied);
-            }}
-          />
-        </div>
-      </section>
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1">
+        <dt className="text-small text-fg-muted">{i18n.t('detail.element')}</dt>
+        <dd className="col-span-2 font-mono text-small break-all" translate="no">
+          {finding.element.label}
+        </dd>
+        <dt className="text-small text-fg-muted">{i18n.t('detail.selector')}</dt>
+        <dd className="font-mono text-small break-all" translate="no">
+          {selector ?? '…'}
+        </dd>
+        <dd>{selector && <CopyButton text={selector} label={i18n.t('actions.copySelector')} />}</dd>
+      </dl>
 
       <section className="flex flex-col gap-2">
         <h2 className="flex flex-wrap items-baseline gap-2">
@@ -239,18 +331,6 @@ export function IssueDetail({
           <p className="text-fg-muted">{i18n.t('detail.noCause')}</p>
         )}
       </section>
-
-      <footer className="flex flex-wrap gap-2">
-        <Button
-          variant="primary"
-          icon={<LocateFixed {...ICON} />}
-          onClick={() => {
-            onReveal(finding.id);
-          }}
-        >
-          {i18n.t('actions.jump')}
-        </Button>
-      </footer>
     </article>
   );
 }

@@ -10,8 +10,10 @@
   color: #1c2024;
   background: #f9f9fb;
 }
+/* Chrome gives extension pages `body { font-size: 75% }`; this page is meant at 15 px. */
 body {
   margin: 0;
+  font-size: 15px;
 }
 .note {
   margin: 0;

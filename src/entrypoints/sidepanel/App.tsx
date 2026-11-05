@@ -1,6 +1,7 @@
 import { i18n } from '#i18n';
 import {
   Ban,
+  Eraser,
   Command as CommandIcon,
   Crosshair,
   ExternalLink,
@@ -73,9 +74,11 @@ export function App() {
     applyTheme(settings.theme);
   }, [settings.theme]);
 
+  // Confirm every revert, from the panel or from the page's own button.
+  const restored = state.restored;
   useEffect(() => {
-    if (state.revertedOnPage > 0) toast(i18n.t('toast.revertedOnPage'));
-  }, [state.revertedOnPage, toast]);
+    if (restored) toast(i18n.t('toast.restored', restored.texts, [String(restored.texts)]));
+  }, [restored, toast]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -194,6 +197,16 @@ export function App() {
         // Looked up when run: commands are built during render, where refs aren't read.
         run: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
       },
+      hasResults &&
+        !busy && {
+          id: 'clear-results',
+          group: results,
+          label: i18n.t('actions.clearResults'),
+          icon: <Eraser {...ICON} />,
+          run: () => {
+            controller.clearResults();
+          },
+        },
       {
         id: 'settings',
         group: viewGroup,
@@ -370,8 +383,6 @@ export function App() {
 
         {state.stressActive && state.stress && (
           <StressBar
-            growth={state.stress.stats.stress.growth}
-            strings={state.stress.stats.stress.strings}
             pending={state.pending}
             busy={busy}
             onRevert={() => void controller.revert()}

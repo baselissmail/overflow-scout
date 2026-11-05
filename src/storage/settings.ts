@@ -20,7 +20,8 @@ export type Settings = z.infer<typeof settingsSchema>;
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   strategy: 'translation',
-  intensity: 'worst',
+  // Realistic: the length most translations reach, so findings are the ones worth fixing.
+  intensity: 'realistic',
   language: 'de',
   rtl: false,
   includeInputs: true,

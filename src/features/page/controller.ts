@@ -36,8 +36,8 @@ export interface PanelState {
   stale: boolean;
   picking: boolean;
   picked: PickedElement | null;
-  /** Counts reverts done from the page's own button, so the panel can confirm them. */
-  revertedOnPage: number;
+  /** The latest revert, from the panel or the page's own button, so the panel can confirm it. */
+  restored: { texts: number; seq: number } | null;
 }
 
 export interface ControllerDeps {
@@ -62,7 +62,7 @@ const INITIAL: PanelState = {
   stale: false,
   picking: false,
   picked: null,
-  revertedOnPage: 0,
+  restored: null,
 };
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -145,8 +145,8 @@ export class PanelController {
 
   async revert(): Promise<void> {
     await this.run('revert', async (connection) => {
-      await connection.request('revert', {});
-      this.set({ stressActive: false, pending: 0 });
+      const result = await connection.request('revert', {});
+      this.set({ stressActive: false, pending: 0, restored: this.nextRestored(result.restored) });
     });
   }
 
@@ -188,6 +188,11 @@ export class PanelController {
     await this.run(null, (connection) => connection.request('reveal', { findingId }));
   }
 
+  /** Back to the start screen. Stress text, if any, stays until reverted. */
+  clearResults(): void {
+    this.set({ scan: null, stress: null, showing: null, stale: false, picked: null });
+  }
+
   dismissError(): void {
     this.set({ error: null });
   }
@@ -202,6 +207,10 @@ export class PanelController {
   private set(patch: Partial<PanelState>): void {
     this.state = { ...this.state, ...patch };
     for (const listener of this.listeners) listener();
+  }
+
+  private nextRestored(texts: number): PanelState['restored'] {
+    return { texts, seq: (this.state.restored?.seq ?? 0) + 1 };
   }
 
   private badge(issues: readonly IssueDto[]): void {
@@ -284,7 +293,7 @@ export class PanelController {
           this.set({
             stressActive: false,
             pending: 0,
-            revertedOnPage: this.state.revertedOnPage + 1,
+            restored: this.nextRestored(event.result.restored),
           });
           break;
         case 'picked':

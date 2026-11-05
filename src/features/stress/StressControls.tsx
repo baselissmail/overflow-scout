@@ -6,7 +6,13 @@ import { SelectField } from '@/ui/Field';
 import { Segmented } from '@/ui/Segmented';
 import { Switch } from '@/ui/Switch';
 
-import { intensityOptions, languageOptions, strategyDescription, strategyOptions } from './options';
+import {
+  intensityDescription,
+  intensityOptions,
+  languageOptions,
+  strategyDescription,
+  strategyOptions,
+} from './options';
 
 export type StressScope = 'page' | 'picked';
 
@@ -69,7 +75,10 @@ export function StressControls({
           />
         )}
       </div>
-      <p className="text-small text-fg-muted">{strategyDescription(settings.strategy)}</p>
+      <p className="text-small text-fg-muted">
+        {strategyDescription(settings.strategy)}
+        {settings.strategy !== 'language' && ` ${intensityDescription(settings.intensity)}`}
+      </p>
       <Switch
         label={i18n.t('stress.rtl')}
         description={i18n.t('stress.rtlDescription')}
@@ -89,6 +98,9 @@ export function StressControls({
             { value: 'picked', label: i18n.t('stress.scopePicked'), disabled: !canScopeToPicked },
           ]}
         />
+        {!canScopeToPicked && (
+          <span className="text-small text-fg-muted">{i18n.t('stress.scopePickedHint')}</span>
+        )}
       </div>
       <Button type="submit" variant="primary" disabled={busy}>
         {i18n.t('stress.apply')}
