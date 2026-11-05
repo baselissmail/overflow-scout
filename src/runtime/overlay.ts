@@ -12,6 +12,9 @@ import { windowOf } from '@/core/dom';
 
 export const OVERLAY_TAG = 'overflow-scout-root';
 
+/** Two pulses of the flash animation in STYLES (700 ms each). */
+const FLASH_MS = 1400;
+
 const STYLES = `
 :host {
   all: initial !important;
@@ -95,6 +98,8 @@ export class Overlay {
   private readonly root: ShadowRoot;
   private readonly view: Window & typeof globalThis;
   private target: HighlightTarget | null = null;
+  /** The pulse lasts its whole animation, even if scrolling redraws the boxes meanwhile. */
+  private flashUntil = 0;
   private hovered: HighlightTarget | null = null;
   private pill: HTMLElement | null = null;
   private catcher: HTMLElement | null = null;
@@ -123,12 +128,13 @@ export class Overlay {
 
   highlight(target: HighlightTarget | null, flash = false): void {
     this.target = target;
-    this.render(flash);
+    this.flashUntil = flash ? this.view.performance.now() + FLASH_MS : 0;
+    this.render();
   }
 
   hover(target: HighlightTarget | null): void {
     this.hovered = target;
-    this.render(false);
+    this.render();
   }
 
   /** Covers the page with a transparent layer that receives pointer events (picker). */
@@ -204,11 +210,12 @@ export class Overlay {
     if (this.frame) return;
     this.frame = this.view.requestAnimationFrame(() => {
       this.frame = 0;
-      this.render(false);
+      this.render();
     });
   }
 
-  private render(flash: boolean): void {
+  private render(): void {
+    const flash = this.view.performance.now() < this.flashUntil;
     for (const node of this.root.querySelectorAll('.box, .tag')) node.remove();
     const layers: [HighlightTarget | null, 'target' | 'hover'][] = [
       [this.target, 'target'],

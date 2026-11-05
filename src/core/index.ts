@@ -12,5 +12,6 @@ export {
 } from './select/describe';
 export { PRESET_KINDS, PRESET_POOLS, getPreset, type PresetKind } from './text/presets';
 export { sampleText } from './dom';
+export { textCut, type TextCut } from './measure/cut';
 export * from './types';
 export * from './stress';

@@ -5,13 +5,22 @@ import { OTHER_ORIGIN, TEST_ORIGIN, expect, test } from './fixtures';
 
 type Chrome = typeof browser;
 
-const results = (panel: Page) => panel.getByRole('list', { name: 'Results' });
-const rows = (panel: Page) => results(panel).getByRole('listitem');
+const results = (panel: Page) => panel.getByRole('listbox', { name: 'Results' });
+const rows = (panel: Page) => results(panel).getByRole('option');
 const pageText = (page: Page) => page.evaluate(() => document.body.innerHTML);
 
+/** Scans from Home, or from the action bar once there are results. */
+async function scan(panel: Page): Promise<void> {
+  await panel
+    .getByRole('button', { name: /^(Scan page|Scan again)/ })
+    .first()
+    .click();
+}
+
 async function runStress(panel: Page): Promise<void> {
-  await panel.getByRole('button', { name: 'Stress test' }).click();
-  await panel.getByRole('button', { name: 'Apply and scan' }).click();
+  const form = panel.getByRole('form', { name: 'Stress test' });
+  if (!(await form.isVisible())) await panel.getByRole('button', { name: /^Stress test/ }).click();
+  await form.getByRole('button', { name: 'Apply and scan' }).click();
   await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
 }
 
@@ -29,18 +38,34 @@ test.describe('demo page', () => {
     const requests: string[] = [];
     panel.on('request', (request) => requests.push(request.url()));
 
-    await panel.getByRole('button', { name: 'Scan page' }).click();
+    await scan(panel);
     await expect(rows(panel).first()).toBeVisible();
-    for (const kind of ['Hidden', 'Truncated', 'Spilling', 'Page scroll', 'Input']) {
-      await expect(results(panel).getByText(kind, { exact: true }).first()).toBeVisible();
+    const filters = panel.getByRole('group', { name: 'Filter by kind' });
+    for (const kind of [
+      'Cut off',
+      'Truncated',
+      'Overflows',
+      'Wider than window',
+      'Field cut off',
+    ]) {
+      await expect(
+        filters.getByRole('button', { name: new RegExp(`^${kind} \\d+`) }),
+      ).toBeVisible();
     }
-    await expect(panel.getByText(/text nodes · \d+ ms · 800×/)).toBeVisible();
+    await expect(panel.getByText(/texts checked · \d+ ms · window 800×/)).toBeVisible();
 
-    // Hovering a result outlines it on the page; clicking scrolls to it.
-    await rows(panel).first().getByRole('button').hover();
+    // Hovering a result outlines it on the page; clicking scrolls to it and opens details.
+    await rows(panel).first().hover();
     await expect(demo.locator('overflow-scout-root .box[data-role="target"]')).toHaveCount(1);
-    await rows(panel).first().getByRole('button').click();
+    await rows(panel).first().click();
     await expect(demo.locator('overflow-scout-root .box[data-flash]')).toHaveCount(1);
+    await expect(panel.getByRole('img', { name: /^Needs .* short\.$/ })).toBeVisible();
+
+    // Revealing an element below the fold scrolls the page; the pulse must survive the redraws.
+    await demo.setViewportSize({ width: 800, height: 300 });
+    await rows(panel).filter({ hasText: 'Ships in 2–3 business days' }).click();
+    await expect(demo.locator('overflow-scout-root .box[data-flash]')).toHaveCount(1);
+    await expect.poll(() => demo.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 
     const badge = await serviceWorker.evaluate(
       (id) =>
@@ -50,6 +75,11 @@ test.describe('demo page', () => {
     expect(Number(badge)).toBeGreaterThan(0);
     // Everything runs locally (plan §6.4).
     expect(requests.filter((url) => !url.startsWith('chrome-extension://'))).toEqual([]);
+
+    // Clearing the results goes back to the start screen.
+    await panel.getByRole('button', { name: 'Clear results' }).click();
+    await expect(results(panel)).toBeHidden();
+    await expect(panel.getByRole('button', { name: /^Scan page/ })).toBeVisible();
   });
 
   test('stress-tests the page and reverts it exactly', async ({
@@ -62,10 +92,20 @@ test.describe('demo page', () => {
     const before = await pageText(demo);
 
     await runStress(panel);
-    await expect(panel.getByRole('button', { name: /^With longer text \d+/ })).toBeVisible();
+    await expect(panel.getByRole('tab', { name: /^New with longer text/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await expect(rows(panel).first()).toBeVisible();
     expect(await pageText(demo)).not.toBe(before);
     await expect(demo.locator('overflow-scout-root .pill')).toContainText('Stress test active');
+    // The results say how they were made, and the odd-looking text is explained.
+    await expect(
+      panel.getByText(
+        /^Translation length · Realistic · [\d.]+× longer: \d+ new, \d+ already broken$/,
+      ),
+    ).toBeVisible();
+    await expect(panel.getByText(/accented words are added on purpose/)).toBeVisible();
 
     await panel.getByRole('button', { name: 'Revert' }).click();
     await expect(panel.getByRole('button', { name: 'Revert' })).toBeHidden();
@@ -88,7 +128,7 @@ test.describe('demo page', () => {
     const { page: demo, tabId } = await openTab(`chrome-extension://${extensionId}/demo.html`);
     const panel = await openPanel(tabId);
 
-    await panel.getByRole('button', { name: 'Inspect element' }).click();
+    await panel.getByRole('button', { name: /^Inspect element/ }).click();
     await expect(panel.getByText('Click an element on the page.', { exact: false })).toBeVisible();
     const button = demo.getByRole('button', { name: 'Add to cart' }).first();
     const box = await button.boundingBox();
@@ -96,9 +136,12 @@ test.describe('demo page', () => {
     await demo.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 
     const card = panel.getByRole('region', { name: 'Inspect' });
-    await expect(card).toContainText('button.buy');
+    await expect(card).toContainText('Add to cart');
     await expect(card).toContainText(/Fits up to \d+ characters|Still fits/);
     await expect(card).toContainText(/a translation needs about 20–22/);
+
+    await card.getByRole('button', { name: 'Close inspection' }).click();
+    await expect(card).toBeHidden();
   });
 });
 
@@ -111,7 +154,7 @@ test.describe('other pages', () => {
     const panel = await openPanel(tabId);
     const before = await pageText(page);
 
-    await panel.getByRole('button', { name: 'Scan page' }).click();
+    await scan(panel);
     await expect(rows(panel)).toHaveCount(1);
     await runStress(panel);
     expect(await pageText(page)).not.toBe(before);
@@ -130,9 +173,9 @@ test.describe('other pages', () => {
       const tab = document.querySelector('.tab')?.firstChild;
       if (tab instanceof Text) tab.data = 'Overview';
     });
-    await expect(panel.getByText('1 string was reset by the page.')).toBeVisible();
+    await expect(panel.getByText('1 text was changed back by the page.')).toBeVisible();
     await panel.getByRole('button', { name: 'Re-apply' }).click();
-    await expect(panel.getByText('1 string was reset by the page.')).toBeHidden();
+    await expect(panel.getByText('1 text was changed back by the page.')).toBeHidden();
     expect(await page.locator('.tab').first().textContent()).not.toBe('Overview');
   });
 
@@ -143,12 +186,15 @@ test.describe('other pages', () => {
     const { page, tabId } = await openTab(`${TEST_ORIGIN}/`);
     const panel = await openPanel(tabId);
 
-    await panel.getByRole('button', { name: 'Scan page' }).click();
+    await scan(panel);
     await expect(rows(panel)).toHaveCount(1);
     await page.goto(`${TEST_ORIGIN}/next.html`);
-    await expect(panel.getByText('Results are from the previous page.')).toBeVisible();
+    const stale = panel
+      .getByRole('status')
+      .filter({ hasText: 'Results are from the previous page.' });
+    await expect(stale).toBeVisible();
 
-    await panel.getByRole('button', { name: 'Scan again' }).click();
+    await stale.getByRole('button', { name: 'Scan again' }).click();
     await expect(panel.getByText('Results are from the previous page.')).toBeHidden();
     await expect.poll(() => rows(panel).count()).toBeGreaterThan(1);
   });
@@ -173,15 +219,16 @@ test.describe('other pages', () => {
     const { tabId } = await openTab('chrome://version');
     const panel = await openPanel(tabId);
 
-    await panel.getByRole('button', { name: 'Scan page' }).click();
+    await scan(panel);
     await expect(panel.getByText("Chrome doesn't allow extensions on this page.")).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Open the demo page' })).toBeVisible();
   });
 
   test('asks for access on sites it has not been granted', async ({ openTab, openPanel }) => {
     const { tabId } = await openTab(`${OTHER_ORIGIN}/`);
     const panel = await openPanel(tabId);
 
-    await panel.getByRole('button', { name: 'Scan page' }).click();
+    await scan(panel);
     // The shortcut shown is the one Chrome reports, as the user has it set.
     await expect(panel.getByText(/^Click the Overflow Scout button in the toolbar/)).toBeVisible();
   });
@@ -190,7 +237,7 @@ test.describe('other pages', () => {
     const { tabId } = await openTab(`${TEST_ORIGIN}/`);
     const panel = await openPanel(tabId);
 
-    await panel.getByRole('button', { name: 'Scan page' }).click();
+    await scan(panel);
     await expect(panel.getByText('overflow-scout.test')).toBeVisible();
     // The e2e build is granted this origin, so there is nothing to ask for.
     await expect(panel.getByText('Always allowed on this site')).toBeVisible();

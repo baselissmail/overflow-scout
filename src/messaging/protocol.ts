@@ -68,12 +68,20 @@ export const findingSchema = z.object({
     confidence: z.enum(['high', 'medium']),
     causes: z.array(causeSchema),
   }),
+  /** Size of the container box, for the measure bar ("has 120 px · needs 214 px"). */
+  box: z.object({ width: px, height: px }),
   /** Text growth under stress (after ÷ before); only for at-risk findings. */
   growth: z.optional(z.nullable(z.number())),
+  /** The element's text before stress; only for at-risk findings. */
+  before: z.optional(z.nullable(z.string())),
+  /** Where the text is cut; sent for the first place of each issue, the rest load on demand. */
+  cut: z.optional(z.nullable(z.object({ visible: z.string(), hidden: z.string() }))),
 });
 
 export const issueSchema = z.object({
   id: z.string(),
+  /** Position of the issue's first instance in the page, for sorting by page order. */
+  order: count,
   kind: findingKindSchema,
   severity: severitySchema,
   instances: z.array(findingSchema).check(z.minLength(1)),
@@ -118,6 +126,7 @@ const stressStatsSchema = z.object({
 export const stressResultSchema = z.object({
   brokenNow: z.array(issueSchema),
   atRisk: z.array(issueSchema),
+  viewport: viewportSchema,
   stats: z.object({
     baseline: scanStatsSchema,
     stress: stressStatsSchema,
@@ -157,12 +166,23 @@ const id = z.number().check(z.int(), z.nonnegative());
 
 export const pageRequestSchema = z.discriminatedUnion('type', [
   z.object({ id, type: z.literal('hello') }),
-  z.object({ id, type: z.literal('scan') }),
-  z.object({ id, type: z.literal('stress'), options: stressOptionsSchema }),
+  z.object({ id, type: z.literal('scan'), includeInputs: z.boolean() }),
+  z.object({
+    id,
+    type: z.literal('stress'),
+    options: stressOptionsSchema,
+    /** `picked`: only the element last chosen with the picker. */
+    scope: z.enum(['page', 'picked']),
+    includeInputs: z.boolean(),
+  }),
+  /** Stops the scan or stress test in progress; it fails with code `cancelled`. */
+  z.object({ id, type: z.literal('cancel') }),
   z.object({ id, type: z.literal('revert') }),
   z.object({ id, type: z.literal('reapply') }),
   z.object({ id, type: z.literal('highlight'), findingId: z.nullable(z.string()) }),
   z.object({ id, type: z.literal('reveal'), findingId: z.string() }),
+  /** The selector and cut of one finding, for places that didn't arrive with them. */
+  z.object({ id, type: z.literal('details'), findingId: z.string() }),
   z.object({ id, type: z.literal('pick'), active: z.boolean() }),
 ]);
 
@@ -173,16 +193,32 @@ export const pageResultSchemas = {
   stress: stressResultSchema,
   revert: revertResultSchema,
   reapply: z.object({ strings: count }),
+  cancel: z.null(),
   highlight: z.null(),
   reveal: z.null(),
+  details: z.nullable(
+    z.object({
+      selector: z.string(),
+      cut: z.nullable(z.object({ visible: z.string(), hidden: z.string() })),
+    }),
+  ),
   pick: z.null(),
 } as const;
+
+export const progressPhaseSchema = z.enum(['scan', 'baseline', 'apply', 'stressed']);
 
 // ── Page → panel messages ───────────────────────────────────────────────────
 
 export const pageMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('result'), id, result: z.unknown() }),
-  z.object({ type: z.literal('error'), id, message: z.string() }),
+  z.object({
+    type: z.literal('error'),
+    id,
+    message: z.string(),
+    code: z.optional(z.enum(['cancelled'])),
+  }),
+  /** Work in progress: text nodes measured so far in the current phase. */
+  z.object({ type: z.literal('progress'), phase: progressPhaseSchema, textNodes: count }),
   /** Strings the page re-rendered or added since stress was applied. */
   z.object({ type: z.literal('pending'), count }),
   /** Stress was reverted on the page itself (the overlay's Revert button). */
@@ -210,6 +246,7 @@ export { LAST_GESTURE_KEY } from './keys';
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export type ElementRef = z.infer<typeof elementRefSchema>;
+export type TextCutDto = NonNullable<z.infer<typeof findingSchema>['cut']>;
 export type FindingDto = z.infer<typeof findingSchema>;
 export type IssueDto = z.infer<typeof issueSchema>;
 export type ScanResultDto = z.infer<typeof scanResultSchema>;
@@ -219,6 +256,7 @@ export type RevertResultDto = z.infer<typeof revertResultSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type PickedElement = z.infer<typeof pickedElementSchema>;
 export type PageRequest = z.infer<typeof pageRequestSchema>;
+export type ProgressPhase = z.infer<typeof progressPhaseSchema>;
 export type PageRequestType = PageRequest['type'];
 export type PageMessage = z.infer<typeof pageMessageSchema>;
 export type GestureMessage = z.infer<typeof gestureMessageSchema>;

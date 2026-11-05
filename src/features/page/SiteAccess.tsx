@@ -8,7 +8,7 @@ import { browser } from 'wxt/browser';
  * per-site grant lets the panel keep working there without another click.
  * The origin is only known once the panel has access, so it's offered here.
  */
-export function SiteAccess({ url }: { url: string }) {
+export function SiteAccess({ url, onGranted }: { url: string; onGranted: (host: string) => void }) {
   const origin = /^https?:/.test(url) ? new URL(url).origin : null;
   const [granted, setGranted] = useState<boolean | null>(null);
 
@@ -33,7 +33,10 @@ export function SiteAccess({ url }: { url: string }) {
           className="rounded-control border border-line bg-canvas px-2 py-0.5 font-medium text-fg"
           onClick={() => {
             // Must run inside the click: Chrome only prompts during a user gesture.
-            void browser.permissions.request({ origins: [`${origin}/*`] }).then(setGranted);
+            void browser.permissions.request({ origins: [`${origin}/*`] }).then((value) => {
+              setGranted(value);
+              if (value) onGranted(new URL(origin).host);
+            });
           }}
         >
           {i18n.t('actions.alwaysAllow')}

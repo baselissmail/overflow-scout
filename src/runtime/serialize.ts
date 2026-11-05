@@ -1,5 +1,5 @@
 import type { AtRiskFinding, Finding, Issue } from '@/core';
-import { elementLabel, elementSelector, groupFindings } from '@/core';
+import { elementLabel, elementSelector, groupFindings, textCut } from '@/core';
 import type { ElementRef, FindingDto, IssueDto } from '@/messaging/protocol';
 
 /**
@@ -31,11 +31,20 @@ function ref(element: Element, withSelector: boolean): ElementRef {
   return withSelector ? { label, selector: elementSelector(element) } : { label };
 }
 
+/** DOCUMENT_POSITION_FOLLOWING: the other node comes after the reference node. */
+const FOLLOWING = 4;
+
+/** Looks up the text an element showed before stress, for at-risk findings. */
+export type BeforeText = (element: Element) => string | null;
+
 function toFindingDto(
   finding: Finding | AtRiskFinding,
   registry: FindingRegistry,
   withSelector: boolean,
+  before: BeforeText | undefined,
 ): FindingDto {
+  const rect = finding.container.getBoundingClientRect();
+  const round = (value: number) => Math.round(value * 10) / 10;
   return {
     id: registry.add(finding),
     kind: finding.kind,
@@ -55,7 +64,11 @@ function toFindingDto(
         note: cause.note,
       })),
     },
+    box: { width: round(rect.width), height: round(rect.height) },
+    // Measuring the cut takes a few layout reads; only the first place gets it up front.
+    ...(withSelector && { cut: textCut(finding) }),
     ...('growth' in finding && { growth: finding.growth }),
+    ...(before && { before: before(finding.element) }),
   };
 }
 
@@ -63,16 +76,27 @@ function toFindingDto(
  * Groups findings into issues. Unique selectors are slow to compute, so only
  * the first instance of each issue gets one.
  */
-export function toIssueDtos(findings: readonly Finding[], registry: FindingRegistry): IssueDto[] {
-  return groupFindings(findings).map((issue: Issue) => {
+export function toIssueDtos(
+  findings: readonly Finding[],
+  registry: FindingRegistry,
+  before?: BeforeText,
+): IssueDto[] {
+  const issues = groupFindings(findings);
+  // groupFindings sorts by severity, then page order; recover page order for sorting.
+  const byPosition = [...issues].sort((a, b) =>
+    a.instances[0].element.compareDocumentPosition(b.instances[0].element) & FOLLOWING ? -1 : 1,
+  );
+  const order = new Map(byPosition.map((issue, index) => [issue, index]));
+  return issues.map((issue: Issue) => {
     const [first, ...rest] = issue.instances;
     return {
       id: issue.id,
+      order: order.get(issue) ?? 0,
       kind: issue.kind,
       severity: issue.severity,
       instances: [
-        toFindingDto(first, registry, true),
-        ...rest.map((finding) => toFindingDto(finding, registry, false)),
+        toFindingDto(first, registry, true, before),
+        ...rest.map((finding) => toFindingDto(finding, registry, false, before)),
       ],
     };
   });

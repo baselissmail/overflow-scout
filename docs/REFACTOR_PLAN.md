@@ -1,6 +1,6 @@
 # Overflow Scout v1.0 — Refactor & Launch Plan
 
-> Status: **Approved 2026-11-04 (all recommendations in §14 accepted)** · Phases 0–3 done · Owner: Basel Issmail
+> Status: **Approved 2026-11-04 (all recommendations in §14 accepted)** · Phases 0–4 done · Owner: Basel Issmail
 > Scope: Take Overflow Scout from prototype (v0.1) to a Chrome Web Store–ready v1.0 that is accurate, fast, private, and a pleasure to use.
 
 ---
@@ -185,16 +185,18 @@ Batching: **write all → read all → (restore all)** in one synchronous pass, 
 
 ### 3.3 Issue taxonomy
 
-| Type            | Meaning                                                       | Severity                                        |
-| --------------- | ------------------------------------------------------------- | ----------------------------------------------- |
-| **Hidden**      | Text cut off with no visual cue (clipped by self or ancestor) | Critical                                        |
-| **Page scroll** | Element causes horizontal page scroll                         | Critical                                        |
-| **Truncated**   | Ellipsis or line-clamp hides content (often intentional)      | Warning. User can mark "accepted on this site". |
-| **Spilling**    | Text overflows its box visibly, overlapping neighbors         | Warning                                         |
-| **Input**       | Input value or placeholder doesn't fit                        | Notice                                          |
-| _At risk_ (tag) | Fine now, broken under the current stress strategy            | Inherits type, tagged "with longer text"        |
+Display names are plain descriptions of what goes wrong (changed 2026-11-05 after a first-time-user review; the engine's kinds keep their original ids). Each has a one-line definition in the panel.
 
-Status is always shown as **color + icon + text label**, never color alone.
+| Kind (id)                 | Shown as                 | Meaning                                                                          | Severity                                        |
+| ------------------------- | ------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `hidden`                  | **Cut off**              | The box clips its text with no ellipsis; readers lose part of it without knowing | Critical                                        |
+| `page-scroll`             | **Wider than page**      | The element is wider than the window, so the page scrolls sideways               | Critical                                        |
+| `truncated`               | **Truncated**            | Ellipsis or line-clamp hides the end (often intentional)                         | Warning. User can mark "accepted on this site". |
+| `spilling`                | **Overflows**            | Text runs out of its box and can overlap what's next to it                       | Warning                                         |
+| `input`                   | **Field cut off**        | A placeholder or read-only value is longer than its field                        | Notice                                          |
+| _At risk_ (stress result) | **New with longer text** | Fine now, broken under the current stress strategy                               | Inherits type                                   |
+
+Status is always shown as **icon + color + text label**, never color alone.
 
 ### 3.4 Diagnosis: honest "likely cause"
 
@@ -257,7 +259,7 @@ Output: "✔ `white-space: normal` on `.toolbar .btn` resolves it (element grows
 
 A **string** is the text of one block: `You have <b>3</b> unread messages` is one 26-character string, not four nodes. Growth is sized by the whole string and split across its pieces; pieces without letters (numbers, prices) are never rewritten. Code, `translate="no"`, editable regions and ligature icon fonts are never stressed ([ADR 0007](adr/0007-stress-text-and-revert.md)).
 
-Intensities: **Realistic** (low end of the range) · **Worst case** (high end, the default) · **Extreme** (2× worst case). An **RTL** toggle sets `dir="rtl"` on `<html>` and is reverted exactly.
+Intensities: **Realistic** (low end of the range; the panel's default, because it finds what a translation will actually hit and so what's worth fixing) · **Worst case** (high end; the engine API's default) · **Extreme** (2× worst case). An **RTL** toggle sets `dir="rtl"` on `<html>` and is reverted exactly.
 
 All generation uses a **seeded RNG**, so a scan is reproducible and tests are deterministic.
 
@@ -461,11 +463,11 @@ Each phase ends with explicit exit criteria. Phases 1 and 2 (engine) can run in 
 
 ### Phase 4 — Design system and side panel UI
 
-- [ ] Install the chosen Claude Code skills (§11). Write `docs/design/DIRECTION.md` (references: DevTools, Linear, Raycast; tokens from §5.5).
-- [ ] Tokens, primitives (Button, IconButton, Chip, Tabs, Tooltip, Popover, Toast, Slider, Segmented, Kbd, EmptyState, MeasureBar), and patterns (ResultRow, IssueDetail, StressBar).
-- [ ] All screens from §5.3, all states from §5.4, theme, motion, i18n plumbing.
+- [x] Install the chosen Claude Code skills (§11). Write `docs/design/DIRECTION.md` (references: DevTools, Linear, Raycast; tokens from §5.5). _Each skill was read in full and pinned to a commit (`.claude/skills/README.md`). `web-design-guidelines` downloads its rules from a branch on every run, so a pinned copy of the rules sits behind a local skill instead; `vercel-react-best-practices` is mostly Next.js and its repository has no license, so its applicable rules are summarized in DIRECTION.md._
+- [x] Tokens, primitives (Button, IconButton, Chip, Tabs, Tooltip, Popover, Toast, Segmented, Kbd, EmptyState, MeasureBar, plus Switch, SelectField, Dialog, ProgressBar), and patterns (ResultRow, IssueDetail, StressBar). _Slider moves to Phase 5, where the length slider uses it._
+- [x] All screens from §5.3, all states from §5.4, theme, motion, i18n plumbing. _Not yet: streaming results while a scan runs (the live count updates; results arrive at the end), and the Phase 5 parts of Issue detail and Inspect (verified fixes, screenshot, copy report, ignore, length slider, presets)._
 
-**Exit:** axe clean · keyboard-only walkthrough passes · visual snapshots approved · **side panel passes its own scan** at 320 px with pseudo-locale.
+**Exit:** axe clean · keyboard-only walkthrough passes · visual snapshots approved · **side panel passes its own scan** at 320 px with pseudo-locale. _Met 2026-11-05: axe reports no serious or critical issues on Home, results, detail, stress results, Settings and the shortcuts sheet, in light and dark; a keyboard-only e2e walkthrough covers Tab, j/k, Enter, Esc, / and ?; token contrast is unit-tested (40 pairs, both themes); the panel stresses itself with pseudo-locale text at 320 px in six states and nothing clips or spills (truncation is allowed only where a `title` carries the full text). That test found and fixed three real layout bugs before review. Screen captures at 320, 400 and 600 px in both themes are uploaded by CI for review; pixel-diff baselines need a fixed Linux font setup and come with Phase 6. Side panel JS: 133 kB gzip (budget 200)._
 
 ### Phase 5 — Inspect, fixes, reporting
 

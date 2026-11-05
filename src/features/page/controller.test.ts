@@ -10,6 +10,7 @@ const SCAN: ScanResultDto = {
   issues: [
     {
       id: 'hidden|div|body',
+      order: 0,
       kind: 'hidden',
       severity: 'critical',
       instances: [
@@ -24,6 +25,7 @@ const SCAN: ScanResultDto = {
           element: { label: 'div', selector: 'div' },
           container: { label: 'div' },
           diagnosis: { confidence: 'high', causes: [] },
+          box: { width: 120, height: 20 },
         },
       ],
     },

@@ -16,4 +16,9 @@ export type { LanguageSample, SampleLanguage } from './samples';
 export { StressSession } from './session';
 export type { Size, StressOptions, StressStats } from './session';
 export { runStressTest } from './stress-test';
-export type { AtRiskFinding, StressTestResult } from './stress-test';
+export type {
+  AtRiskFinding,
+  StressPhase,
+  StressTestOptions,
+  StressTestResult,
+} from './stress-test';

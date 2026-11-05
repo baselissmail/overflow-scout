@@ -3,6 +3,15 @@ import type { Axis, Cause, Finding, FindingKind, ScanOptions, ScanStats } from '
 import type { Size, StressOptions, StressStats } from './session';
 import { StressSession } from './session';
 
+export type StressPhase = 'baseline' | 'apply' | 'stressed';
+
+export interface StressTestOptions extends StressOptions {
+  /** Check input placeholders and read-only values. Default true. */
+  includeInputs?: boolean;
+  /** Called as each phase makes progress, with the text nodes measured so far. */
+  onProgress?: (phase: StressPhase, textNodes: number) => void;
+}
+
 /** A problem that only appears with longer text. */
 export interface AtRiskFinding extends Finding {
   /** How much longer the element's text became (after ÷ before), when known. */
@@ -92,8 +101,9 @@ function withEvidence(finding: Finding, session: StressSession): AtRiskFinding {
  */
 export async function runStressTest(
   doc: Document,
-  options: StressOptions = {},
+  options: StressTestOptions = {},
 ): Promise<StressTestResult> {
+  const { onProgress } = options;
   const scanOptions: ScanOptions = {
     ...(options.ignore && { ignore: options.ignore }),
     ...(options.openShadowRoot && { openShadowRoot: options.openShadowRoot }),
@@ -101,15 +111,32 @@ export async function runStressTest(
     ...(options.now && { now: options.now }),
     ...(options.yieldToHost && { yieldToHost: options.yieldToHost }),
     ...(options.scope && { root: options.scope }),
+    ...(options.signal && { signal: options.signal }),
+    ...(options.includeInputs !== undefined && { includeInputs: options.includeInputs }),
   };
 
-  const baseline = await scanDocumentAsync(doc, scanOptions);
+  const baseline = await scanDocumentAsync(doc, {
+    ...scanOptions,
+    ...(onProgress && {
+      onProgress: (count: number) => {
+        onProgress('baseline', count);
+      },
+    }),
+  });
+  onProgress?.('apply', baseline.stats.textNodes);
   const session = new StressSession(doc, options);
   let stress: StressStats;
   let stressed: Awaited<ReturnType<typeof scanDocumentAsync>>;
   try {
     stress = await session.apply();
-    stressed = await scanDocumentAsync(doc, scanOptions);
+    stressed = await scanDocumentAsync(doc, {
+      ...scanOptions,
+      ...(onProgress && {
+        onProgress: (count: number) => {
+          onProgress('stressed', count);
+        },
+      }),
+    });
   } catch (error) {
     session.revert();
     throw error;

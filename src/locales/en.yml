@@ -1,6 +1,6 @@
 # Manifest strings. Chrome limits the description to 132 characters.
 extName: Overflow Scout
-extDescription: Find clipped and truncated text before users do. Stress-test with translation-length text and get verified CSS fixes.
+extDescription: Find clipped and truncated text before users do. Stress-test with translation-length text and get CSS fixes to try.
 actionTitle: Open Overflow Scout
 contextMenuInspect: Inspect text overflow here
 
@@ -9,72 +9,203 @@ overlay:
   stressActive: Stress test active
   revert: Revert
 
-# Side panel
+# Side panel. Sentence case, plain verbs; see docs/design/DIRECTION.md.
 tagline: Find text that gets cut off, before your users do.
 actions:
   scan: Scan page
   scanAgain: Scan again
   stress: Stress test
-  stressAgain: Run again
   inspect: Inspect element
   stopInspecting: Stop inspecting
   demo: Try the demo page
+  openDemo: Open the demo page
   revert: Revert
   reapply: Re-apply
   alwaysAllow: Always allow on this site
   retry: Try again
+  cancel: Cancel
+  back: Back to results
+  jump: Show on page
+  copySelector: Copy selector
+  copyCss: Copy CSS
+  copied: Copied
+  settings: Settings
+  shortcuts: Keyboard shortcuts
+  close: Close
+  runStress: Run a stress test
+  clearResults: Clear results
+  previous: Previous place
+  next: Next place
+home:
+  scan: Checks this page for text that’s cut off, truncated or overflowing. The page itself doesn’t change.
+  stress: Makes every text as long as a translation would, shows what breaks, then puts the page back.
+  inspect: Pick an element and see how much text fits in it.
+  shortcut: Open this panel with $1.
+  demoLabel: A button label grows longer, as it would in translation, until it no longer fits its button.
+  demoCaption: The accents stand in for a translation that makes the label longer. Overflow Scout shows where it’s cut, and by how much.
 busy:
   connecting: Connecting to the page…
   scanning: Scanning…
-  stressing: Stress testing…
+  baseline: Measuring the page…
+  apply: Lengthening text…
+  stressed: Measuring with longer text…
   reverting: Reverting…
+  textNodes:
+    1: 1 text checked
+    n: $1 texts checked
 page:
   restricted: Chrome doesn't allow extensions on this page.
   noAccess: Click the Overflow Scout button in the toolbar to work on this page.
   noAccessShortcut: Click the Overflow Scout button in the toolbar, or press $1, to work on this page.
-  alwaysAllowed: Always allowed on this site
   fileAccess: To scan local files, turn on “Allow access to file URLs” for Overflow Scout on the Extensions page.
   error: 'Couldn’t reach the page: $1'
   stale: Results are from the previous page.
+  alwaysAllowed: Always allowed on this site
+  accessGranted: Overflow Scout can now work on $1 without a click.
   reset:
-    1: 1 string was reset by the page.
-    n: $1 strings were reset by the page.
+    1: 1 text was changed back by the page.
+    n: $1 texts were changed back by the page.
 results:
   heading: Results
-  brokenNow: Broken now
-  atRisk: With longer text
-  none: No overflow in $1 text nodes at $2.
+  brokenNow: Already broken
+  atRisk: New with longer text
+  stressSummary: '$1 · $2 · $3× longer: $4 new, $5 already broken'
+  restored: The page is back to normal. These results are from the stress test.
+  none: No overflow in $1 texts, in a $2 window.
   noneNow: Nothing was broken before the stress test.
   noneAtRisk: Nothing else breaks with longer text.
-  footer: $1 text nodes · $2 ms · $3
-  footerStress: $1 text nodes · $2 ms
+  noMatches: No results match these filters.
+  severitySummary: $1 critical, $2 warnings, $3 notices
+  severityHelp:
+    title: What the levels mean
+    critical: Text is cut off with no sign of it, or the whole page scrolls sideways.
+    warning: Text ends in an ellipsis, stops after a few lines, or runs out of its box.
+    notice: A field’s placeholder or value doesn’t fit.
+  severityCount:
+    critical:
+      1: 1 critical
+      n: $1 critical
+    warning:
+      1: 1 warning
+      n: $1 warnings
+    notice:
+      1: 1 notice
+      n: $1 notices
+  filterLabel: Filter
+  clearFilters: Clear filters
+  selectHint: Choose a result to see how much text doesn’t fit, and why.
+  footer: $1 texts checked · $2 ms · window $3
+  footerStress: $1 texts checked · $2 ms
   places:
     1: 1 place
     n: $1 places
+  filters: Filter by kind
+  search: Search results
+  searchPlaceholder: Search results…
+  sort: Sort results
+  sortSeverity: Severity
+  sortPage: Page order
+  coverage: What was checked
+  coverageTextNodes: Texts checked
+  coverageInputs: Fields checked
+  coverageInvisible: Texts not shown on the page (skipped)
+  coverageForeign: Text in SVG and MathML (skipped)
+  coverageShadowRoots: Shadow roots
+  coverageFrames: Frames not scanned
+  coverageTime: Time
+  coverageViewport: Window size
 kind:
-  hidden: Hidden
-  pageScroll: Page scroll
+  hidden: Cut off
+  pageScroll: Wider than window
   truncated: Truncated
-  spilling: Spilling
-  input: Input
+  spilling: Overflows
+  input: Field cut off
+kindDescription:
+  hidden: The box clips its text with no ellipsis, so readers lose part of it without knowing.
+  pageScroll: This element is wider than the browser window, so the whole page scrolls sideways.
+  truncated: The text ends in an ellipsis (…) or stops after a few lines. Often intended, but the end is lost.
+  spilling: The text runs out of its box and can overlap what’s next to it.
+  input: A placeholder or read-only value is longer than its field.
+severity:
+  critical: Critical
+  warning: Warning
+  notice: Notice
+detail:
+  visible: Visible
+  lost: Cut off
+  spills: Spills out
+  proof: What readers see
+  place: Place $1 of $2
+  hasWidth: width $1
+  hasHeight: height $1
+  hasWindow: window $1
+  needs: needs $1
+  short: −$1
+  measure: Needs $1, has $2, $3 short.
+  pageWider: Reaches $1 past the $2 window.
+  measureY: Needs $1 of height, has $2, $3 short.
+  text: Text
+  before: Before
+  cause: Likely cause
+  confidenceHigh: High confidence
+  confidenceMedium: Medium confidence
+  noCause: No single CSS property explains this.
+  element: Element
+  selector: CSS selector
+  growth: Text $1× longer
+  whatToDo: What to do
+  on: On $1
+  suggestionNote: Based on the likely cause below; not yet tried on the page.
+advice:
+  whiteSpace: Let the text wrap onto another line.
+  textOverflow: The ellipsis hides the end. If the full text matters, let it wrap, or show it on hover with a title.
+  lineClamp: Show more lines, or let readers expand the text.
+  maxWidth: Let the box grow past this maximum width.
+  width: Let the box size itself to its text.
+  flex: Let this flex item give its text room, or let it shrink without hiding the text.
+  grid: Give this grid column more room, or let it size to its content.
+  height: Let the box grow with its text, using a minimum height instead of a fixed one.
+  maxHeight: Raise or remove the maximum height.
+  overflow: Hiding overflow cuts text silently. Fix the size instead, or add an ellipsis so readers can tell.
+  overflowWrap: Let long words, URLs and email addresses break.
+  minWidth: Remove the minimum width, or keep it within the window.
+  pageWidth: Keep the element within the window.
+  field: Widen the field, or shorten the text.
 stress:
   heading: Stress test
   strategy: Strategy
   intensity: Intensity
   language: Language
   rtl: Right-to-left layout
+  rtlDescription: Sets the page direction to right-to-left while stress text is on.
+  scope: Scope
+  scopePage: Whole page
+  scopePicked: Picked element
   apply: Apply and scan
-  active: Stress text is on the page. Revert to restore it exactly.
-  growth: $1 strings, $2× longer
+  active: Stress text is on the page. Revert puts every text back exactly.
+  activeTranslation: The accented words are added on purpose, to make each text as long as a translation.
+  activePseudo: The accents and [brackets] are added on purpose. A missing ] shows where a text was cut.
+  activeLongWords: The long words, links and email addresses are added on purpose, to test text that can’t wrap.
+  activeLanguage: The text is replaced with real text in another language, to test other scripts.
+  scopePickedHint: To test one element, pick it with Inspect element first.
 strategy:
   translation: Translation length
   pseudo: Pseudo-locale
   longWords: Long words
   language: Language samples
+strategyDescription:
+  translation: Adds accented copies of each string’s words, up to the length a translation needs.
+  pseudo: Accents every letter and brackets each string. A missing ] means the end was cut off.
+  longWords: Adds a long word, URL or email address that can’t wrap.
+  language: Replaces text with real text in another language and script.
 intensity:
   realistic: Realistic
   worst: Worst case
   extreme: Extreme
+intensityDescription:
+  realistic: The length most translations reach. Best for deciding what to fix.
+  worst: The long end of the range, which only some languages reach.
+  extreme: Twice the worst case, to see how robust a layout is.
 language:
   de: German
   fi: Finnish
@@ -84,13 +215,72 @@ language:
   th: Thai
 inspect:
   heading: Inspect
+  close: Close inspection
   hint: Click an element on the page. Press Esc to cancel.
   noText: This element has no text to grow.
   fitsUpTo: Fits up to $1 characters.
   fitsAll: Still fits at $1 characters.
   needs: Now $1 characters; a translation needs about $2–$3.
+  has: fits $1
+  needsChars: needs $1
+  measure: Fits up to $1 characters; a translation needs about $2.
   verdict:
     fits: Room for translation
     atRisk: May break in translation
     willBreak: Will break in translation
     broken: Already broken
+settings:
+  heading: Settings
+  appearance: Appearance
+  theme: Theme
+  themeSystem: System
+  themeLight: Light
+  themeDark: Dark
+  defaults: Stress test defaults
+  scanning: Scanning
+  includeInputs: Check fields
+  includeInputsDescription: Placeholders and read-only values that don’t fit.
+  sites: Site access
+  sitesDescription: Sites where Overflow Scout works without a click.
+  sitesNone: None yet. Use “Always allow on this site” while scanning a page.
+  remove: Remove
+  removeSite: Remove access to $1
+  shortcut: Keyboard shortcut
+  shortcutCurrent: Opens the panel with $1.
+  shortcutNone: No shortcut is set.
+  changeShortcut: Change shortcut
+  about: About
+  version: Version $1
+  privacy: Everything runs in your browser. Overflow Scout collects no data and makes no network requests.
+  credit: Made by Basel Issmail. Open source under the MIT license.
+shortcuts:
+  heading: Keyboard shortcuts
+  next: Next result
+  previous: Previous result
+  open: Open the selected result
+  close: Close details or stop the picker
+  search: Search results
+  help: Show keyboard shortcuts
+  panel: Open this panel
+commands:
+  title: Commands
+  open: Commands
+  placeholder: Type a command…
+  none: No commands match.
+  groupActions: Actions
+  groupResults: Results
+  groupView: View
+  groupHelp: Help
+  runStress: Run stress test now
+  stressOptions: Stress test options
+  clearResults: Clear results
+  search: Search results
+  themeSystem: Use the system theme
+  themeLight: Use the light theme
+  themeDark: Use the dark theme
+  changeShortcut: Change the keyboard shortcut
+toast:
+  label: Notifications
+  restored:
+    1: Page restored. 1 text put back.
+    n: Page restored. $1 texts put back.

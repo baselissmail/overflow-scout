@@ -187,6 +187,20 @@ export class StressSession {
     return this.sizes.get(element);
   }
 
+  /** The element's text before stress (whitespace collapsed), or null if none of it is stressed. */
+  originalTextOf(element: Element): string | null {
+    const placeholder = this.ledger.attributeEntries(element)[0];
+    if (placeholder) return placeholder.original;
+    let stressed = false;
+    const parts: string[] = [];
+    for (const node of walkTree(this.doc, element, SHOW_TEXT, this.options)) {
+      const entry = this.ledger.textEntry(node as Text);
+      stressed ||= entry !== undefined;
+      parts.push(entry?.original ?? (node as Text).data);
+    }
+    return stressed ? parts.join('').replace(/\s+/g, ' ').trim() : null;
+  }
+
   /** How much longer the element's stressed text became (after ÷ before), or null. */
   growthOf(element: Element): number | null {
     let before = 0;

@@ -2,13 +2,15 @@ import type {
   IssueDto,
   PageInfo,
   PickedElement,
+  ProgressPhase,
+  ResultOf,
   ScanResultDto,
   StressOptionsDto,
   StressResultDto,
 } from '@/messaging/protocol';
 
 import type { ConnectionFailure, PageConnection } from './connection';
-import { ConnectionError } from './connection';
+import { ConnectionError, RequestError } from './connection';
 
 export type Busy = 'connect' | 'scan' | 'stress' | 'revert' | 'reapply';
 
@@ -19,9 +21,13 @@ export interface PanelState {
   failure: ConnectionFailure | null;
   page: PageInfo | null;
   busy: Busy | null;
+  /** Live progress of the scan or stress test in progress. */
+  progress: { phase: ProgressPhase; textNodes: number } | null;
   error: string | null;
   scan: ScanResultDto | null;
   stress: StressResultDto | null;
+  /** The options the latest stress test ran with, so its results can say so. */
+  stressOptions: StressOptionsDto | null;
   /** Which results to show: the latest scan or the latest stress test. */
   showing: 'scan' | 'stress' | null;
   /** Stress text is on the page right now. */
@@ -32,6 +38,8 @@ export interface PanelState {
   stale: boolean;
   picking: boolean;
   picked: PickedElement | null;
+  /** The latest revert, from the panel or the page's own button, so the panel can confirm it. */
+  restored: { texts: number; seq: number } | null;
 }
 
 export interface ControllerDeps {
@@ -46,15 +54,18 @@ const INITIAL: PanelState = {
   failure: null,
   page: null,
   busy: null,
+  progress: null,
   error: null,
   scan: null,
   stress: null,
+  stressOptions: null,
   showing: null,
   stressActive: false,
   pending: 0,
   stale: false,
   picking: false,
   picked: null,
+  restored: null,
 };
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -108,19 +119,24 @@ export class PanelController {
     if (inspect) await this.pick(true);
   }
 
-  async scan(): Promise<void> {
+  async scan(includeInputs = true): Promise<void> {
     await this.run('scan', async (connection) => {
-      const scan = await connection.request('scan', {});
+      const scan = await connection.request('scan', { includeInputs });
       this.set({ scan, showing: 'scan', stale: false, picked: null });
       this.badge(scan.issues);
     });
   }
 
-  async stress(options: StressOptionsDto): Promise<void> {
+  async stress(
+    options: StressOptionsDto,
+    scope: 'page' | 'picked' = 'page',
+    includeInputs = true,
+  ): Promise<void> {
     await this.run('stress', async (connection) => {
-      const stress = await connection.request('stress', { options });
+      const stress = await connection.request('stress', { options, scope, includeInputs });
       this.set({
         stress,
+        stressOptions: options,
         showing: 'stress',
         stressActive: true,
         pending: 0,
@@ -133,8 +149,8 @@ export class PanelController {
 
   async revert(): Promise<void> {
     await this.run('revert', async (connection) => {
-      await connection.request('revert', {});
-      this.set({ stressActive: false, pending: 0 });
+      const result = await connection.request('revert', {});
+      this.set({ stressActive: false, pending: 0, restored: this.nextRestored(result.restored) });
     });
   }
 
@@ -152,6 +168,21 @@ export class PanelController {
     });
   }
 
+  /** Stops the scan or stress test in progress. */
+  cancel(): void {
+    this.connection?.request('cancel', {}).catch(() => undefined);
+  }
+
+  /** The selector and cut of a finding; only the first place of an issue arrives with them. */
+  async details(findingId: string): Promise<ResultOf<'details'>> {
+    try {
+      const connection = await this.ensureConnection();
+      return await connection.request('details', { findingId });
+    } catch {
+      return null;
+    }
+  }
+
   /** Highlights a finding on the page; quiet if the page isn't connected. */
   highlight(findingId: string | null): void {
     this.connection?.request('highlight', { findingId }).catch(() => undefined);
@@ -159,6 +190,17 @@ export class PanelController {
 
   async reveal(findingId: string): Promise<void> {
     await this.run(null, (connection) => connection.request('reveal', { findingId }));
+  }
+
+  /** Closes the inspect card and its outline on the page. */
+  closeInspect(): void {
+    this.set({ picked: null });
+    this.highlight(null);
+  }
+
+  /** Back to the start screen. Stress text, if any, stays until reverted. */
+  clearResults(): void {
+    this.set({ scan: null, stress: null, showing: null, stale: false, picked: null });
   }
 
   dismissError(): void {
@@ -177,6 +219,10 @@ export class PanelController {
     for (const listener of this.listeners) listener();
   }
 
+  private nextRestored(texts: number): PanelState['restored'] {
+    return { texts, seq: (this.state.restored?.seq ?? 0) + 1 };
+  }
+
   private badge(issues: readonly IssueDto[]): void {
     if (this.state.tabId !== null) this.deps.setBadge(this.state.tabId, issues);
   }
@@ -193,11 +239,12 @@ export class PanelController {
       await work(connection);
     } catch (error) {
       // The tab may have changed while we waited; its state is gone already.
-      if (tabId === this.state.tabId && !(error instanceof ConnectionError)) {
+      const cancelled = error instanceof RequestError && error.code === 'cancelled';
+      if (tabId === this.state.tabId && !cancelled && !(error instanceof ConnectionError)) {
         this.set({ error: message(error) });
       }
     } finally {
-      if (busy && tabId === this.state.tabId) this.set({ busy: null });
+      if (busy && tabId === this.state.tabId) this.set({ busy: null, progress: null });
     }
   }
 
@@ -245,11 +292,19 @@ export class PanelController {
     connection.onEvent((event) => {
       if (connection !== this.connection) return;
       switch (event.type) {
+        case 'progress':
+          if (this.state.busy)
+            this.set({ progress: { phase: event.phase, textNodes: event.textNodes } });
+          break;
         case 'pending':
           this.set({ pending: event.count });
           break;
         case 'reverted':
-          this.set({ stressActive: false, pending: 0 });
+          this.set({
+            stressActive: false,
+            pending: 0,
+            restored: this.nextRestored(event.result.restored),
+          });
           break;
         case 'picked':
           this.set({ picking: false, picked: event.picked });

@@ -6,12 +6,16 @@ describe('page requests', () => {
   it('accepts every request type', () => {
     const requests = [
       { id: 1, type: 'hello' },
-      { id: 2, type: 'scan' },
+      { id: 2, type: 'scan', includeInputs: true },
       {
         id: 3,
         type: 'stress',
         options: { strategy: 'pseudo', intensity: 'extreme', language: 'ar', rtl: true },
+        scope: 'picked',
+        includeInputs: false,
       },
+      { id: 9, type: 'cancel' },
+      { id: 10, type: 'details', findingId: 'f2' },
       { id: 4, type: 'revert' },
       { id: 5, type: 'reapply' },
       { id: 6, type: 'highlight', findingId: null },
@@ -24,9 +28,10 @@ describe('page requests', () => {
   it('rejects unknown types, bad ids and invalid options', () => {
     const invalid = [
       { id: 1, type: 'eval', code: 'alert(1)' },
-      { id: -1, type: 'scan' },
-      { id: 1.5, type: 'scan' },
-      { type: 'scan' },
+      { id: -1, type: 'scan', includeInputs: true },
+      { id: 1.5, type: 'scan', includeInputs: true },
+      { type: 'scan', includeInputs: true },
+      { id: 1, type: 'scan' },
       {
         id: 1,
         type: 'stress',
@@ -53,6 +58,8 @@ describe('page messages', () => {
       { type: 'pending', count: 3 },
       { type: 'reverted', result: { restored: 4, keptPageChanges: 1 } },
       { type: 'pick-cancelled' },
+      { type: 'progress', phase: 'stressed', textNodes: 1200 },
+      { type: 'error', id: 4, message: 'The operation was aborted.', code: 'cancelled' },
     ];
     for (const message of messages) expect(pageMessageSchema.safeParse(message).success).toBe(true);
   });

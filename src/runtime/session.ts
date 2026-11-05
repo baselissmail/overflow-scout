@@ -6,12 +6,14 @@ import {
   runStressTest,
   sampleText,
   scanDocumentAsync,
+  textCut,
 } from '@/core';
 import type {
   PageInfo,
   PageMessage,
   PageRequest,
   PickedElement,
+  ProgressPhase,
   ResultOf,
   RevertResultDto,
 } from '@/messaging/protocol';
@@ -46,6 +48,11 @@ export class PageSession {
   private stopWatching: (() => void) | null = null;
   /** Heavy work (scan, stress, revert) runs one at a time. */
   private queue: Promise<unknown> = Promise.resolve();
+  /** Cancels the scan or stress test in progress. */
+  private work: AbortController | null = null;
+  /** The element last chosen with the picker, for stress tests scoped to it. */
+  private picked: Element | null = null;
+  private lastProgressAt = 0;
   private disposed = false;
 
   constructor(
@@ -82,8 +89,14 @@ export class PageSession {
       if (this.live()) this.send({ type: 'result', id: request.id, result });
     } catch (error) {
       if (this.live()) {
+        const cancelled = error instanceof DOMException && error.name === 'AbortError';
         const message = error instanceof Error ? error.message : String(error);
-        this.send({ type: 'error', id: request.id, message });
+        this.send({
+          type: 'error',
+          id: request.id,
+          message,
+          ...(cancelled && { code: 'cancelled' as const }),
+        });
       }
     }
   }
@@ -96,6 +109,7 @@ export class PageSession {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.work?.abort();
     this.picker.stop();
     this.endStress();
     this.overlay.destroy();
@@ -104,9 +118,16 @@ export class PageSession {
 
   private readonly handlers: Handlers = {
     hello: () => this.pageInfo(),
-    scan: () =>
-      this.serial(async () => {
-        const result = await scanDocumentAsync(this.doc, this.traversal);
+    scan: ({ includeInputs }) =>
+      this.cancellable(async (signal) => {
+        const result = await scanDocumentAsync(this.doc, {
+          ...this.traversal,
+          includeInputs,
+          signal,
+          onProgress: (textNodes) => {
+            this.progress('scan', textNodes);
+          },
+        });
         this.registry.clear();
         return {
           issues: toIssueDtos(result.findings, this.registry),
@@ -114,12 +135,26 @@ export class PageSession {
           viewport: result.viewport,
         };
       }),
-    stress: ({ options }) =>
-      this.serial(async () => {
+    stress: ({ options, scope, includeInputs }) =>
+      this.cancellable(async (signal) => {
+        const region = scope === 'picked' ? this.picked : null;
+        if (scope === 'picked' && !region?.isConnected) {
+          throw new Error('Pick an element on the page first.');
+        }
         this.endStress();
-        const result = await runStressTest(this.doc, { ...options, ...this.traversal });
-        this.stress = result.session;
-        this.stopWatching = result.session.watch((count) => {
+        const result = await runStressTest(this.doc, {
+          ...options,
+          ...this.traversal,
+          ...(region && { scope: region }),
+          includeInputs,
+          signal,
+          onProgress: (phase, textNodes) => {
+            this.progress(phase, textNodes);
+          },
+        });
+        const session = result.session;
+        this.stress = session;
+        this.stopWatching = session.watch((count) => {
           this.send({ type: 'pending', count });
         });
         this.overlay.showStressPill(() => {
@@ -129,10 +164,17 @@ export class PageSession {
         this.registry.clear();
         return {
           brokenNow: toIssueDtos(result.brokenNow, this.registry),
-          atRisk: toIssueDtos(result.atRisk, this.registry),
+          atRisk: toIssueDtos(result.atRisk, this.registry, (element) =>
+            session.originalTextOf(element),
+          ),
+          viewport: this.pageInfo().viewport,
           stats: result.stats,
         };
       }),
+    cancel: () => {
+      this.work?.abort();
+      return null;
+    },
     revert: () => this.serial(() => Promise.resolve(this.endStress())),
     reapply: () =>
       this.serial(async () => {
@@ -172,12 +214,42 @@ export class PageSession {
       );
       return null;
     },
+    details: ({ findingId }) => {
+      const finding = this.registry.get(findingId);
+      if (!finding?.element.isConnected) return null;
+      return {
+        selector: elementSelector(finding.element),
+        cut: textCut(finding, this.traversal),
+      };
+    },
     pick: ({ active }) => {
       if (active) this.picker.start();
       else this.picker.stop();
       return null;
     },
   };
+
+  /** Runs heavy work one at a time with a fresh abort signal for `cancel`. */
+  private cancellable<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    return this.serial(async () => {
+      const controller = new AbortController();
+      this.work = controller;
+      this.lastProgressAt = 0;
+      try {
+        return await work(controller.signal);
+      } finally {
+        if (this.work === controller) this.work = null;
+      }
+    });
+  }
+
+  /** Reports progress at most every 100 ms. */
+  private progress(phase: ProgressPhase, textNodes: number): void {
+    const now = Date.now();
+    if (now - this.lastProgressAt < 100) return;
+    this.lastProgressAt = now;
+    this.send({ type: 'progress', phase, textNodes });
+  }
 
   private serial<T>(work: () => Promise<T>): Promise<T> {
     const next = this.queue.then(work, work);
@@ -204,6 +276,7 @@ export class PageSession {
   }
 
   private describePicked(element: Element): PickedElement {
+    this.picked = element;
     const rect = element.getBoundingClientRect();
     const result = findBreakingPoint(element, this.traversal);
     this.overlay.highlight({ element, label: elementLabel(element) });

@@ -17,6 +17,17 @@ export type ConnectionFailure =
   | { reason: 'file-access' }
   | { reason: 'error'; message: string };
 
+/** A request the page answered with an error. `cancelled` means the user stopped it. */
+export class RequestError extends Error {
+  constructor(
+    message: string,
+    readonly code?: 'cancelled',
+  ) {
+    super(message);
+    this.name = 'RequestError';
+  }
+}
+
 export class ConnectionError extends Error {
   constructor(readonly failure: ConnectionFailure) {
     super(failure.reason === 'error' ? failure.message : failure.reason);
@@ -167,7 +178,7 @@ export class PageConnection {
       if (!pending) return;
       this.pending.delete(message.id);
       if (message.type === 'error') {
-        pending.reject(new Error(message.message));
+        pending.reject(new RequestError(message.message, message.code));
         return;
       }
       const result = pageResultSchemas[pending.type].safeParse(message.result);
