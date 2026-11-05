@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tabs with a max-width</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tab {
+        display: inline-block;
+        max-width: 120px;
+        overflow: hidden;
+        white-space: nowrap;
+        vertical-align: top;
+        padding: 4px 8px;
+      }
+      .ellipsis {
+        text-overflow: ellipsis;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="case">
+      <a href="#" class="tab ellipsis" data-expect="truncated">Infrastructure overview</a>
+      <a href="#" class="tab ellipsis" data-expect="ok">Logs</a>
+      <a href="#" class="tab" data-expect="hidden">Deployment history and rollbacks</a>
+    </nav>
+  </body>
+</html>

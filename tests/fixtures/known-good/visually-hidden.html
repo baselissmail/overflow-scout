@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Visually hidden text</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+      .clip-path-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .ir {
+        display: block;
+        width: 120px;
+        height: 40px;
+        overflow: hidden;
+        text-indent: -9999px;
+        background: #333;
+      }
+      .ir-visible {
+        display: block;
+        width: 120px;
+        height: 40px;
+        text-indent: -9999px;
+        background: #333;
+      }
+      .font-zero {
+        font-size: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      <button>
+        Close <span class="sr-only">the notification panel and return to the dashboard</span>
+      </button>
+    </p>
+    <p>
+      <a href="#"><span class="sr-only">Skip to the main content of this page</span></a>
+    </p>
+    <span class="clip-path-hidden">Screen reader announcement text that is long</span>
+    <a class="ir case" href="#">Company logo with a long hidden label</a>
+    <a class="ir-visible case" href="#">Company logo with another hidden label</a>
+    <div class="font-zero">Hidden by a zero font size</div>
+  </body>
+</html>

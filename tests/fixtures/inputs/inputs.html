@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Inputs and placeholders</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      input,
+      textarea {
+        font: 16px sans-serif;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <label class="case"
+      >Search
+      <input
+        style="width: 120px"
+        placeholder="Search by name, email or company"
+        data-expect="input"
+    /></label>
+    <input class="case" style="width: 220px" placeholder="Search" data-expect="ok" />
+    <!-- Editable values scroll by design -->
+    <input
+      class="case"
+      style="width: 120px"
+      value="A very long value typed by the user that scrolls"
+      data-expect="ok"
+    />
+    <input
+      class="case"
+      style="width: 120px"
+      readonly
+      value="customer-account-identifier-0042"
+      data-expect="input"
+    />
+    <input
+      class="case"
+      style="width: 120px"
+      disabled
+      value="Disabled field with a long value"
+      data-expect="input"
+    />
+    <textarea class="case" style="width: 120px" data-expect="ok">
+Long textarea content scrolls inside the field and is fine to leave as is.</textarea>
+  </body>
+</html>

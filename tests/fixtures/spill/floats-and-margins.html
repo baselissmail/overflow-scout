@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Floats and negative margins that still spill</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A float wider than its container overflows sideways -->
+    <div class="case" style="width: 200px; border: 1px solid #ccc">
+      <div style="float: left; width: 320px" data-expect="spilling">
+        This floated panel is wider than the box around it.
+      </div>
+      <div style="clear: both"></div>
+    </div>
+    <!-- A negative margin allows 16px of overhang, not 200px -->
+    <div class="case" style="width: 240px; border: 1px solid #ccc">
+      <div style="margin: 0 -16px; white-space: nowrap" data-expect="spilling">
+        Full-bleed row whose text keeps going far beyond the overhang
+      </div>
+    </div>
+    <!-- Inside a scroll container, a fixed-height card still spills onto what follows it -->
+    <div class="case" style="width: 300px; height: 260px; overflow: auto; border: 1px solid #ccc">
+      <div style="height: 48px; border: 1px solid #999">
+        <p style="margin: 0" data-expect="spilling">
+          This card text is far too long for its fixed height and runs into the paragraph below it.
+        </p>
+      </div>
+      <p>Following content that the spilled text overlaps.</p>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Truncation in flex layouts</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        width: 220px;
+        align-items: center;
+      }
+      .avatar {
+        width: 32px;
+        height: 32px;
+        flex: none;
+        background: #ccc;
+        border-radius: 50%;
+      }
+      .grow {
+        flex: 1;
+      }
+      .min-w-0 {
+        min-width: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- The classic, working pattern: truncate inside a flex child with min-width: 0 -->
+    <div class="case row">
+      <div class="avatar"></div>
+      <div class="min-w-0 grow">
+        <div class="truncate" data-expect="truncated">
+          Aleksandra Konstantinovna Vasilyeva-Orlova
+        </div>
+      </div>
+    </div>
+    <!-- Missing min-width: 0, so the flex child grows and the text pushes out of the row -->
+    <div class="case row">
+      <div class="avatar"></div>
+      <div class="grow">
+        <div class="truncate" data-expect="spilling">
+          Aleksandra Konstantinovna Vasilyeva-Orlova
+        </div>
+      </div>
+    </div>
+    <div class="case row" style="width: 400px">
+      <div class="avatar"></div>
+      <div class="min-w-0 grow"><div class="truncate" data-expect="ok">Jane Cooper</div></div>
+    </div>
+    <!-- A flex item that is not allowed to shrink -->
+    <div class="case row" style="width: 200px">
+      <span style="flex-shrink: 0; white-space: nowrap" data-expect="spilling"
+        >Very long toolbar label that cannot shrink</span
+      >
+    </div>
+  </body>
+</html>

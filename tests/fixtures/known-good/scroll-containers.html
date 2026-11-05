@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scroll containers</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case" style="width: 200px; overflow: auto; white-space: nowrap">
+      A horizontally scrollable strip of long text that the user can scroll
+    </div>
+    <div class="case" style="width: 200px; height: 60px; overflow-y: auto">
+      <p>Long scrollable list, line one.</p>
+      <p>Line two.</p>
+      <p>Line three.</p>
+      <p>Line four.</p>
+    </div>
+    <div class="case" style="overflow-x: auto; width: 300px">
+      <table style="width: 800px">
+        <tr>
+          <td>Wide table cell one</td>
+          <td>Wide table cell two</td>
+          <td>Wide table cell three</td>
+        </tr>
+      </table>
+    </div>
+    <pre class="case" style="width: 200px; overflow: auto">
+const message = "a long line of code inside a scrollable block";</pre>
+  </body>
+</html>

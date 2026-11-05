@@ -12,6 +12,7 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+.vitest/
 
 # Environment and secrets
 .env

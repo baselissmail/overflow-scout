@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Horizontal page overflow on desktop</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case" style="width: 1400px; background: #eef" data-expect="page-scroll">
+      Wide promotional banner
+    </div>
+    <!-- Contained by a scroll container -->
+    <div class="case" style="overflow-x: auto; width: 300px">
+      <div style="width: 900px" data-expect="ok">Wide table inside a scroll container</div>
+    </div>
+    <!-- Fixed to the viewport, so it never scrolls the page -->
+    <div
+      style="position: fixed; bottom: 0; left: 0; width: 1500px; background: #fee"
+      data-expect="ok"
+    >
+      Fixed toast wider than the viewport
+    </div>
+  </body>
+</html>

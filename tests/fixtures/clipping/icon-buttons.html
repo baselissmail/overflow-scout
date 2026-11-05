@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Icon and text buttons</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      button {
+        font: 16px sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="case">
+      <button style="width: 110px; white-space: nowrap; overflow: hidden" data-expect="hidden">
+        <svg width="16" height="16" aria-hidden="true"><rect width="16" height="16" /></svg> Save
+        all changes now
+      </button>
+    </p>
+    <p class="case">
+      <button data-expect="ok">
+        <svg width="16" height="16" aria-hidden="true"><rect width="16" height="16" /></svg> Save
+      </button>
+    </p>
+    <p class="case">
+      <a
+        href="#"
+        style="
+          display: inline-block;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          vertical-align: top;
+        "
+        data-expect="truncated"
+        >Download the full annual report</a
+      >
+    </p>
+  </body>
+</html>

@@ -32,6 +32,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:browser"
   },
   "dependencies": {
+    "@medv/finder": "^4.0.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

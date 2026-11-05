@@ -23,6 +23,8 @@ export default defineConfig({
         resolve: { alias: { '@': srcDir } },
         test: {
           name: 'browser',
+          // Performance budgets are looser on shared CI runners.
+          provide: { ci: Boolean(process.env['CI']) },
           include: ['tests/engine/**/*.test.ts'],
           browser: {
             enabled: true,

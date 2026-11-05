@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixed height clips wrapped text</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .badge {
+        width: 60px;
+        height: 20px;
+        overflow: hidden;
+        font-size: 12px;
+        line-height: 16px;
+        background: #eef;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case badge" data-expect="hidden">New item available now</div>
+    <!-- An ancestor card clips a paragraph that grows freely -->
+    <div class="case" style="width: 240px; height: 80px; overflow: hidden; border: 1px solid #ccc">
+      <p style="margin: 0" data-expect="hidden">
+        This product description is much longer than the card allows, so the last lines are cut off
+        at the bottom edge of the card without any indication.
+      </p>
+    </div>
+    <div class="case" style="width: 240px; height: 200px; overflow: hidden" data-expect="ok">
+      Short description that fits.
+    </div>
+    <!-- Room for one and a half lines -->
+    <div
+      class="case"
+      style="width: 160px; height: 33px; overflow: hidden; line-height: 22px"
+      data-expect="hidden"
+    >
+      Two lines of text do not fit in one and a half
+    </div>
+  </body>
+</html>

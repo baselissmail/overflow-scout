@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Several text nodes in one element</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- The bold label is visible; the trailing text node is cut off -->
+    <div
+      class="case"
+      style="width: 220px; white-space: nowrap; overflow: hidden"
+      data-expect="hidden"
+    >
+      <b data-expect="ok">New:</b> the quarterly report is ready to download
+    </div>
+    <p class="case" style="width: 300px" data-expect="ok">
+      Plain paragraph with <em data-expect="ok">emphasis</em> and a
+      <a href="#" data-expect="ok">link</a> that wraps normally across lines without any trouble at
+      all.
+    </p>
+  </body>
+</html>
