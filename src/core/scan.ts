@@ -434,8 +434,10 @@ class ScanSession {
             top: rect.top - overhang.top,
             bottom: rect.bottom + overhang.bottom,
           };
-          const scrollsX = x > tolerance.x && this.endsAtScrollEdge(element, sideX);
-          const scrollsY = y > tolerance.y && this.endsAtScrollEdge(element, sideY);
+          // Code (preformatted text) is meant to scroll, past per-line highlights too.
+          const code = this.layout.style(start).whiteSpace.startsWith('pre');
+          const scrollsX = x > tolerance.x && this.endsAtScrollEdge(element, sideX, code);
+          const scrollsY = y > tolerance.y && this.endsAtScrollEdge(element, sideY, code);
           // Sideways, text that outgrew its box always shows (it runs into margins, the next
           // column, or off-screen), unless by less than a glyph's overhang. When a wider box
           // of its own runs past this one instead (a mock bleeding out of its column), it shows
@@ -615,9 +617,9 @@ class ScanSession {
    * of an enclosing scroll container: whatever spills past it is simply that
    * container's scrollable content (code editors, chat logs).
    */
-  private endsAtScrollEdge(element: Element, side: keyof Bounds): boolean {
-    // Text that visibly crosses a border on the way isn't just scrollable content.
-    if (this.hasVisibleEdge(element, side)) return false;
+  private endsAtScrollEdge(element: Element, side: keyof Bounds, code = false): boolean {
+    // Prose that visibly crosses a border on the way isn't just scrollable content.
+    if (!code && this.hasVisibleEdge(element, side)) return false;
     const edge = this.layout.rect(element)[side];
     const horizontal = side === 'left' || side === 'right';
     for (
@@ -629,7 +631,7 @@ class ScanSession {
       if (!this.isComparableBox(style)) continue;
       const overflow = horizontal ? style.overflowX : style.overflowY;
       const scrolls = overflow === 'auto' || overflow === 'scroll';
-      if (!scrolls && this.hasVisibleEdge(ancestor, side)) return false;
+      if (!code && !scrolls && this.hasVisibleEdge(ancestor, side)) return false;
       // A scroll container's padding scrolls with its content: nothing else can sit there.
       const padding = scrolls ? px(style.getPropertyValue(`padding-${side}`)) : 0;
       if (Math.abs(this.layout.paddingBox(ancestor)[side] - edge) > padding + 1) return false;

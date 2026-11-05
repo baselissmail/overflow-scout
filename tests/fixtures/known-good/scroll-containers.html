@@ -39,5 +39,11 @@
     </div>
     <pre class="case" style="width: 200px; overflow: auto">
 const message = "a long line of code inside a scrollable block";</pre>
+    <!--
+      A diff with tinted lines in a scrolling code block: the code scrolls on past where a
+      line's tint ends, as diff views do (Phase 6 dogfooding).
+    -->
+    <pre style="width: 300px; overflow: auto; font: 14px/20px monospace">
+<code style="display: flex; flex-direction: column"><span style="display: block; background: rgb(243 78 82 / 0.1)" data-expect="ok">-  const state = useVehicleState(vehicleId, { refresh: 'every-minute' });</span><span style="display: block; background: rgb(69 211 105 / 0.1)" data-expect="ok">+  const state = useVehicleState(vehicleId, { refresh: 'on-change' });</span></code></pre>
   </body>
 </html>
