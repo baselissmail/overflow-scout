@@ -492,11 +492,11 @@ Example report (Copy as Markdown):
 
 ### Phase 6 — Hardening and dogfooding
 
-- [ ] Dogfood on 20 real sites and design systems (e.g. GitHub, Gmail, Wikipedia, Amazon, Booking, Stripe docs, MUI, Bootstrap, Tailwind docs, Shopify admin demo). Log false positives and negatives, and turn each one into a fixture.
-- [ ] Edge cases: closed shadow roots, same-origin iframes, SPA navigation, strict CSP (constructable stylesheets in the shadow root), zoom/DPR, RTL pages, very large pages, memory (observers disconnected, WeakMaps).
-- [ ] `/code-review` and `/security-review` passes. Fix everything P0/P1.
+- [x] Dogfood on 20 real sites and design systems (e.g. GitHub, Gmail, Wikipedia, Amazon, Booking, Stripe docs, MUI, Bootstrap, Tailwind docs, Shopify admin demo). Log false positives and negatives, and turn each one into a fixture. _23 public sites with `pnpm dogfood` (Gmail and the Shopify admin need a login, so React, MDN, Linear, Airbnb, shadcn, Ant Design and others stand in). Findings fell from 564 to 34; each false-positive pattern is a corpus case that fails without its rule (ADR 0010, [results](dogfood/2026-11.md))._
+- [x] Edge cases: closed shadow roots, same-origin iframes, SPA navigation, strict CSP (constructable stylesheets in the shadow root), zoom/DPR, RTL pages, very large pages, memory (observers disconnected, WeakMaps). _Already covered: closed shadow roots, frames (counted, not scanned in v1), strict CSP (e2e), RTL, 5,000-node budgets. Added: route changes in single-page apps (the page reports them through the Navigation API; e2e covers `pushState`, anchors, `replaceState` and hash routes), CSS zoom and transforms (browser tests), and a closed session leaving nothing behind (overlay, styles, text, observers; `tests/panel/session.test.ts`)._
+- [x] `/code-review` and `/security-review` passes. Fix everything P0/P1. _See the Phase 6 pull request: the review's navigation findings led to the Navigation API design; the security pass found that a panel pinned to one tab could capture another, now refused._
 
-**Exit:** dogfood false-positive rate < 5%; no open P0/P1.
+**Exit:** dogfood false-positive rate < 5%; no open P0/P1. _Met 2026-11-06: 1 false positive in 34 findings (2.9%), a sidebar that scrolls only on hover, recorded as a limitation. Corpus precision 96.9% at 100% recall._
 
 ### Phase 7 — Brand, listing, publish
 
