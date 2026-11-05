@@ -1,61 +1,78 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens (docs/REFACTOR_PLAN.md §5.5). Semantic roles only: components
- * never use raw colors. Contrast for every pair is validated in Phase 4.
- * Theme follows the OS by default; [data-theme] lets Settings override it.
+ * Design tokens (docs/design/DIRECTION.md). Semantic roles only: components
+ * never use raw colors. src/ui/tokens.test.ts checks every text pair for
+ * 4.5:1 contrast and control borders for 3:1, in both themes.
+ * The theme follows the OS; [data-theme] on <html> lets Settings override it.
  */
 :root {
   color-scheme: light;
   --os-canvas: #ffffff;
-  --os-surface: #f7f7f8;
+  --os-surface: #f4f4f6;
   --os-line: #e4e4e7;
+  --os-line-strong: #8b8d98;
   --os-fg: #18181b;
   --os-fg-muted: #5f5f69;
   --os-accent: #3451d1;
   --os-accent-fg: #ffffff;
-  --os-critical: #ce2c31;
-  --os-critical-soft: #feebec;
-  --os-warning: #ab6400;
-  --os-warning-soft: #fff4d5;
-  --os-notice: #0d74ce;
-  --os-notice-soft: #e6f4fe;
+  --os-accent-soft: #edf0fd;
+  --os-critical: #c62a2f;
+  --os-critical-soft: #feeceb;
+  --os-warning: #9a4a00;
+  --os-warning-soft: #fff3e0;
+  --os-notice: #6550b9;
+  --os-notice-soft: #f2efff;
+  --os-ok: #18794e;
+  --os-ok-soft: #e9f6ef;
+  --os-scrim: rgb(0 0 0 / 0.32);
 }
 
+/* Dark: kept identical in both blocks below (the token test checks). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
     --os-canvas: #0e0f11;
-    --os-surface: #16171a;
+    --os-surface: #18191c;
     --os-line: #2a2b30;
+    --os-line-strong: #6f7079;
     --os-fg: #ededef;
     --os-fg-muted: #a1a1aa;
     --os-accent: #8ea2ff;
     --os-accent-fg: #0e0f11;
+    --os-accent-soft: #1c2240;
     --os-critical: #ff9592;
     --os-critical-soft: #3b1219;
-    --os-warning: #ffca16;
-    --os-warning-soft: #302008;
-    --os-notice: #70b8ff;
-    --os-notice-soft: #0d2847;
+    --os-warning: #ffc53d;
+    --os-warning-soft: #2e1f05;
+    --os-notice: #b9a6ff;
+    --os-notice-soft: #251c45;
+    --os-ok: #3dd68c;
+    --os-ok-soft: #0f2a1d;
+    --os-scrim: rgb(0 0 0 / 0.6);
   }
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
   --os-canvas: #0e0f11;
-  --os-surface: #16171a;
+  --os-surface: #18191c;
   --os-line: #2a2b30;
+  --os-line-strong: #6f7079;
   --os-fg: #ededef;
   --os-fg-muted: #a1a1aa;
   --os-accent: #8ea2ff;
   --os-accent-fg: #0e0f11;
+  --os-accent-soft: #1c2240;
   --os-critical: #ff9592;
   --os-critical-soft: #3b1219;
-  --os-warning: #ffca16;
-  --os-warning-soft: #302008;
-  --os-notice: #70b8ff;
-  --os-notice-soft: #0d2847;
+  --os-warning: #ffc53d;
+  --os-warning-soft: #2e1f05;
+  --os-notice: #b9a6ff;
+  --os-notice-soft: #251c45;
+  --os-ok: #3dd68c;
+  --os-ok-soft: #0f2a1d;
+  --os-scrim: rgb(0 0 0 / 0.6);
 }
 
 @theme inline {
@@ -65,16 +82,21 @@
   --color-canvas: var(--os-canvas);
   --color-surface: var(--os-surface);
   --color-line: var(--os-line);
+  --color-line-strong: var(--os-line-strong);
   --color-fg: var(--os-fg);
   --color-fg-muted: var(--os-fg-muted);
   --color-accent: var(--os-accent);
   --color-accent-fg: var(--os-accent-fg);
+  --color-accent-soft: var(--os-accent-soft);
   --color-critical: var(--os-critical);
   --color-critical-soft: var(--os-critical-soft);
   --color-warning: var(--os-warning);
   --color-warning-soft: var(--os-warning-soft);
   --color-notice: var(--os-notice);
   --color-notice-soft: var(--os-notice-soft);
+  --color-ok: var(--os-ok);
+  --color-ok-soft: var(--os-ok-soft);
+  --color-scrim: var(--os-scrim);
 
   --text-base: 13px;
   --text-base--line-height: 18px;
@@ -85,16 +107,48 @@
 
   --radius-control: 6px;
   --radius-card: 10px;
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --duration-press: 120ms;
+  --duration-enter: 180ms;
+  --duration-view: 240ms;
+
+  --shadow-float: 0 8px 24px rgb(0 0 0 / 0.16), 0 0 0 1px var(--os-line);
+
+  --animate-enter: os-enter var(--duration-enter) var(--ease-out) both;
+  --animate-scan: os-scan 1.2s var(--ease-out) infinite;
+}
+
+@keyframes os-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes os-scan {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
 }
 
 @layer base {
+  /* The root keeps the browser's 16 px so rem-based spacing stays on the 4 px grid. */
   html {
     font-family: var(--font-sans);
-    font-size: var(--text-base);
-    line-height: var(--text-base--line-height);
     background-color: var(--color-canvas);
     color: var(--color-fg);
     -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Native selects need explicit colors for Windows dark mode. */
+  select {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
   }
 
   :focus-visible {
@@ -111,5 +165,25 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+/*
+ * Unlayered on purpose: Chrome's own stylesheet for extension pages sets
+ * `body { font-size: 75% }` and outranks anything inside @layer.
+ */
+body {
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+}
+
+@layer utilities {
+  /* The measure bar's overflow: a print bleed, hatched in the current color. */
+  .bg-hatch {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      currentColor 0 1.5px,
+      transparent 1.5px 5px
+    );
   }
 }
