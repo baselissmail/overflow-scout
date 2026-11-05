@@ -31,6 +31,7 @@ actions:
   jump: Show on page
   copySelector: Copy selector
   copyCss: Copy CSS
+  copyReport: Copy report
   preview: Preview on page
   previewAll: Preview them together
   stopPreview: Stop preview
@@ -297,11 +298,38 @@ commands:
   runStress: Test with longer text now
   stressOptions: Longer text options
   clearResults: Clear results
+  copyReport: Copy report as Markdown
+  saveJson: Save results as JSON
   search: Search results
   themeSystem: Use the system theme
   themeLight: Use the light theme
   themeDark: Use the dark theme
   changeShortcut: Change the keyboard shortcut
+report:
+  title: Overflow Scout report
+  export: Export results
+  copyMarkdown: Copy report (Markdown)
+  saveMarkdown: Save as Markdown
+  saveJson: Save as JSON
+  exportNote: For GitHub, Jira or scripts. It covers the results on screen, and nothing leaves your browser unless you paste it.
+  copied: Report copied. Paste it into GitHub or Jira.
+  page: Page
+  window: window $1
+  testLabel: Tested with
+  test: $1 · $2 · $3× longer text
+  severity: Severity
+  longer: With longer text
+  cut: Where it’s cut
+  cutLost: Readers see $1 and lose $2.
+  cutSpills: Readers see $1, and $2 runs out of the box.
+  size: Size
+  on: on
+  fixesTried: Fixes, tried on the page
+  fixesSuggested: Fixes to try
+  found: Found
+  issues:
+    1: 1 issue
+    n: $1 issues
 toast:
   label: Notifications
   restored:

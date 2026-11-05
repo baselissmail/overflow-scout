@@ -6,7 +6,8 @@ import { IconButton } from '@/ui/IconButton';
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
 
-function useCopied(): [boolean, () => void] {
+/** True for 1.2 s after `markCopied`, for an inline "Copied" confirmation. */
+export function useCopied(): [boolean, () => void] {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;

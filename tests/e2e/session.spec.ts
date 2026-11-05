@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+
 import type { Page } from '@playwright/test';
 import type { browser } from 'wxt/browser';
 
@@ -113,6 +115,57 @@ test.describe('demo page', () => {
     await expect.poll(() => title.getAttribute('style')).toContain('height: auto');
     await panel.keyboard.press('Escape');
     await expect.poll(() => pageText(demo)).toBe(before);
+  });
+
+  test('copies an issue report and exports every result', async ({
+    extensionId,
+    openTab,
+    openPanel,
+  }) => {
+    const { page: demo, tabId } = await openTab(`chrome-extension://${extensionId}/demo.html`);
+    await demo.setViewportSize({ width: 800, height: 900 });
+    const panel = await openPanel(tabId);
+
+    // Extension origins can't be granted clipboard-read; keep what the panel writes instead.
+    await panel.evaluate(() => {
+      const copied: string[] = [];
+      Object.assign(window, { copied });
+      navigator.clipboard.writeText = (text: string) => {
+        copied.push(text);
+        return Promise.resolve();
+      };
+    });
+
+    await scan(panel);
+    await rows(panel).filter({ hasText: 'Waterproof hiking jacket' }).click();
+    await expect(panel.getByText(/^Fixes it\./)).toBeVisible();
+    await panel.getByRole('button', { name: 'Copy report' }).click();
+    await expect(panel.getByRole('button', { name: 'Copied' })).toBeVisible();
+    const report = await panel.evaluate(
+      () => (window as unknown as { copied: string[] }).copied.at(-1) ?? '',
+    );
+    expect(report).toMatch(
+      /^### Cut off: `section\.grid › article\.card › h2\.title` \(2 places\)\n/,
+    );
+    expect(report).toContain(
+      `- **Page:** chrome-extension://${extensionId}/demo.html · window 800×900 · Chrome `,
+    );
+    expect(report).toMatch(/- \*\*Size:\*\* Needs [\d.]+\s?px of height, has 44\s?px/);
+    expect(report).toContain('- **Fixes, tried on the page:**');
+    expect(report).toMatch(/`height: auto; min-height: 44px;` on `[^`]+`: Fixes it\./);
+
+    await panel.getByRole('button', { name: 'Export results' }).click();
+    const [download] = await Promise.all([
+      panel.waitForEvent('download'),
+      panel.getByRole('button', { name: 'Save as JSON' }).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(
+      /^overflow-scout-.+-\d{4}-\d{2}-\d{2}-\d{4}\.json$/,
+    );
+    const path = await download.path();
+    const data = JSON.parse(await readFile(path, 'utf8')) as { format: string; issues: unknown[] };
+    expect(data.format).toBe('overflow-scout/results');
+    expect(data.issues.length).toBeGreaterThan(3);
   });
 
   test('stress-tests the page and reverts it exactly', async ({

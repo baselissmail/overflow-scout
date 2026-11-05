@@ -1,10 +1,12 @@
 import { i18n } from '#i18n';
 import {
   Ban,
-  Eraser,
+  ClipboardCopy,
   Command as CommandIcon,
   Crosshair,
+  Eraser,
   ExternalLink,
+  FileJson,
   Keyboard,
   Monitor,
   Moon,
@@ -27,6 +29,7 @@ import { PageNotice } from '@/features/page/PageNotice';
 import { ScanProgress } from '@/features/page/ScanProgress';
 import { SiteAccess } from '@/features/page/SiteAccess';
 import { usePanel } from '@/features/page/use-panel';
+import { downloadText, exportResults } from '@/features/report/export';
 import { ResultsView } from '@/features/results/ResultsView';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { applyTheme, useSettings } from '@/features/settings/use-settings';
@@ -199,6 +202,31 @@ export function App() {
         keys: ['/'],
         // Looked up when run: commands are built during render, where refs aren't read.
         run: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+      },
+      hasResults && {
+        id: 'copy-report',
+        group: results,
+        label: i18n.t('commands.copyReport'),
+        icon: <ClipboardCopy {...ICON} />,
+        keywords: 'export markdown github jira bug',
+        run: () => {
+          const exported = exportResults(state);
+          if (!exported) return;
+          void navigator.clipboard.writeText(exported.markdown).then(() => {
+            toast(i18n.t('report.copied'));
+          });
+        },
+      },
+      hasResults && {
+        id: 'save-json',
+        group: results,
+        label: i18n.t('commands.saveJson'),
+        icon: <FileJson {...ICON} />,
+        keywords: 'export download data',
+        run: () => {
+          const exported = exportResults(state);
+          if (exported) downloadText(exported.jsonName, exported.json, 'application/json');
+        },
       },
       hasResults &&
         !busy && {

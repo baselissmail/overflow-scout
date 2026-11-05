@@ -8,12 +8,12 @@ import type { FindingDto, FixTrialsDto, PreviewKey, TrialDto } from '@/messaging
 import { Button } from '@/ui/Button';
 
 import { CopyButton } from './CopyButton';
-import { formatPx } from './labels';
+import { adviceText, verdictText } from './fix-text';
 
 export interface FixesProps {
   finding: FindingDto;
-  /** Tries each fix on the page; null when the page can't be reached. */
-  loadFixes: (findingId: string) => Promise<FixTrialsDto | null>;
+  /** The trials: undefined while they run, null when they couldn't. */
+  result: FixTrialsDto | null | undefined;
   /** Keeps a fix applied on the page (null stops it); resolves false if it couldn't. */
   onPreview: (findingId: string, key: PreviewKey | null) => Promise<boolean>;
 }
@@ -29,89 +29,22 @@ interface Item {
 
 const ICON = { size: 14, strokeWidth: 1.5 } as const;
 
-function adviceText(key: FixKey): string {
-  switch (key) {
-    case 'whiteSpace':
-      return i18n.t('advice.whiteSpace');
-    case 'overflowWrap':
-      return i18n.t('advice.overflowWrap');
-    case 'lineClamp':
-      return i18n.t('advice.lineClamp');
-    case 'textOverflow':
-      return i18n.t('advice.textOverflow');
-    case 'maxWidth':
-      return i18n.t('advice.maxWidth');
-    case 'minWidth':
-      return i18n.t('advice.minWidth');
-    case 'height':
-      return i18n.t('advice.height');
-    case 'maxHeight':
-      return i18n.t('advice.maxHeight');
-    case 'width':
-      return i18n.t('advice.width');
-    case 'flex':
-      return i18n.t('advice.flex');
-    case 'grid':
-      return i18n.t('advice.grid');
-    case 'pageWidth':
-      return i18n.t('advice.pageWidth');
-    case 'field':
-      return i18n.t('advice.field');
-    case 'overflow':
-      return i18n.t('advice.overflow');
-  }
-}
-
-/** "The box gets 18 px taller." Changes under a pixel aren't worth a sentence. */
-function sizeChange(change: TrialDto['change']): string {
-  const parts: string[] = [];
-  if (Math.abs(change.width) >= 1) {
-    parts.push(
-      change.width > 0
-        ? i18n.t('fix.wider', [formatPx(change.width)])
-        : i18n.t('fix.narrower', [formatPx(-change.width)]),
-    );
-  }
-  if (Math.abs(change.height) >= 1) {
-    parts.push(
-      change.height > 0
-        ? i18n.t('fix.taller', [formatPx(change.height)])
-        : i18n.t('fix.shorter', [formatPx(-change.height)]),
-    );
-  }
-  const [first, second] = parts;
-  if (first === undefined) return i18n.t('fix.sizeSame');
-  return second === undefined
-    ? i18n.t('fix.sizeOne', [first])
-    : i18n.t('fix.sizeTwo', [first, second]);
-}
-
 /** What a trial showed, as icon + words (never color alone). */
 function Verdict({ trial, together = false }: { trial: TrialDto; together?: boolean }) {
-  const still = Math.max(trial.remaining.x, trial.remaining.y);
-  const [icon, text] =
-    trial.outcome === 'fixes'
-      ? [
-          <CircleCheck key="icon" {...ICON} className="text-ok" />,
-          `${together ? i18n.t('fix.togetherFixes') : i18n.t('fix.fixes')} ${sizeChange(trial.change)}`,
-        ]
-      : trial.outcome === 'improves'
-        ? [
-            <CircleAlert key="icon" {...ICON} className="text-warning" />,
-            together
-              ? i18n.t('fix.togetherImproves', [formatPx(still)])
-              : i18n.t('fix.improves', [formatPx(still)]),
-          ]
-        : [
-            <CircleMinus key="icon" {...ICON} className="text-fg-muted" />,
-            together ? i18n.t('fix.togetherNoChange') : i18n.t('fix.noChange'),
-          ];
+  const icon =
+    trial.outcome === 'fixes' ? (
+      <CircleCheck {...ICON} className="text-ok" />
+    ) : trial.outcome === 'improves' ? (
+      <CircleAlert {...ICON} className="text-warning" />
+    ) : (
+      <CircleMinus {...ICON} className="text-fg-muted" />
+    );
   return (
     <p className="flex items-start gap-1.5 text-small">
       <span aria-hidden="true" className="mt-0.5 shrink-0">
         {icon}
       </span>
-      <span>{text}</span>
+      <span>{verdictText(trial, together)}</span>
     </p>
   );
 }
@@ -144,27 +77,20 @@ function PreviewButton({
 
 /**
  * What to do, verified (plan §3.5): each fix with its CSS, where it goes, and
- * what happened when the page tried it. Trials run when a finding opens; a
- * preview keeps one fix on the page until it's stopped or the details close.
+ * what happened when the page tried it. A preview keeps one fix on the page
+ * until it's stopped or the details close.
  */
-export function Fixes({ finding, loadFixes, onPreview }: FixesProps) {
-  const [loaded, setLoaded] = useState<{ id: string; result: FixTrialsDto | null } | null>(null);
+export function Fixes({ finding, result, onPreview }: FixesProps) {
   const [previewing, setPreviewing] = useState<{ id: string; key: PreviewKey } | null>(null);
-  // undefined while the trials run; null when they couldn't.
-  const result = loaded?.id === finding.id ? loaded.result : undefined;
   const active = previewing?.id === finding.id ? previewing.key : null;
 
-  useEffect(() => {
-    let current = true;
-    void loadFixes(finding.id).then((value) => {
-      if (current) setLoaded({ id: finding.id, result: value });
-    });
-    return () => {
-      current = false;
+  useEffect(
+    () => () => {
       // Leaving this finding (or closing the details) takes any preview off the page.
       void onPreview(finding.id, null);
-    };
-  }, [finding.id, loadFixes, onPreview]);
+    },
+    [finding.id, onPreview],
+  );
 
   const items: Item[] = [
     ...fixesFor(finding).map((fix) => ({

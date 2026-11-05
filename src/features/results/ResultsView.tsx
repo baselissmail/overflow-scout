@@ -5,6 +5,9 @@ import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 import type { PanelController, PanelState } from '@/features/page/controller';
+import { ExportMenu } from '@/features/report/ExportMenu';
+import { reportContext } from '@/features/report/export';
+import type { ReportContext } from '@/features/report/markdown';
 import { intensityLabel, languageLabel, strategyLabel } from '@/features/stress/options';
 import type { IssueDto, PreviewKey, ScanResultDto } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
@@ -159,7 +162,17 @@ function SeverityHelp() {
   );
 }
 
-function Footer({ stats, viewport, stress }: { stats: Stats; viewport: string; stress: boolean }) {
+function Footer({
+  stats,
+  viewport,
+  stress,
+  state,
+}: {
+  stats: Stats;
+  viewport: string;
+  stress: boolean;
+  state: PanelState;
+}) {
   const ms = formatCount(Math.round(stats.durationMs));
   const text = stress
     ? i18n.t('results.footerStress', [formatCount(stats.textNodes), ms])
@@ -167,18 +180,21 @@ function Footer({ stats, viewport, stress }: { stats: Stats; viewport: string; s
   return (
     <footer className="flex items-center justify-between gap-2 border-t border-line pt-1">
       <p className="min-w-0 text-small text-fg-muted tabular-nums">{text}</p>
-      <Popover
-        label={i18n.t('results.coverage')}
-        trigger={
-          <IconButton
-            label={i18n.t('results.coverage')}
-            icon={<Info size={16} strokeWidth={1.5} />}
-          />
-        }
-      >
-        <p className="mb-2 font-medium">{i18n.t('results.coverage')}</p>
-        <Coverage stats={stats} viewport={stress ? null : viewport} />
-      </Popover>
+      <span className="flex shrink-0 items-center">
+        <ExportMenu state={state} />
+        <Popover
+          label={i18n.t('results.coverage')}
+          trigger={
+            <IconButton
+              label={i18n.t('results.coverage')}
+              icon={<Info size={16} strokeWidth={1.5} />}
+            />
+          }
+        >
+          <p className="mb-2 font-medium">{i18n.t('results.coverage')}</p>
+          <Coverage stats={stats} viewport={stress ? null : viewport} />
+        </Popover>
+      </span>
     </footer>
   );
 }
@@ -194,6 +210,8 @@ interface BodyProps {
   searchRef: RefObject<HTMLInputElement | null>;
   controller: PanelController;
   empty: ReactNode;
+  /** Where the results come from, for the reports copied from a result's details. */
+  report: ReportContext | null;
 }
 
 function ResultsBody({
@@ -206,6 +224,7 @@ function ResultsBody({
   searchRef,
   controller,
   empty,
+  report,
 }: BodyProps) {
   const query = useDeferredValue(filter.query);
   const shown = useMemo(() => applyFilter(issues, { ...filter, query }), [issues, filter, query]);
@@ -296,6 +315,7 @@ function ResultsBody({
         loadDetails={loadDetails}
         loadFixes={loadFixes}
         onPreview={preview}
+        report={report}
       />
     </div>
   ) : null;
@@ -455,6 +475,7 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
   const [tab, setTab] = useState<Tab>('atRisk');
   const atRisk = useCountUp(state.stress?.atRisk.length ?? 0);
   const brokenNow = useCountUp(state.stress?.brokenNow.length ?? 0);
+  const report = reportContext(state);
   const body = (
     issues: readonly IssueDto[],
     resultsKey: string,
@@ -471,6 +492,7 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
       searchRef={searchRef}
       controller={controller}
       empty={empty}
+      report={report}
     />
   );
 
@@ -537,6 +559,7 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
           stats={stress.stats.stressed}
           viewport={`${String(stress.viewport.width)}×${String(stress.viewport.height)}`}
           stress
+          state={state}
         />
       </section>
     );
@@ -563,7 +586,7 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
             }
           />,
         )}
-        <Footer stats={scan.stats} viewport={viewport} stress={false} />
+        <Footer stats={scan.stats} viewport={viewport} stress={false} state={state} />
       </section>
     );
   }

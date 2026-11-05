@@ -1,17 +1,26 @@
 import { i18n } from '#i18n';
-import { ArrowLeft, ChevronLeft, ChevronRight, LocateFixed } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCopy,
+  LocateFixed,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import type { FindingDto, IssueDto, PreviewKey, ResultOf } from '@/messaging/protocol';
+import type { ReportContext } from '@/features/report/markdown';
+import { issueMarkdown } from '@/features/report/markdown';
+import type { FixTrialsDto, IssueDto, PreviewKey, ResultOf } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
 import { Badge, TONE_TEXT } from '@/ui/Chip';
 import { CutText } from '@/ui/CutText';
 import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
 
-import { CopyButton } from './CopyButton';
-import type { FixesProps } from './Fixes';
+import { CopyButton, useCopied } from './CopyButton';
 import { Fixes } from './Fixes';
+import { measurement, measurementSentence } from './measure';
 import {
   KindIcon,
   SEVERITY_TONE,
@@ -31,21 +40,14 @@ export interface IssueDetailProps {
   onReveal: (findingId: string) => void;
   onHighlight: (findingId: string | null) => void;
   loadDetails: (findingId: string) => Promise<Details>;
-  loadFixes: FixesProps['loadFixes'];
+  /** Tries each suggested fix on the page; null when that can't run. */
+  loadFixes: (findingId: string) => Promise<FixTrialsDto | null>;
   onPreview: (findingId: string, key: PreviewKey | null) => Promise<boolean>;
+  /** Where the results come from; null hides Copy report. */
+  report: ReportContext | null;
 }
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
-
-/** What the box offers and what the text needs, on the axis that overflows. */
-function measurement(finding: FindingDto, viewport: { width: number }) {
-  if (finding.kind === 'page-scroll') {
-    return { has: viewport.width, needs: viewport.width + finding.overflow.x, axis: 'x' as const };
-  }
-  const axis = finding.overflow.x > 0 ? 'x' : 'y';
-  const has = axis === 'x' ? finding.box.width : finding.box.height;
-  return { has, needs: has + finding.overflow[axis], axis };
-}
 
 export function IssueDetail({
   issue,
@@ -56,7 +58,9 @@ export function IssueDetail({
   loadDetails,
   loadFixes,
   onPreview,
+  report,
 }: IssueDetailProps) {
+  const [copied, markCopied] = useCopied();
   const [index, setIndex] = useState(0);
   const finding = issue.instances[Math.min(index, issue.instances.length - 1)];
   // Only the first place of an issue arrives with its selector and cut; others load on demand.
@@ -64,6 +68,21 @@ export function IssueDetail({
   const details = loaded?.id === finding?.id ? loaded?.details : undefined;
   const selector = finding?.element.selector ?? details?.selector ?? null;
   const cut = finding?.cut !== undefined ? finding.cut : (details?.cut ?? null);
+
+  // Fix trials for the finding shown: undefined while they run, null when they couldn't.
+  const [trials, setTrials] = useState<{ id: string; result: FixTrialsDto | null } | null>(null);
+  const fixes = finding && trials?.id === finding.id ? trials.result : undefined;
+
+  useEffect(() => {
+    if (!finding) return;
+    let current = true;
+    void loadFixes(finding.id).then((result) => {
+      if (current) setTrials({ id: finding.id, result });
+    });
+    return () => {
+      current = false;
+    };
+  }, [finding, loadFixes]);
 
   useEffect(() => {
     if (!finding) return;
@@ -81,7 +100,8 @@ export function IssueDetail({
 
   if (!finding) return null;
   const tone = SEVERITY_TONE[issue.severity];
-  const { has, needs, axis } = measurement(finding, viewport);
+  const measured = measurement(finding, viewport);
+  const { has, needs, axis } = measured;
   const short = needs - has;
   const places = issue.instances.length;
   const go = (next: number) => {
@@ -168,11 +188,7 @@ export function IssueDetail({
           }
           needsLabel={i18n.t('detail.needs', [formatPx(needs)])}
           differenceLabel={i18n.t('detail.short', [formatPx(short)])}
-          description={i18n.t(axis === 'x' ? 'detail.measure' : 'detail.measureY', [
-            formatPx(needs),
-            formatPx(has),
-            formatPx(short),
-          ])}
+          description={measurementSentence(measured)}
         />
         <Button
           variant="primary"
@@ -185,10 +201,32 @@ export function IssueDetail({
         >
           {i18n.t('actions.jump')}
         </Button>
+        {report && (
+          <Button
+            size="sm"
+            icon={
+              copied ? (
+                <Check size={14} strokeWidth={1.5} className="text-ok" />
+              ) : (
+                <ClipboardCopy size={14} strokeWidth={1.5} />
+              )
+            }
+            onClick={() => {
+              const markdown = issueMarkdown(
+                issue,
+                { finding, cut, selector, fixes: fixes ?? null },
+                report,
+              );
+              void navigator.clipboard.writeText(markdown).then(markCopied);
+            }}
+          >
+            {copied ? i18n.t('actions.copied') : i18n.t('actions.copyReport')}
+          </Button>
+        )}
       </section>
 
       {/* The next step comes first; the evidence follows. */}
-      <Fixes finding={finding} loadFixes={loadFixes} onPreview={onPreview} />
+      <Fixes finding={finding} result={fixes} onPreview={onPreview} />
 
       {finding.before && (
         <section className="flex flex-col gap-1">
