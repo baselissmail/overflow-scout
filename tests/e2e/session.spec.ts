@@ -55,6 +55,12 @@ test.describe('demo page', () => {
     await expect(demo.locator('overflow-scout-root .box[data-flash]')).toHaveCount(1);
     await expect(panel.getByRole('img', { name: /^Needs .* short\.$/ })).toBeVisible();
 
+    // Revealing an element below the fold scrolls the page; the pulse must survive the redraws.
+    await demo.setViewportSize({ width: 800, height: 300 });
+    await rows(panel).filter({ hasText: 'Ships in 2–3 business days' }).click();
+    await expect(demo.locator('overflow-scout-root .box[data-flash]')).toHaveCount(1);
+    await expect.poll(() => demo.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
     const badge = await serviceWorker.evaluate(
       (id) =>
         (globalThis as unknown as { chrome: Chrome }).chrome.action.getBadgeText({ tabId: id }),

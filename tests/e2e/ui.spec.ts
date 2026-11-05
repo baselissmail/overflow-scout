@@ -114,8 +114,10 @@ test('works with the keyboard alone', async ({ openTab, openPanel, extensionId }
         '',
     );
 
-  // Header buttons first, then the Home actions.
-  for (let step = 0; step < 3; step += 1) await press('Tab');
+  // The Home actions come after the header buttons; Tab until "Scan page".
+  for (let step = 0; step < 6 && !(await focused()).startsWith('Scan page'); step += 1) {
+    await press('Tab');
+  }
   expect(await focused()).toMatch(/^Scan page/);
   await press('Enter');
   const list = panel.getByRole('listbox', { name: 'Results' });
@@ -140,8 +142,10 @@ test('works with the keyboard alone', async ({ openTab, openPanel, extensionId }
   // / searches.
   await press('/');
   await expect(panel.getByRole('searchbox')).toBeFocused();
+  // Font metrics decide whether this element also spills, so check what matched, not how many.
   await panel.keyboard.type('p.promo');
-  await expect(list.getByRole('option')).toHaveCount(1);
+  await expect(list.getByRole('option').filter({ hasNotText: 'p.promo' })).toHaveCount(0);
+  await expect(list.getByRole('option').first()).toContainText('p.promo');
   await press('Shift+Tab');
 
   // ? shows the shortcuts; Esc closes them.
