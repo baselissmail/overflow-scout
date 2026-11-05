@@ -163,6 +163,14 @@ export const fixTrialsSchema = z.object({
   combined: z.nullable(trialSchema),
 });
 
+/** What the picked element does with a text tried in it (Inspect's slider and presets). */
+export const textTrialSchema = z.object({
+  length: count,
+  fits: z.boolean(),
+  breaksAs: z.nullable(findingKindSchema),
+  overflow: z.object({ x: px, y: px }),
+});
+
 export const pickedElementSchema = z.object({
   element: elementRefSchema,
   size: viewportSchema,
@@ -203,6 +211,21 @@ export const pageRequestSchema = z.discriminatedUnion('type', [
   /** The selector and cut of one finding, for places that didn't arrive with them. */
   z.object({ id, type: z.literal('details'), findingId: z.string() }),
   z.object({ id, type: z.literal('pick'), active: z.boolean() }),
+  /**
+   * Puts a text in the picked element and measures it: a length (grown or
+   * shortened from its own text) or a given text. It stays on the page until
+   * the next try, `null`, another pick, or other work.
+   */
+  z.object({
+    id,
+    type: z.literal('tryText'),
+    value: z.nullable(
+      z.union([
+        z.object({ length: count.check(z.maximum(5000)) }),
+        z.object({ text: z.string().check(z.maxLength(5000)) }),
+      ]),
+    ),
+  }),
   /** Scrolls a finding into view for a screenshot and says where it is in the window. */
   z.object({ id, type: z.literal('frame'), findingId: z.string() }),
   /** Tries each suggested fix for one measurement, then restores the page exactly. */
@@ -237,6 +260,7 @@ export const pageResultSchemas = {
   ),
   pick: z.null(),
   fixes: z.nullable(fixTrialsSchema),
+  tryText: z.nullable(textTrialSchema),
   frame: z.nullable(
     z.object({
       /** The finding's box, its text and its container, in CSS pixels from the window's corner. */
@@ -299,6 +323,8 @@ export type RevertResultDto = z.infer<typeof revertResultSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type PickedElement = z.infer<typeof pickedElementSchema>;
 export type FixTrialsDto = z.infer<typeof fixTrialsSchema>;
+export type TextTrialDto = z.infer<typeof textTrialSchema>;
+export type TextValueDto = NonNullable<RequestParams<'tryText'>['value']>;
 export type TrialDto = FixTrialsDto['trials'][number]['trial'];
 export type PreviewKey = NonNullable<RequestParams<'preview'>['key']>;
 export type PageRequest = z.infer<typeof pageRequestSchema>;

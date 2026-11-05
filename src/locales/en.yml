@@ -259,6 +259,24 @@ inspect:
   has: fits $1
   needsChars: needs $1
   measure: Fits up to $1 characters; a translation needs about $2.
+  tryHeading: Try other text
+  tryHint: The text changes on the page while you try. It goes back when you close this.
+  length: Length
+  chars:
+    1: 1 character
+    n: $1 characters
+  tryFits: Fits at $1.
+  tryBreaks: $1 at $2, $3 short.
+  presets: Real-world text
+  preset:
+    longName: Name
+    product: Product
+    url: Link
+    email: Email
+    longText: Long text
+  custom: Your own text
+  try: Try
+  reset: Put the text back
   verdict:
     fits: Room for translation
     atRisk: May break in translation

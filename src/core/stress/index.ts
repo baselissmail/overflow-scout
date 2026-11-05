@@ -1,4 +1,6 @@
-export { findBreakingPoint, verdictFor } from './breaking-point';
+export { findBreakingPoint, growableText, verdictFor } from './breaking-point';
+export { tryText } from './try-text';
+export type { TextEdit, TextTrial, TextValue } from './try-text';
 export type { BreakingPoint, BreakingPointOptions, BreakingVerdict } from './breaking-point';
 export {
   EXPANSION_BANDS,

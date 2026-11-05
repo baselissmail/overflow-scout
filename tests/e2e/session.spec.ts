@@ -263,8 +263,33 @@ test.describe('demo page', () => {
     await expect(card).toContainText(/Fits up to \d+ characters|Still fits/);
     await expect(card).toContainText(/a translation needs about 20–22/);
 
+    // Try other text: it shows on the page, and goes back when done. The button's name
+    // changes with its text, so it's found by its place instead.
+    const tried = demo.locator('article.card button.buy').first();
+    const slider = card.getByRole('slider', { name: 'Length' });
+    await slider.focus();
+    await panel.keyboard.press('End');
+    await expect(card).toContainText(
+      /(Cut off|Overflows|Truncated) at \d+ characters, [\d.]+\s?px short\./,
+    );
+    expect((await tried.textContent())?.length).toBeGreaterThan('Add to cart'.length);
+    await panel.keyboard.press('Home');
+    await expect(card).toContainText('Fits at 1 character.');
+
+    await card.getByRole('button', { name: 'Email' }).click();
+    await expect.poll(() => tried.textContent()).toContain('@');
+    await card.getByLabel('Your own text').fill('Zum Warenkorb hinzufügen');
+    await card.getByRole('button', { name: 'Try', exact: true }).click();
+    await expect.poll(() => tried.textContent()).toBe('Zum Warenkorb hinzufügen');
+    await card.getByRole('button', { name: 'Put the text back' }).click();
+    await expect.poll(() => tried.textContent()).toBe('Add to cart');
+
+    // Closing the card puts tried text back too.
+    await card.getByRole('button', { name: 'Name' }).click();
+    await expect.poll(() => tried.textContent()).not.toBe('Add to cart');
     await card.getByRole('button', { name: 'Close measurement' }).click();
     await expect(card).toBeHidden();
+    await expect.poll(() => tried.textContent()).toBe('Add to cart');
   });
 });
 

@@ -3,6 +3,8 @@ import type {
   PageInfo,
   PickedElement,
   PreviewKey,
+  TextTrialDto,
+  TextValueDto,
   ProgressPhase,
   ResultOf,
   ScanResultDto,
@@ -251,10 +253,24 @@ export class PanelController {
     await this.run(null, (connection) => connection.request('reveal', { findingId }));
   }
 
-  /** Closes the inspect card and its outline on the page. */
+  /** Closes the inspect card, puts any tried text back, and clears its outline. */
   closeInspect(): void {
     this.set({ picked: null });
+    this.connection?.request('tryText', { value: null }).catch(() => undefined);
     this.highlight(null);
+  }
+
+  /**
+   * Puts a text in the picked element and measures it; `null` puts the
+   * element's own text back. Null when the page can't be reached.
+   */
+  async tryText(value: TextValueDto | null): Promise<TextTrialDto | null> {
+    try {
+      const connection = await this.ensureConnection();
+      return await connection.request('tryText', { value });
+    } catch {
+      return null;
+    }
   }
 
   /** Back to the start screen. Stress text, if any, stays until reverted. */

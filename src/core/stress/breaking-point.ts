@@ -45,6 +45,18 @@ export function verdictFor(
   return fitsUpTo >= needs.realistic ? 'at-risk' : 'will-break';
 }
 
+/** The text nodes of an element that can grow: not in icon fonts or untouchable parts. */
+export function growableText(element: Element, options: TraversalOptions = {}): Text[] {
+  const doc = element.ownerDocument;
+  const view = windowOf(doc);
+  return [...walkTree(doc, element, SHOW_TEXT, options, { skip: isUntouchable })].filter(
+    (node): node is Text => {
+      const host = node.parentElement;
+      return host !== null && !isIconFont(view.getComputedStyle(host));
+    },
+  );
+}
+
 /**
  * Finds how many characters fit in an element before its text is cut off or
  * spills (plan §4.3). Binary search on the text length, in place: every trial
@@ -58,13 +70,7 @@ export function findBreakingPoint(
   options: BreakingPointOptions = {},
 ): BreakingPoint | null {
   const doc = element.ownerDocument;
-  const view = windowOf(doc);
-  const nodes = [...walkTree(doc, element, SHOW_TEXT, options, { skip: isUntouchable })].filter(
-    (node): node is Text => {
-      const host = node.parentElement;
-      return host !== null && !isIconFont(view.getComputedStyle(host));
-    },
-  );
+  const nodes = growableText(element, options);
   const originals = nodes.map((node) => node.data);
   if (!originals.some(hasLetters)) return null;
 

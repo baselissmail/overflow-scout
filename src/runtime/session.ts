@@ -1,4 +1,12 @@
-import type { Finding, Fix, FixTrials, StressSession, StyleEdit, TraversalOptions } from '@/core';
+import type {
+  Finding,
+  Fix,
+  FixTrials,
+  StressSession,
+  StyleEdit,
+  TextEdit,
+  TraversalOptions,
+} from '@/core';
 import {
   applyDeclarations,
   elementLabel,
@@ -11,6 +19,7 @@ import {
   scanDocumentAsync,
   textCut,
   tryFixes,
+  tryText,
 } from '@/core';
 import type {
   PageInfo,
@@ -92,6 +101,8 @@ export class PageSession {
   private tried: { findingId: string; fixes: Fix<Element>[]; result: FixTrials } | null = null;
   /** A fix kept on the page so it can be seen; undone before any other work. */
   private preview: StyleEdit | null = null;
+  /** Text tried in the picked element, kept on the page until reset. */
+  private trying: TextEdit | null = null;
 
   constructor(
     private readonly doc: Document,
@@ -150,6 +161,7 @@ export class PageSession {
     this.work?.abort();
     this.picker.stop();
     this.endPreview();
+    this.endTryText();
     this.endStress();
     this.overlay.destroy();
     this.registry.clear();
@@ -194,7 +206,9 @@ export class PageSession {
         const session = result.session;
         this.stress = session;
         this.stopWatching = session.watch((count) => {
-          this.send({ type: 'pending', count });
+          // Text tried in the Measure card isn't the page changing stress text back;
+          // the count is sent again once that text is put back.
+          if (!this.trying) this.send({ type: 'pending', count });
         });
         this.overlay.showStressPill(() => {
           const reverted = this.endStress();
@@ -217,6 +231,7 @@ export class PageSession {
     revert: () =>
       this.serial(() => {
         this.endPreview();
+        this.endTryText();
         this.tried = null;
         return Promise.resolve(this.endStress());
       }),
@@ -274,6 +289,18 @@ export class PageSession {
         rect: frameOf(finding),
         viewport: { width: view.innerWidth, height: view.innerHeight },
       };
+    },
+    tryText: ({ value }) => {
+      this.endTryText();
+      if (value === null) return null;
+      const element = this.picked;
+      if (!element?.isConnected) throw new Error('Pick an element on the page first.');
+      const edit = tryText(element, value, this.traversal);
+      if (!edit) return null;
+      this.trying = edit;
+      // The outline follows the element's new size.
+      this.overlay.highlight({ element, label: elementLabel(element) });
+      return edit.trial;
     },
     fixes: ({ findingId }) => {
       this.endPreview();
@@ -335,6 +362,11 @@ export class PageSession {
     );
   }
 
+  private endTryText(): void {
+    this.trying?.undo();
+    this.trying = null;
+  }
+
   private endPreview(): void {
     this.preview?.undo();
     this.preview = null;
@@ -343,8 +375,9 @@ export class PageSession {
   /** Runs heavy work one at a time with a fresh abort signal for `cancel`. */
   private cancellable<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
     return this.serial(async () => {
-      // Results describe the page as it is, not with a previewed fix.
+      // Results describe the page as it is, not with a previewed fix or tried text.
       this.endPreview();
+      this.endTryText();
       this.tried = null;
       const controller = new AbortController();
       this.work = controller;
@@ -390,6 +423,7 @@ export class PageSession {
   }
 
   private describePicked(element: Element): PickedElement {
+    this.endTryText();
     this.picked = element;
     const rect = element.getBoundingClientRect();
     const result = findBreakingPoint(element, this.traversal);

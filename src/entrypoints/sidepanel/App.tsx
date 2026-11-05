@@ -18,7 +18,7 @@ import {
   Sun,
   WholeWord,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 
 import type { Command } from '@/features/commands/CommandPalette';
@@ -38,6 +38,7 @@ import { ShortcutsDialog } from '@/features/shortcuts/ShortcutsDialog';
 import { StressBar } from '@/features/stress/StressBar';
 import type { StressScope } from '@/features/stress/StressControls';
 import { StressControls } from '@/features/stress/StressControls';
+import type { TextValueDto } from '@/messaging/protocol';
 import { siteOf } from '@/storage/ignore';
 import { BrandMark } from '@/ui/BrandMark';
 import { Button } from '@/ui/Button';
@@ -62,6 +63,10 @@ export function App() {
   const { state, controller } = usePanel();
   const [settings, updateSettings] = useSettings();
   const ignore = useIgnoreRules();
+  const tryText = useCallback(
+    (value: TextValueDto | null) => controller.tryText(value),
+    [controller],
+  );
   const ignoredIds = ignoredOn(ignore.rules, state.page ? siteOf(state.page.url) : null);
   useEffect(() => {
     // The toolbar badge counts what the panel shows: ignored issues are left out.
@@ -445,6 +450,7 @@ export function App() {
           onClose={() => {
             controller.closeInspect();
           }}
+          onTryText={tryText}
         />
       </div>
 

@@ -7,6 +7,9 @@ import { Badge } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
 
+import type { TryTextProps } from './TryText';
+import { TryText } from './TryText';
+
 type Verdict = NonNullable<PickedElement['breakingPoint']>['verdict'];
 
 const VERDICT: Readonly<Record<Verdict, { label: () => string; tone: Tone }>> = {
@@ -20,9 +23,24 @@ interface InspectCardProps {
   picking: boolean;
   picked: PickedElement | null;
   onClose: () => void;
+  /** Must keep its identity: a new function would put the tried text back. */
+  onTryText: TryTextProps['onTry'];
 }
 
-export function InspectCard({ picking, picked, onClose }: InspectCardProps) {
+/** A key per pick, so trying text starts over for each element. */
+const pickKeys = new WeakMap<PickedElement, number>();
+let nextPickKey = 0;
+function keyOf(picked: PickedElement): number {
+  let key = pickKeys.get(picked);
+  if (key === undefined) {
+    nextPickKey += 1;
+    key = nextPickKey;
+    pickKeys.set(picked, key);
+  }
+  return key;
+}
+
+export function InspectCard({ picking, picked, onClose, onTryText }: InspectCardProps) {
   if (picking) {
     return (
       <p
@@ -88,6 +106,7 @@ export function InspectCard({ picking, picked, onClose }: InspectCardProps) {
               String(point.needs.worst),
             ])}
           </p>
+          <TryText key={keyOf(picked)} point={point} onTry={onTryText} />
         </>
       ) : (
         <p className="text-fg-muted">{i18n.t('inspect.noText')}</p>
