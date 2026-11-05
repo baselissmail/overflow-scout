@@ -15,7 +15,7 @@ describe('page requests', () => {
         includeInputs: false,
       },
       { id: 9, type: 'cancel' },
-      { id: 10, type: 'selector', findingId: 'f2' },
+      { id: 10, type: 'details', findingId: 'f2' },
       { id: 4, type: 'revert' },
       { id: 5, type: 'reapply' },
       { id: 6, type: 'highlight', findingId: null },

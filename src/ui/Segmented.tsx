@@ -45,7 +45,7 @@ export function Segmented<T extends string>({
             'min-h-6 flex-auto rounded-[5px] px-2 py-0.5 text-small font-medium text-fg-muted',
             'transition-[background-color,color] duration-(--duration-press) ease-(--ease-out)',
             'hover:text-fg disabled:opacity-50',
-            'data-[state=on]:bg-canvas data-[state=on]:text-fg data-[state=on]:shadow-[0_0_0_1px_var(--color-line)]',
+            'data-[state=on]:bg-raised data-[state=on]:text-fg data-[state=on]:shadow-raised',
           )}
         >
           {option.label}

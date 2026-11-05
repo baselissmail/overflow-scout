@@ -33,7 +33,7 @@ export function StressControls({
 }: StressControlsProps) {
   return (
     <form
-      className="flex animate-enter flex-col gap-3 rounded-card border border-line p-3"
+      className="flex animate-enter flex-col gap-3 rounded-card bg-raised p-3 shadow-raised"
       aria-label={i18n.t('stress.heading')}
       onSubmit={(event) => {
         event.preventDefault();

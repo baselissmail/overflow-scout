@@ -2,23 +2,26 @@ import { i18n } from '#i18n';
 import { Info, Search } from 'lucide-react';
 import type { Dispatch, ReactNode, RefObject, SetStateAction } from 'react';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import type { PanelController, PanelState } from '@/features/page/controller';
 import type { IssueDto, ScanResultDto } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
-import { Chip } from '@/ui/Chip';
+import { Chip, TONE_BG } from '@/ui/Chip';
 import { EmptyState } from '@/ui/EmptyState';
 import { IconButton } from '@/ui/IconButton';
 import { Popover } from '@/ui/Popover';
 import { Segmented } from '@/ui/Segmented';
+import { SeverityBar } from '@/ui/SeverityBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/Tabs';
+import { useCountUp } from '@/ui/use-count-up';
 
 import { IssueDetail } from './IssueDetail';
 import { ResultList } from './ResultList';
 import type { ResultFilter, SortOrder } from './filter';
 import { NO_FILTER, applyFilter, countByKind } from './filter';
 import type { Kind } from './labels';
-import { KINDS, NBSP, SEVERITY_TONE, formatCount, kindLabel } from './labels';
+import { KINDS, KindIcon, NBSP, SEVERITY_TONE, formatCount, kindLabel } from './labels';
 
 type Stats = ScanResultDto['stats'];
 type Tab = 'atRisk' | 'brokenNow';
@@ -39,6 +42,43 @@ const TONE_OF_KIND: Readonly<Record<Kind, IssueDto['severity']>> = {
   spilling: 'warning',
   input: 'notice',
 };
+
+/** A filter chip whose count lands with a short count-up. */
+function KindChip({
+  kind,
+  count,
+  pressed,
+  onToggle,
+}: {
+  kind: Kind;
+  count: number;
+  pressed: boolean;
+  onToggle: (kind: Kind) => void;
+}) {
+  const shown = useCountUp(count);
+  return (
+    <Chip
+      tone={SEVERITY_TONE[TONE_OF_KIND[kind]]}
+      icon={<KindIcon kind={kind} />}
+      label={kindLabel(kind)}
+      count={shown}
+      pressed={pressed}
+      onClick={() => {
+        onToggle(kind);
+      }}
+    />
+  );
+}
+
+function severitySummary(issues: readonly IssueDto[]): string {
+  const count = (severity: IssueDto['severity']) =>
+    issues.filter((issue) => issue.severity === severity).length;
+  return i18n.t('results.severitySummary', [
+    String(count('critical')),
+    String(count('warning')),
+    String(count('notice')),
+  ]);
+}
 
 function Coverage({ stats, viewport }: { stats: Stats; viewport: string | null }) {
   const rows: [string, string][] = [
@@ -89,6 +129,8 @@ function Footer({ stats, viewport, stress }: { stats: Stats; viewport: string; s
 
 interface BodyProps {
   issues: readonly IssueDto[];
+  /** Changes with each new set of results, so the list replays its arrival once. */
+  resultsKey: string;
   filter: ResultFilter;
   setFilter: Dispatch<SetStateAction<ResultFilter>>;
   viewport: { width: number; height: number };
@@ -100,6 +142,7 @@ interface BodyProps {
 
 function ResultsBody({
   issues,
+  resultsKey,
   filter,
   setFilter,
   viewport,
@@ -121,11 +164,29 @@ function ResultsBody({
     },
     [controller],
   );
-  const loadSelector = useCallback((id: string) => controller.selector(id), [controller]);
+  const loadDetails = useCallback((id: string) => controller.details(id), [controller]);
+  /** Narrow panels swap list and detail; a view transition keeps the change legible. */
+  const swap = useCallback(
+    (update: () => void) => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (wide || reduced || !('startViewTransition' in document)) {
+        update();
+        return;
+      }
+      document.startViewTransition(() => {
+        // The DOM must change inside the transition callback, so React renders synchronously.
+        // eslint-disable-next-line @eslint-react/dom-no-flush-sync
+        flushSync(update);
+      });
+    },
+    [wide],
+  );
   const close = useCallback(() => {
-    setOpenId(null);
+    swap(() => {
+      setOpenId(null);
+    });
     controller.highlight(null);
-  }, [controller]);
+  }, [controller, swap]);
 
   if (issues.length === 0) return <>{empty}</>;
 
@@ -140,6 +201,7 @@ function ResultsBody({
 
   const list = (
     <ResultList
+      key={resultsKey}
       issues={shown}
       selectedId={selectedId}
       label={i18n.t('results.heading')}
@@ -147,7 +209,9 @@ function ResultsBody({
         setSelectedId(issue.id);
       }}
       onOpen={(issue) => {
-        setOpenId(issue.id);
+        swap(() => {
+          setOpenId(issue.id);
+        });
         const first = issue.instances[0];
         if (first) void controller.reveal(first.id);
       }}
@@ -166,7 +230,7 @@ function ResultsBody({
         onBack={wide ? null : close}
         onReveal={(id) => void controller.reveal(id)}
         onHighlight={highlight}
-        loadSelector={loadSelector}
+        loadDetails={loadDetails}
       />
     </div>
   ) : null;
@@ -185,17 +249,22 @@ function ResultsBody({
         }
       }}
     >
+      <SeverityBar
+        label={severitySummary(issues)}
+        segments={(['critical', 'warning', 'notice'] as const).map((severity) => ({
+          key: severity,
+          count: issues.filter((issue) => issue.severity === severity).length,
+          colorClass: TONE_BG[SEVERITY_TONE[severity]],
+        }))}
+      />
       <div role="group" aria-label={i18n.t('results.filters')} className="flex flex-wrap gap-1.5">
         {KINDS.filter((kind) => counts.has(kind)).map((kind) => (
-          <Chip
+          <KindChip
             key={kind}
-            tone={SEVERITY_TONE[TONE_OF_KIND[kind]]}
-            label={kindLabel(kind)}
+            kind={kind}
             count={counts.get(kind) ?? 0}
             pressed={filter.kinds.has(kind)}
-            onClick={() => {
-              toggleKind(kind);
-            }}
+            onToggle={toggleKind}
           />
         ))}
       </div>
@@ -220,7 +289,7 @@ function ResultsBody({
               const value = event.target.value;
               setFilter((current) => ({ ...current, query: value }));
             }}
-            className="min-h-8 w-full rounded-control border border-line-strong bg-canvas ps-7 pe-2"
+            className="min-h-8 w-full rounded-control border border-line-strong bg-raised ps-7 pe-2"
           />
         </label>
         <Segmented<SortOrder>
@@ -245,18 +314,41 @@ function ResultsBody({
           {detail ?? <p className="p-2 text-fg-muted">{i18n.t('results.selectHint')}</p>}
         </div>
       ) : (
-        (detail ?? <div className="flex min-h-0 flex-1 flex-col">{list}</div>)
+        <div className="flex min-h-0 flex-1 flex-col [view-transition-name:results-pane]">
+          {detail ?? list}
+        </div>
       )}
     </div>
   );
 }
 
+/** A stable key per result object: a new scan or stress test gets a new one. */
+const resultKeys = new WeakMap<object, number>();
+let nextResultKey = 0;
+function keyOf(result: object): string {
+  let key = resultKeys.get(result);
+  if (key === undefined) {
+    nextResultKey += 1;
+    key = nextResultKey;
+    resultKeys.set(result, key);
+  }
+  return String(key);
+}
+
 export function ResultsView({ state, controller, wide, searchRef, onRunStress }: ResultsViewProps) {
   const [filter, setFilter] = useState<ResultFilter>(NO_FILTER);
   const [tab, setTab] = useState<Tab>('atRisk');
-  const body = (issues: readonly IssueDto[], viewport: BodyProps['viewport'], empty: ReactNode) => (
+  const atRisk = useCountUp(state.stress?.atRisk.length ?? 0);
+  const brokenNow = useCountUp(state.stress?.brokenNow.length ?? 0);
+  const body = (
+    issues: readonly IssueDto[],
+    resultsKey: string,
+    viewport: BodyProps['viewport'],
+    empty: ReactNode,
+  ) => (
     <ResultsBody
       issues={issues}
+      resultsKey={resultsKey}
       filter={filter}
       setFilter={setFilter}
       viewport={viewport}
@@ -284,16 +376,17 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
           <TabsList label={i18n.t('results.heading')}>
             <TabsTrigger value="atRisk">
               {i18n.t('results.atRisk')}
-              <span className="tabular-nums">{formatCount(stress.atRisk.length)}</span>
+              <span className="tabular-nums">{formatCount(atRisk)}</span>
             </TabsTrigger>
             <TabsTrigger value="brokenNow">
               {i18n.t('results.brokenNow')}
-              <span className="tabular-nums">{formatCount(stress.brokenNow.length)}</span>
+              <span className="tabular-nums">{formatCount(brokenNow)}</span>
             </TabsTrigger>
           </TabsList>
           <TabsContent value="atRisk" className="flex min-h-0 flex-1 flex-col">
             {body(
               stress.atRisk,
+              `${keyOf(stress)}-at-risk`,
               stress.viewport,
               <EmptyState title={i18n.t('results.noneAtRisk')} />,
             )}
@@ -301,6 +394,7 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
           <TabsContent value="brokenNow" className="flex min-h-0 flex-1 flex-col">
             {body(
               stress.brokenNow,
+              `${keyOf(stress)}-broken-now`,
               stress.viewport,
               <EmptyState title={i18n.t('results.noneNow')} />,
             )}
@@ -325,6 +419,7 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
       >
         {body(
           scan.issues,
+          keyOf(scan),
           scan.viewport,
           <EmptyState
             title={i18n.t('results.none', [formatCount(scan.stats.textNodes), viewport])}

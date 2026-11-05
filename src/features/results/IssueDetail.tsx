@@ -2,13 +2,16 @@ import { i18n } from '#i18n';
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, LocateFixed } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import type { FindingDto, IssueDto } from '@/messaging/protocol';
+import type { FindingDto, IssueDto, ResultOf } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
 import { Badge, TONE_TEXT } from '@/ui/Chip';
+import { CutText } from '@/ui/CutText';
 import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
 
-import { SEVERITY_TONE, formatPx, kindLabel, severityLabel } from './labels';
+import { KindIcon, SEVERITY_TONE, formatPx, kindLabel, severityLabel } from './labels';
+
+type Details = ResultOf<'details'>;
 
 export interface IssueDetailProps {
   issue: IssueDto;
@@ -17,7 +20,7 @@ export interface IssueDetailProps {
   onBack: (() => void) | null;
   onReveal: (findingId: string) => void;
   onHighlight: (findingId: string | null) => void;
-  loadSelector: (findingId: string) => Promise<string | null>;
+  loadDetails: (findingId: string) => Promise<Details>;
 }
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
@@ -57,29 +60,30 @@ export function IssueDetail({
   onBack,
   onReveal,
   onHighlight,
-  loadSelector,
+  loadDetails,
 }: IssueDetailProps) {
   const [index, setIndex] = useState(0);
   const finding = issue.instances[Math.min(index, issue.instances.length - 1)];
-  // Only the first place of an issue arrives with a selector; others load on demand.
-  const [loaded, setLoaded] = useState<{ id: string; selector: string | null } | null>(null);
-  const selector =
-    finding?.element.selector ?? (loaded?.id === finding?.id ? (loaded?.selector ?? null) : null);
+  // Only the first place of an issue arrives with its selector and cut; others load on demand.
+  const [loaded, setLoaded] = useState<{ id: string; details: Details } | null>(null);
+  const details = loaded?.id === finding?.id ? loaded?.details : undefined;
+  const selector = finding?.element.selector ?? details?.selector ?? null;
+  const cut = finding?.cut !== undefined ? finding.cut : (details?.cut ?? null);
   const [copied, markCopied] = useCopied();
 
   useEffect(() => {
     if (!finding) return;
     // Keep the element outlined on the page while its details are open.
     onHighlight(finding.id);
-    if (finding.element.selector) return;
+    if (finding.element.selector && finding.cut !== undefined) return;
     let current = true;
-    void loadSelector(finding.id).then((value) => {
-      if (current) setLoaded({ id: finding.id, selector: value });
+    void loadDetails(finding.id).then((value) => {
+      if (current) setLoaded({ id: finding.id, details: value });
     });
     return () => {
       current = false;
     };
-  }, [finding, loadSelector, onHighlight]);
+  }, [finding, loadDetails, onHighlight]);
 
   if (!finding) return null;
   const tone = SEVERITY_TONE[issue.severity];
@@ -99,11 +103,13 @@ export function IssueDetail({
         {onBack && (
           <IconButton
             label={i18n.t('actions.back')}
-            icon={<ArrowLeft {...ICON} />}
+            icon={<ArrowLeft {...ICON} className="rtl:rotate-180" />}
             onClick={onBack}
           />
         )}
-        <Badge tone={tone}>{kindLabel(issue.kind)}</Badge>
+        <Badge tone={tone} icon={<KindIcon kind={issue.kind} />}>
+          {kindLabel(issue.kind)}
+        </Badge>
         <span className={`text-small ${TONE_TEXT[tone]}`}>{severityLabel(issue.severity)}</span>
         {places > 1 && (
           <span className="ms-auto flex items-center gap-1">
@@ -130,46 +136,72 @@ export function IssueDetail({
         )}
       </header>
 
-      <section className="flex flex-col gap-1">
-        <h2 className="text-small text-fg-muted">{i18n.t('detail.selector')}</h2>
-        <p className="font-mono text-small break-all" translate="no">
-          {selector ?? finding.element.label}
-        </p>
-      </section>
-
-      <MeasureBar
-        has={has}
-        needs={needs}
-        tone={tone}
-        hasLabel={i18n.t('detail.has', [formatPx(has)])}
-        needsLabel={i18n.t('detail.needs', [formatPx(needs)])}
-        differenceLabel={i18n.t('detail.short', [formatPx(short)])}
-        description={i18n.t(axis === 'x' ? 'detail.measure' : 'detail.measureY', [
-          formatPx(needs),
-          formatPx(has),
-          formatPx(short),
-        ])}
-      />
-
-      <section className="flex flex-col gap-1">
-        {finding.before ? (
-          <>
-            <h2 className="text-small text-fg-muted">{i18n.t('detail.before')}</h2>
-            <p className="break-words">{finding.before}</p>
-            <h2 className="text-small text-fg-muted">
-              {i18n.t('detail.after')}
-              {finding.growth ? ` · ${i18n.t('detail.growth', [String(finding.growth)])}` : ''}
-            </h2>
-            <p className="break-words">{finding.text}</p>
-          </>
+      {/* The proof: the text cut where readers lose it, measured underneath. */}
+      <section
+        className="flex flex-col gap-4 rounded-card bg-raised p-3 shadow-raised"
+        aria-label={i18n.t('detail.proof')}
+      >
+        {cut ? (
+          <p className="text-title leading-snug">
+            <CutText
+              visible={cut.visible}
+              hidden={cut.hidden}
+              visibleLabel={i18n.t('detail.visible')}
+              hiddenLabel={
+                finding.kind === 'spilling' ? i18n.t('detail.spills') : i18n.t('detail.lost')
+              }
+              toneClass={TONE_TEXT[tone]}
+            />
+          </p>
         ) : (
           finding.text !== '' && (
-            <>
-              <h2 className="text-small text-fg-muted">{i18n.t('detail.text')}</h2>
-              <p className="break-words">{finding.text}</p>
-            </>
+            <p className="text-title leading-snug break-words">{finding.text}</p>
           )
         )}
+        <MeasureBar
+          key={finding.id}
+          has={has}
+          needs={needs}
+          tone={tone}
+          hasLabel={i18n.t('detail.has', [formatPx(has)])}
+          needsLabel={i18n.t('detail.needs', [formatPx(needs)])}
+          differenceLabel={i18n.t('detail.short', [formatPx(short)])}
+          description={i18n.t(axis === 'x' ? 'detail.measure' : 'detail.measureY', [
+            formatPx(needs),
+            formatPx(has),
+            formatPx(short),
+          ])}
+        />
+      </section>
+
+      {finding.before && (
+        <section className="flex flex-col gap-1">
+          <h2 className="text-small text-fg-muted">{i18n.t('detail.before')}</h2>
+          <p className="break-words">{finding.before}</p>
+          {finding.growth ? (
+            <p className="text-small text-fg-muted tabular-nums">
+              {i18n.t('detail.growth', [String(finding.growth)])}
+            </p>
+          ) : null}
+        </section>
+      )}
+
+      <section className="flex flex-col gap-1">
+        <h2 className="text-small text-fg-muted">{i18n.t('detail.selector')}</h2>
+        <div className="flex items-start justify-between gap-2">
+          <code className="min-w-0 font-mono text-small break-all" translate="no">
+            {selector ?? finding.element.label}
+          </code>
+          <IconButton
+            label={copied ? i18n.t('actions.copied') : i18n.t('actions.copySelector')}
+            icon={copied ? <Check {...ICON} className="text-ok" /> : <Copy {...ICON} />}
+            disabled={!selector}
+            onClick={() => {
+              if (!selector) return;
+              void navigator.clipboard.writeText(selector).then(markCopied);
+            }}
+          />
+        </div>
       </section>
 
       <section className="flex flex-col gap-2">
@@ -182,16 +214,23 @@ export function IssueDetail({
           </span>
         </h2>
         {finding.diagnosis.causes.length > 0 ? (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-card bg-raised shadow-raised">
             {finding.diagnosis.causes.map((cause) => (
               <li
                 key={`${cause.property}|${cause.value}|${cause.element.label}`}
-                className="flex flex-col gap-0.5 border-s-2 border-line ps-2"
+                className="flex flex-col gap-1 p-2.5"
               >
-                <code className="font-mono text-small break-all" translate="no">
-                  {cause.property}: {cause.value}
-                  <span className="text-fg-muted"> · {cause.element.label}</span>
-                </code>
+                <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <code
+                    className="rounded-[4px] bg-surface px-1 font-mono text-small"
+                    translate="no"
+                  >
+                    {cause.property}: {cause.value}
+                  </code>
+                  <span className="font-mono text-small break-all text-fg-muted" translate="no">
+                    {cause.element.label}
+                  </span>
+                </span>
                 <span>{cause.note}</span>
               </li>
             ))}
@@ -210,16 +249,6 @@ export function IssueDetail({
           }}
         >
           {i18n.t('actions.jump')}
-        </Button>
-        <Button
-          icon={copied ? <Check {...ICON} /> : <Copy {...ICON} />}
-          disabled={!selector}
-          onClick={() => {
-            if (!selector) return;
-            void navigator.clipboard.writeText(selector).then(markCopied);
-          }}
-        >
-          {copied ? i18n.t('actions.copied') : i18n.t('actions.copySelector')}
         </Button>
       </footer>
     </article>

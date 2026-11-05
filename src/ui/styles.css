@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* Self-hosted (OFL-1.1): nothing is fetched from the network. */
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 
 /*
  * Design tokens (docs/design/DIRECTION.md). Semantic roles only: components
@@ -8,39 +11,42 @@
  */
 :root {
   color-scheme: light;
-  --os-canvas: #ffffff;
-  --os-surface: #f4f4f6;
-  --os-line: #e4e4e7;
-  --os-line-strong: #8b8d98;
-  --os-fg: #18181b;
-  --os-fg-muted: #5f5f69;
+  /* Ground, raised surfaces and wells: an ink-tinted ground, paper on top. */
+  --os-canvas: #f3f4f8;
+  --os-raised: #ffffff;
+  --os-surface: #e9ebf2;
+  --os-line: #dfe2ea;
+  --os-line-strong: #858a99;
+  --os-fg: #14161b;
+  --os-fg-muted: #555a69;
   --os-accent: #3451d1;
   --os-accent-fg: #ffffff;
-  --os-accent-soft: #edf0fd;
-  --os-critical: #c62a2f;
-  --os-critical-soft: #feeceb;
-  --os-warning: #9a4a00;
-  --os-warning-soft: #fff3e0;
-  --os-notice: #6550b9;
-  --os-notice-soft: #f2efff;
-  --os-ok: #18794e;
-  --os-ok-soft: #e9f6ef;
-  --os-scrim: rgb(0 0 0 / 0.32);
+  --os-accent-soft: #e6eafb;
+  --os-critical: #c2272d;
+  --os-critical-soft: #fde9e9;
+  --os-warning: #934600;
+  --os-warning-soft: #fdf0dd;
+  --os-notice: #6049b3;
+  --os-notice-soft: #efebfd;
+  --os-ok: #16734a;
+  --os-ok-soft: #e4f4ec;
+  --os-scrim: rgb(10 12 20 / 0.36);
 }
 
 /* Dark: kept identical in both blocks below (the token test checks). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --os-canvas: #0e0f11;
-    --os-surface: #18191c;
-    --os-line: #2a2b30;
-    --os-line-strong: #6f7079;
-    --os-fg: #ededef;
-    --os-fg-muted: #a1a1aa;
+    --os-canvas: #0b0c10;
+    --os-raised: #14161b;
+    --os-surface: #1c1f26;
+    --os-line: #262a33;
+    --os-line-strong: #6e7381;
+    --os-fg: #eceef3;
+    --os-fg-muted: #a3a8b6;
     --os-accent: #8ea2ff;
-    --os-accent-fg: #0e0f11;
-    --os-accent-soft: #1c2240;
+    --os-accent-fg: #0b0c10;
+    --os-accent-soft: #1c2342;
     --os-critical: #ff9592;
     --os-critical-soft: #3b1219;
     --os-warning: #ffc53d;
@@ -55,15 +61,16 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --os-canvas: #0e0f11;
-  --os-surface: #18191c;
-  --os-line: #2a2b30;
-  --os-line-strong: #6f7079;
-  --os-fg: #ededef;
-  --os-fg-muted: #a1a1aa;
+  --os-canvas: #0b0c10;
+  --os-raised: #14161b;
+  --os-surface: #1c1f26;
+  --os-line: #262a33;
+  --os-line-strong: #6e7381;
+  --os-fg: #eceef3;
+  --os-fg-muted: #a3a8b6;
   --os-accent: #8ea2ff;
-  --os-accent-fg: #0e0f11;
-  --os-accent-soft: #1c2240;
+  --os-accent-fg: #0b0c10;
+  --os-accent-soft: #1c2342;
   --os-critical: #ff9592;
   --os-critical-soft: #3b1219;
   --os-warning: #ffc53d;
@@ -76,10 +83,11 @@
 }
 
 @theme inline {
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   --color-canvas: var(--os-canvas);
+  --color-raised: var(--os-raised);
   --color-surface: var(--os-surface);
   --color-line: var(--os-line);
   --color-line-strong: var(--os-line-strong);
@@ -113,10 +121,14 @@
   --duration-enter: 180ms;
   --duration-view: 240ms;
 
-  --shadow-float: 0 8px 24px rgb(0 0 0 / 0.16), 0 0 0 1px var(--os-line);
+  --shadow-float: 0 8px 24px rgb(10 12 20 / 0.16), 0 0 0 1px var(--os-line);
+  --shadow-raised: 0 1px 2px rgb(10 12 20 / 0.06), 0 0 0 1px var(--os-line);
 
-  --animate-enter: os-enter var(--duration-enter) var(--ease-out) both;
-  --animate-scan: os-scan 1.2s var(--ease-out) infinite;
+  --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-enter: os-enter var(--duration-enter) var(--ease-arrive) both;
+  --animate-scan: os-scan 1.4s linear infinite;
+  --animate-grow: os-grow 420ms var(--ease-arrive) both;
+  --animate-bleed: os-bleed 320ms var(--ease-arrive) 160ms both;
 }
 
 @keyframes os-enter {
@@ -126,12 +138,40 @@
   }
 }
 
+/* The scanning bar: a band of light passing along the track. */
 @keyframes os-scan {
   from {
-    transform: translateX(-100%);
+    background-position: 100% 0;
   }
   to {
-    transform: translateX(250%);
+    background-position: -100% 0;
+  }
+}
+
+/* The measure bar draws itself: the box first, then the bleed past its edge. */
+@keyframes os-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes os-bleed {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+/* List ⇄ detail on narrow panels (View Transitions). */
+::view-transition-old(results-pane) {
+  animation: os-leave 160ms var(--ease-out) both;
+}
+::view-transition-new(results-pane) {
+  animation: os-enter 240ms var(--ease-arrive) both;
+}
+@keyframes os-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
   }
 }
 
@@ -143,6 +183,19 @@
     color: var(--color-fg);
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The parts the browser draws carry the design too. */
+  ::selection {
+    background-color: var(--color-accent-soft);
+    color: var(--color-fg);
+  }
+
+  :root {
+    caret-color: var(--color-accent);
+    scrollbar-color: var(--color-line-strong) transparent;
+    scrollbar-width: thin;
+    accent-color: var(--color-accent);
   }
 
   /* Native selects need explicit colors for Windows dark mode. */
@@ -161,6 +214,7 @@
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
@@ -185,5 +239,25 @@ body {
       currentColor 0 1.5px,
       transparent 1.5px 5px
     );
+  }
+
+  /* The cut-off part of text: a faint bleed behind the characters a reader loses. */
+  .bg-bleed {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      color-mix(in oklab, currentColor 22%, transparent) 0 1px,
+      transparent 1px 4px
+    );
+  }
+
+  .bg-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--color-accent) 50%,
+      transparent 100%
+    );
+    background-size: 50% 100%;
+    background-repeat: no-repeat;
   }
 }

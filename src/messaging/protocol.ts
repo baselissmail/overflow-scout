@@ -74,6 +74,8 @@ export const findingSchema = z.object({
   growth: z.optional(z.nullable(z.number())),
   /** The element's text before stress; only for at-risk findings. */
   before: z.optional(z.nullable(z.string())),
+  /** Where the text is cut; sent for the first place of each issue, the rest load on demand. */
+  cut: z.optional(z.nullable(z.object({ visible: z.string(), hidden: z.string() }))),
 });
 
 export const issueSchema = z.object({
@@ -179,7 +181,8 @@ export const pageRequestSchema = z.discriminatedUnion('type', [
   z.object({ id, type: z.literal('reapply') }),
   z.object({ id, type: z.literal('highlight'), findingId: z.nullable(z.string()) }),
   z.object({ id, type: z.literal('reveal'), findingId: z.string() }),
-  z.object({ id, type: z.literal('selector'), findingId: z.string() }),
+  /** The selector and cut of one finding, for places that didn't arrive with them. */
+  z.object({ id, type: z.literal('details'), findingId: z.string() }),
   z.object({ id, type: z.literal('pick'), active: z.boolean() }),
 ]);
 
@@ -193,7 +196,12 @@ export const pageResultSchemas = {
   cancel: z.null(),
   highlight: z.null(),
   reveal: z.null(),
-  selector: z.nullable(z.string()),
+  details: z.nullable(
+    z.object({
+      selector: z.string(),
+      cut: z.nullable(z.object({ visible: z.string(), hidden: z.string() })),
+    }),
+  ),
   pick: z.null(),
 } as const;
 
@@ -238,6 +246,7 @@ export { LAST_GESTURE_KEY } from './keys';
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export type ElementRef = z.infer<typeof elementRefSchema>;
+export type TextCutDto = NonNullable<z.infer<typeof findingSchema>['cut']>;
 export type FindingDto = z.infer<typeof findingSchema>;
 export type IssueDto = z.infer<typeof issueSchema>;
 export type ScanResultDto = z.infer<typeof scanResultSchema>;

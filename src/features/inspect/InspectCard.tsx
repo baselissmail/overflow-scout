@@ -34,7 +34,7 @@ export function InspectCard({ picking, picked }: InspectCardProps) {
   const point = picked.breakingPoint;
   return (
     <section
-      className="flex animate-enter flex-col gap-3 rounded-card border border-line p-3"
+      className="flex animate-enter flex-col gap-3 rounded-card bg-raised p-3 shadow-raised"
       aria-label={i18n.t('inspect.heading')}
     >
       <div className="flex min-w-0 flex-col gap-1">

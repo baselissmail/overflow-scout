@@ -1,13 +1,14 @@
 import { i18n } from '#i18n';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { KeyboardEvent } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { IssueDto } from '@/messaging/protocol';
-import { Badge } from '@/ui/Chip';
+import { Badge, TONE_TEXT } from '@/ui/Chip';
+import { CutText } from '@/ui/CutText';
 import { cx } from '@/ui/cx';
 
-import { SEVERITY_TONE, formatCount, kindLabel } from './labels';
+import { KindIcon, SEVERITY_TONE, formatCount, kindLabel } from './labels';
 
 export interface ResultListProps {
   issues: readonly IssueDto[];
@@ -20,24 +21,29 @@ export interface ResultListProps {
 
 const rowId = (issue: IssueDto) => `result-${issue.id}`;
 
-/** One issue: its kind, where it is, and the text that's affected. */
+/** One issue: its kind, where it is, and the text, cut where readers lose it. */
 function ResultRow({ issue, selected }: { issue: IssueDto; selected: boolean }) {
   const [first] = issue.instances;
   if (!first) return null;
   const places = issue.instances.length;
+  const tone = SEVERITY_TONE[issue.severity];
   return (
     <div
       className={cx(
-        'flex flex-col gap-1 rounded-control px-2 py-2',
+        'flex flex-col gap-1 rounded-control px-2.5 py-2',
         'transition-[background-color] duration-(--duration-press)',
         selected ? 'bg-accent-soft' : 'hover:bg-surface',
       )}
     >
-      <span className="flex min-w-0 items-center gap-2">
-        <Badge tone={SEVERITY_TONE[issue.severity]}>{kindLabel(issue.kind)}</Badge>
+      {/* Wraps rather than squeezing: badge, place and count each keep their text. */}
+      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+        <Badge tone={tone} icon={<KindIcon kind={issue.kind} />}>
+          {kindLabel(issue.kind)}
+        </Badge>
         <span
-          className="min-w-0 flex-1 truncate font-mono text-small text-fg-muted"
+          className="min-w-0 flex-1 basis-24 truncate font-mono text-small text-fg-muted"
           title={first.element.label}
+          translate="no"
         >
           {first.element.label}
         </span>
@@ -47,9 +53,23 @@ function ResultRow({ issue, selected }: { issue: IssueDto; selected: boolean }) 
           </span>
         )}
       </span>
-      <span className="line-clamp-2 break-words" title={first.text}>
-        {first.text}
-      </span>
+      {first.cut ? (
+        <CutText
+          className="line-clamp-2"
+          title={`${first.cut.visible}${first.cut.hidden}`}
+          visible={first.cut.visible}
+          hidden={first.cut.hidden}
+          visibleLabel={i18n.t('detail.visible')}
+          hiddenLabel={i18n.t('detail.lost')}
+          toneClass={TONE_TEXT[tone]}
+        />
+      ) : (
+        first.text !== '' && (
+          <span className="line-clamp-2 break-words" title={first.text}>
+            {first.text}
+          </span>
+        )
+      )}
     </div>
   );
 }
@@ -58,6 +78,14 @@ function ResultRow({ issue, selected }: { issue: IssueDto; selected: boolean }) 
  * A virtualized listbox: thousands of results stay fast, and the selection
  * moves with j/k or the arrow keys (plan §5.7). Moving the selection
  * highlights the element on the page, like hovering does.
+ */
+/** Rows animate in only on arrival: never again while scrolling the virtual list. */
+const ARRIVAL_MS = 500;
+const STAGGERED_ROWS = 8;
+
+/**
+ * Remount it (with a `key`) when a new set of results arrives, so the first
+ * rows stagger in once. Filtering and scrolling never replay it.
  */
 export function ResultList({
   issues,
@@ -78,6 +106,16 @@ export function ResultList({
     overscan: 8,
   });
   const selectedIndex = issues.findIndex((issue) => issue.id === selectedId);
+  const [arriving, setArriving] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setArriving(false);
+    }, ARRIVAL_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedIndex >= 0) virtualizer.scrollToIndex(selectedIndex, { align: 'auto' });
@@ -132,7 +170,7 @@ export function ResultList({
       onMouseLeave={() => {
         onHighlight(null);
       }}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-control focus-visible:outline-offset-[-2px]"
+      className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-card bg-raised p-1 shadow-raised focus-visible:outline-offset-[-2px]"
     >
       <div
         role="presentation"
@@ -165,7 +203,16 @@ export function ResultList({
                 onOpen(issue);
               }}
             >
-              <ResultRow issue={issue} selected={issue.id === selectedId} />
+              <div
+                className={cx(arriving && item.index < STAGGERED_ROWS && 'animate-enter')}
+                style={
+                  arriving
+                    ? { animationDelay: `${String(Math.min(item.index, STAGGERED_ROWS) * 20)}ms` }
+                    : undefined
+                }
+              >
+                <ResultRow issue={issue} selected={issue.id === selectedId} />
+              </div>
             </div>
           );
         })}

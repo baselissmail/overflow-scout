@@ -39,6 +39,7 @@ home:
   stress: Lengthen every string to translation length and see what breaks.
   inspect: Pick an element and see how much text fits in it.
   shortcut: Open this panel with $1.
+  demoLabel: A button label grows longer, as it would in translation, until it no longer fits its button.
 busy:
   connecting: Connecting to the page…
   scanning: Scanning…
@@ -69,6 +70,7 @@ results:
   noneNow: Nothing was broken before the stress test.
   noneAtRisk: Nothing else breaks with longer text.
   noMatches: No results match these filters.
+  severitySummary: $1 critical, $2 warnings, $3 notices
   selectHint: Choose a result to see how much text doesn’t fit, and why.
   footer: $1 text nodes · $2 ms · $3
   footerStress: $1 text nodes · $2 ms
@@ -101,6 +103,10 @@ severity:
   warning: Warning
   notice: Notice
 detail:
+  visible: Visible
+  lost: Cut off
+  spills: Spills out
+  proof: What readers see
   place: Place $1 of $2
   has: has $1
   needs: needs $1
@@ -198,6 +204,22 @@ shortcuts:
   search: Search results
   help: Show keyboard shortcuts
   panel: Open this panel
+commands:
+  title: Commands
+  open: Commands
+  placeholder: Type a command…
+  none: No commands match.
+  groupActions: Actions
+  groupResults: Results
+  groupView: View
+  groupHelp: Help
+  runStress: Run stress test
+  stressOptions: Stress test options
+  search: Search results
+  themeSystem: Use the system theme
+  themeLight: Use the light theme
+  themeDark: Use the dark theme
+  changeShortcut: Change the keyboard shortcut
 toast:
   label: Notifications
   revertedOnPage: Stress text was reverted from the page.

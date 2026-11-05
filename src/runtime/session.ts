@@ -6,6 +6,7 @@ import {
   runStressTest,
   sampleText,
   scanDocumentAsync,
+  textCut,
 } from '@/core';
 import type {
   PageInfo,
@@ -213,9 +214,13 @@ export class PageSession {
       );
       return null;
     },
-    selector: ({ findingId }) => {
+    details: ({ findingId }) => {
       const finding = this.registry.get(findingId);
-      return finding ? elementSelector(finding.element) : null;
+      if (!finding?.element.isConnected) return null;
+      return {
+        selector: elementSelector(finding.element),
+        cut: textCut(finding, this.traversal),
+      };
     },
     pick: ({ active }) => {
       if (active) this.picker.start();

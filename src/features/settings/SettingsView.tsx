@@ -27,12 +27,12 @@ function Group({
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3 border-t border-line pt-3">
-      <div>
+    <section className="flex flex-col gap-2">
+      <div className="px-1">
         <h2 className="font-semibold">{title}</h2>
         {description && <p className="text-small text-fg-muted">{description}</p>}
       </div>
-      {children}
+      <div className="flex flex-col gap-3 rounded-card bg-raised p-3 shadow-raised">{children}</div>
     </section>
   );
 }
@@ -76,7 +76,7 @@ export function SettingsView({ settings, onSettings, onBack }: SettingsViewProps
   const { version } = browser.runtime.getManifest();
 
   return (
-    <main className="flex flex-col gap-4 p-3" aria-labelledby="settings-title">
+    <main className="flex flex-col gap-5 p-3" aria-labelledby="settings-title">
       <header className="flex items-center gap-2">
         <IconButton
           label={i18n.t('actions.back')}

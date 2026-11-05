@@ -30,7 +30,9 @@ function Notice({
       role={tone === 'critical' ? 'alert' : 'status'}
       className={cx(
         'flex animate-enter flex-col items-start gap-2 rounded-card border p-3',
-        tone === 'critical' ? 'border-critical bg-critical-soft' : 'border-line bg-surface',
+        tone === 'critical'
+          ? 'border-critical bg-critical-soft'
+          : 'border-transparent bg-raised shadow-raised',
       )}
     >
       <p>{message}</p>

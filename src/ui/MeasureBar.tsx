@@ -46,7 +46,7 @@ export function MeasureBar({
           }}
         />
         <div
-          className="absolute inset-y-0 start-0 rounded-s-[3px] border-e-2 border-fg bg-fg/12"
+          className="absolute inset-y-0 start-0 origin-left animate-grow rounded-s-[3px] border-e-2 border-fg bg-fg/12 rtl:origin-right"
           style={{ width: `${String(hasPct)}%` }}
         />
         {overflows ? (

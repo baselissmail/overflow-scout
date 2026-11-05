@@ -41,10 +41,18 @@ const THEMES = {
 /** [foreground, background, minimum ratio] */
 const PAIRS: readonly [string, string, number][] = [
   ['fg', 'canvas', 4.5],
+  ['fg', 'raised', 4.5],
   ['fg', 'surface', 4.5],
+  ['fg-muted', 'raised', 4.5],
   ['fg-muted', 'canvas', 4.5],
   ['fg-muted', 'surface', 4.5],
   ['accent', 'canvas', 4.5],
+  ['accent', 'raised', 4.5],
+  ['critical', 'raised', 4.5],
+  ['warning', 'raised', 4.5],
+  ['notice', 'raised', 4.5],
+  ['ok', 'raised', 4.5],
+  ['line-strong', 'raised', 3],
   ['accent', 'accent-soft', 4.5],
   ['accent-fg', 'accent', 4.5],
   ['critical', 'canvas', 4.5],

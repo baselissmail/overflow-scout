@@ -3,6 +3,7 @@ import type {
   PageInfo,
   PickedElement,
   ProgressPhase,
+  ResultOf,
   ScanResultDto,
   StressOptionsDto,
   StressResultDto,
@@ -168,11 +169,11 @@ export class PanelController {
     this.connection?.request('cancel', {}).catch(() => undefined);
   }
 
-  /** The unique selector of a finding (only the first instance of an issue carries one). */
-  async selector(findingId: string): Promise<string | null> {
+  /** The selector and cut of a finding; only the first place of an issue arrives with them. */
+  async details(findingId: string): Promise<ResultOf<'details'>> {
     try {
       const connection = await this.ensureConnection();
-      return await connection.request('selector', { findingId });
+      return await connection.request('details', { findingId });
     } catch {
       return null;
     }

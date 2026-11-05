@@ -1,5 +1,5 @@
 import type { AtRiskFinding, Finding, Issue } from '@/core';
-import { elementLabel, elementSelector, groupFindings } from '@/core';
+import { elementLabel, elementSelector, groupFindings, textCut } from '@/core';
 import type { ElementRef, FindingDto, IssueDto } from '@/messaging/protocol';
 
 /**
@@ -65,6 +65,8 @@ function toFindingDto(
       })),
     },
     box: { width: round(rect.width), height: round(rect.height) },
+    // Measuring the cut takes a few layout reads; only the first place gets it up front.
+    ...(withSelector && { cut: textCut(finding) }),
     ...('growth' in finding && { growth: finding.growth }),
     ...(before && { before: before(finding.element) }),
   };
