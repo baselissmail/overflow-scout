@@ -41,12 +41,17 @@ export function Badge({
   return (
     <span
       className={cx(
-        'inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 text-small font-semibold',
+        // Long labels (translations) wrap inside the badge instead of pushing past the row.
+        'inline-flex max-w-full min-w-0 items-center gap-1 rounded-control px-1.5 text-small font-semibold',
         TONE_SOFT[tone],
       )}
     >
-      {icon !== undefined && <span aria-hidden="true">{icon}</span>}
-      {children}
+      {icon !== undefined && (
+        <span aria-hidden="true" className="shrink-0">
+          {icon}
+        </span>
+      )}
+      <span className="min-w-0 break-words">{children}</span>
     </span>
   );
 }
