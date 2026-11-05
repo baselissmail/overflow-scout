@@ -1,6 +1,6 @@
 # Overflow Scout v1.0 — Refactor & Launch Plan
 
-> Status: **Approved 2026-11-04 (all recommendations in §14 accepted)** · Phases 0–2 done · Owner: Basel Issmail
+> Status: **Approved 2026-11-04 (all recommendations in §14 accepted)** · Phases 0–3 done · Owner: Basel Issmail
 > Scope: Take Overflow Scout from prototype (v0.1) to a Chrome Web Store–ready v1.0 that is accurate, fast, private, and a pleasure to use.
 
 ---
@@ -75,7 +75,7 @@ Real translation preview via Chrome's on-device Translator API · viewport sweep
 | Language            | TypeScript (strictest settings, §6.1)                                                                                                                        |                                                                                                                                                                                                                         |
 | Side panel UI       | React 19, Tailwind v4, Radix primitives via shadcn/ui, Lucide icons, TanStack Virtual                                                                        | Accessible primitives, fast iteration, and good coverage by the Claude UI skills (§11)                                                                                                                                  |
 | Page overlay        | Vanilla TS in a shadow root                                                                                                                                  | Must stay tiny and must not inject React into user pages                                                                                                                                                                |
-| Messaging           | `@webext-core/messaging`, plus a long-lived `chrome.tabs.connect` port between panel and page; **zod** validation at every boundary                          | Typed contracts; untrusted input is never used unvalidated                                                                                                                                                              |
+| Messaging           | A typed request/reply protocol over one long-lived `chrome.tabs.connect` port between panel and page; **zod** (`zod/mini`) validation at every boundary      | Typed contracts; untrusted input is never used unvalidated                                                                                                                                                              |
 | Selectors           | `@medv/finder`                                                                                                                                               | Short, unique, stable selectors                                                                                                                                                                                         |
 | Tests               | Vitest (unit), **Vitest Browser Mode** with the Playwright provider (engine, real layout), Playwright (e2e with the built extension), `@axe-core/playwright` | Layout can't be tested in jsdom                                                                                                                                                                                         |
 | Tooling             | pnpm, TypeScript 6.0, ESLint 10 (flat config), Prettier, lefthook, commitlint, size-limit, Dependabot                                                        | Version pins explained in ADR 0006                                                                                                                                                                                      |
@@ -89,7 +89,7 @@ optional_host_permissions: ["http://*/*", "https://*/*"]   # requested per-origi
 minimum_chrome_version: "142"   # sidePanel.close / onOpened (141), onClosed (142)
 ```
 
-- Clicking the toolbar button opens the side panel and grants `activeTab` for that tab. Nothing runs on any page until the user asks.
+- Clicking the toolbar button opens the side panel and grants `activeTab` for that tab. The service worker opens the panel from `action.onClicked` (not `openPanelOnActionClick`), the documented activeTab gesture (spike S1). The shortcut (⌥⇧O) and the context menu grant it too. Nothing runs on any page until the user asks.
 - **"Always allow on this site"** (opt-in, per origin) lets the panel re-scan after navigation without another click. It uses `chrome.permissions.request({ origins: [origin] })` from a user gesture in the panel.
 - Result: no "read and change all your data" warning at install, a faster store review, and no "reload the page" errors.
 
@@ -287,13 +287,15 @@ Binary search on string length (in place, about 8 iterations, invisible because 
 
 ### 5.2 Surfaces
 
-| Surface                        | Role                                                                           |
-| ------------------------------ | ------------------------------------------------------------------------------ |
-| **Side panel**                 | The whole app. Doesn't cover the page (the current 400 px overlay does).       |
-| **Page overlay** (shadow root) | Highlights, the picker, and a small "Stress active · Revert" pill              |
-| **Toolbar action**             | Opens the panel. Badge shows the issue count for the tab.                      |
-| **Context menu**               | "Inspect text overflow here", which opens the panel with that element selected |
-| **No popup**                   | It was a two-button launcher, so it's removed                                  |
+| Surface                        | Role                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| **Side panel**                 | The whole app. Doesn't cover the page (the current 400 px overlay does). |
+| **Page overlay** (shadow root) | Highlights, the picker, and a small "Stress active · Revert" pill        |
+| **Toolbar action**             | Opens the panel. Badge shows the issue count for the tab.                |
+| **Context menu**               | "Inspect text overflow here": opens the panel with the picker active¹    |
+| **No popup**                   | It was a two-button launcher, so it's removed                            |
+
+¹ The right-clicked element can't be known without a content script on every page, which §2.2 rules out, so the picker opens and one click selects it.
 
 ### 5.3 Screens
 
@@ -452,10 +454,10 @@ Each phase ends with explicit exit criteria. Phases 1 and 2 (engine) can run in 
 
 ### Phase 3 — Extension shell
 
-- [ ] **Spikes first:** (S1) is `activeTab` granted when the action opens the side panel via `openPanelOnActionClick`? If not, use `action.onClicked` → `sidePanel.open({ tabId })`. (S2) Behavior after in-tab navigation, plus the "Always allow on this site" flow.
-- [ ] Permission model, on-demand injection, typed port protocol, sender validation, session lifecycle, auto-revert, overlay, picker, restricted-page detection, `chrome.commands`, context menu, toolbar badge.
+- [x] **Spikes first:** (S1) is `activeTab` granted when the action opens the side panel via `openPanelOnActionClick`? If not, use `action.onClicked` → `sidePanel.open({ tabId })`. (S2) Behavior after in-tab navigation, plus the "Always allow on this site" flow. _Outcomes in §13 and [ADR 0002](adr/0002-active-tab-on-demand-injection.md)._
+- [x] Permission model, on-demand injection, typed port protocol, sender validation, session lifecycle, auto-revert, overlay, picker, restricted-page detection, `chrome.commands`, context menu, toolbar badge ([ADR 0008](adr/0008-panel-page-protocol.md)).
 
-**Exit:** Playwright e2e on the demo page covering scan → highlight → stress → revert, plus the restricted-page and navigation cases.
+**Exit:** Playwright e2e on the demo page covering scan → highlight → stress → revert, plus the restricted-page and navigation cases. _Met 2026-11-05: 13 e2e tests cover scan, highlight and reveal on the bundled demo page; stress and exact revert from the panel and from the on-page button; the picker with breaking point; injection into a normal page and auto-revert when the panel closes; re-rendered strings and re-apply; stale results after navigation and re-scan; restricted pages; sites without access; per-site access; a strict-CSP page; zero network requests from the panel; and the production manifest. Bundles: page runtime 28 kB gzip (budget 35), side panel 73 kB (200), service worker 1.1 kB (20). Not automatable in Playwright (no toolbar or context-menu clicks): the toolbar button, ⌥⇧O and the context menu are checked by hand before release (Phase 6)._
 
 ### Phase 4 — Design system and side panel UI
 
@@ -594,16 +596,16 @@ Install command form: `npx skills add https://github.com/<repo> --skill <name>`.
 
 ## 13. Risks and spikes
 
-| #   | Risk / unknown                                                      | Mitigation                                                                       |
-| --- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| S1  | `activeTab` grant when the panel opens via `openPanelOnActionClick` | Fallback: `action.onClicked` → `sidePanel.open({ tabId })` (same gesture)        |
-| S2  | Re-scan after in-tab navigation needs a new grant                   | "Always allow on this site" per-origin optional permission; clear stale-state UX |
-| S3  | Strict page CSP blocking our shadow-root styles                     | Constructable stylesheets (`adoptedStyleSheets`) + strict-CSP fixture            |
-| S4  | Apps re-rendering over stressed text                                | MutationObserver detection + "Re-apply"                                          |
-| S5  | Intentional truncation flagged as noise                             | "Truncated" is a Warning, with per-site accept rules                             |
-| S6  | Translator API in extension contexts (v1.1)                         | Spike before committing to it; pseudo-locale remains the default                 |
-| S7  | Firefox side panel parity (v1.1)                                    | WXT sidebar mapping; verify before promising                                     |
-| S8  | Ancestor-clip geometry with transforms, zoom, or sticky elements    | Dedicated fixtures; fall back to the self-overflow check with lower confidence   |
+| #   | Risk / unknown                                                      | Mitigation                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S1  | `activeTab` grant when the panel opens via `openPanelOnActionClick` | **Resolved (Phase 3):** not documented as a grant, so the panel opens from `action.onClicked` → `sidePanel.open({ tabId })`, a documented gesture                                              |
+| S2  | Re-scan after in-tab navigation needs a new grant                   | **Resolved (Phase 3):** same-origin navigation keeps access; cross-origin needs a click or the per-site grant, offered once connected (Chrome hides the URL before). Stale results are marked. |
+| S3  | Strict page CSP blocking our shadow-root styles                     | **Resolved (Phase 3):** constructed stylesheets; e2e test on a page with `default-src 'none'`                                                                                                  |
+| S4  | Apps re-rendering over stressed text                                | MutationObserver detection + "Re-apply"                                                                                                                                                        |
+| S5  | Intentional truncation flagged as noise                             | "Truncated" is a Warning, with per-site accept rules                                                                                                                                           |
+| S6  | Translator API in extension contexts (v1.1)                         | Spike before committing to it; pseudo-locale remains the default                                                                                                                               |
+| S7  | Firefox side panel parity (v1.1)                                    | WXT sidebar mapping; verify before promising                                                                                                                                                   |
+| S8  | Ancestor-clip geometry with transforms, zoom, or sticky elements    | Dedicated fixtures; fall back to the self-overflow check with lower confidence                                                                                                                 |
 
 ---
 

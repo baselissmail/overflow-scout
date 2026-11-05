@@ -1,0 +1,231 @@
+/**
+ * The contract between the side panel, the page runtime and the service
+ * worker: the single source of truth for every message (plan §2.3, §6.3).
+ *
+ * The panel talks to the page over one long-lived port per session, so the
+ * service worker stays out of the hot path. Every message is validated on
+ * arrival with these schemas; nothing from another context is trusted.
+ * `zod/mini` keeps the page runtime small.
+ */
+import * as z from 'zod/mini';
+
+import { SAMPLE_LANGUAGES, STRESS_INTENSITIES, STRESS_STRATEGIES } from '@/core';
+
+/** Name of the panel ↔ page port. */
+export const PAGE_PORT = 'overflow-scout/page';
+
+const count = z.number().check(z.int(), z.nonnegative());
+const ms = z.number().check(z.nonnegative());
+const px = z.number();
+
+// ── Data ────────────────────────────────────────────────────────────────────
+
+export const findingKindSchema = z.enum([
+  'hidden',
+  'page-scroll',
+  'truncated',
+  'spilling',
+  'input',
+]);
+export const severitySchema = z.enum(['critical', 'warning', 'notice']);
+const mechanismSchema = z.enum([
+  'clip',
+  'ellipsis',
+  'line-clamp',
+  'spill',
+  'page-overflow',
+  'placeholder',
+  'value',
+]);
+
+/** An element on the page, as the panel sees it. */
+export const elementRefSchema = z.object({
+  /** Short path such as `nav › a.nav-link`. */
+  label: z.string(),
+  /** Unique selector, computed only where someone is likely to look. */
+  selector: z.optional(z.string()),
+});
+
+const causeSchema = z.object({
+  element: elementRefSchema,
+  property: z.string(),
+  value: z.string(),
+  note: z.string(),
+});
+
+export const findingSchema = z.object({
+  /** Session-scoped id; the page keeps the live element for highlight and reveal. */
+  id: z.string(),
+  kind: findingKindSchema,
+  severity: severitySchema,
+  mechanism: mechanismSchema,
+  axes: z.array(z.enum(['x', 'y'])),
+  overflow: z.object({ x: px, y: px }),
+  text: z.string(),
+  element: elementRefSchema,
+  container: elementRefSchema,
+  diagnosis: z.object({
+    confidence: z.enum(['high', 'medium']),
+    causes: z.array(causeSchema),
+  }),
+  /** Text growth under stress (after ÷ before); only for at-risk findings. */
+  growth: z.optional(z.nullable(z.number())),
+});
+
+export const issueSchema = z.object({
+  id: z.string(),
+  kind: findingKindSchema,
+  severity: severitySchema,
+  instances: z.array(findingSchema).check(z.minLength(1)),
+});
+
+const timingShape = { durationMs: ms, wallMs: ms, slices: count, longestSliceMs: ms };
+
+export const scanStatsSchema = z.object({
+  textNodes: count,
+  inputs: count,
+  skippedInvisible: count,
+  skippedForeign: count,
+  shadowRoots: count,
+  framesSkipped: count,
+  ...timingShape,
+});
+
+const viewportSchema = z.object({ width: px, height: px });
+
+export const scanResultSchema = z.object({
+  issues: z.array(issueSchema),
+  stats: scanStatsSchema,
+  viewport: viewportSchema,
+});
+
+export const stressOptionsSchema = z.object({
+  strategy: z.enum(STRESS_STRATEGIES),
+  intensity: z.enum(STRESS_INTENSITIES),
+  language: z.enum(SAMPLE_LANGUAGES),
+  rtl: z.boolean(),
+});
+
+const stressStatsSchema = z.object({
+  strings: count,
+  textNodes: count,
+  placeholders: count,
+  buttonValues: count,
+  growth: z.number(),
+  ...timingShape,
+});
+
+export const stressResultSchema = z.object({
+  brokenNow: z.array(issueSchema),
+  atRisk: z.array(issueSchema),
+  stats: z.object({
+    baseline: scanStatsSchema,
+    stress: stressStatsSchema,
+    stressed: scanStatsSchema,
+    durationMs: ms,
+    longestSliceMs: ms,
+  }),
+});
+
+export const revertResultSchema = z.object({ restored: count, keptPageChanges: count });
+
+export const pageInfoSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  viewport: viewportSchema,
+});
+
+export const pickedElementSchema = z.object({
+  element: elementRefSchema,
+  size: viewportSchema,
+  text: z.string(),
+  breakingPoint: z.nullable(
+    z.object({
+      length: count,
+      fitsUpTo: z.nullable(count),
+      maxTested: count,
+      needs: z.object({ realistic: count, worst: count }),
+      verdict: z.enum(['fits', 'at-risk', 'will-break', 'broken']),
+      breaksAs: z.nullable(findingKindSchema),
+    }),
+  ),
+});
+
+// ── Panel → page requests ───────────────────────────────────────────────────
+
+const id = z.number().check(z.int(), z.nonnegative());
+
+export const pageRequestSchema = z.discriminatedUnion('type', [
+  z.object({ id, type: z.literal('hello') }),
+  z.object({ id, type: z.literal('scan') }),
+  z.object({ id, type: z.literal('stress'), options: stressOptionsSchema }),
+  z.object({ id, type: z.literal('revert') }),
+  z.object({ id, type: z.literal('reapply') }),
+  z.object({ id, type: z.literal('highlight'), findingId: z.nullable(z.string()) }),
+  z.object({ id, type: z.literal('reveal'), findingId: z.string() }),
+  z.object({ id, type: z.literal('pick'), active: z.boolean() }),
+]);
+
+/** What each request resolves to. */
+export const pageResultSchemas = {
+  hello: pageInfoSchema,
+  scan: scanResultSchema,
+  stress: stressResultSchema,
+  revert: revertResultSchema,
+  reapply: z.object({ strings: count }),
+  highlight: z.null(),
+  reveal: z.null(),
+  pick: z.null(),
+} as const;
+
+// ── Page → panel messages ───────────────────────────────────────────────────
+
+export const pageMessageSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('result'), id, result: z.unknown() }),
+  z.object({ type: z.literal('error'), id, message: z.string() }),
+  /** Strings the page re-rendered or added since stress was applied. */
+  z.object({ type: z.literal('pending'), count }),
+  /** Stress was reverted on the page itself (the overlay's Revert button). */
+  z.object({ type: z.literal('reverted'), result: revertResultSchema }),
+  z.object({ type: z.literal('picked'), picked: pickedElementSchema }),
+  z.object({ type: z.literal('pick-cancelled') }),
+]);
+
+// ── Service worker → panel ──────────────────────────────────────────────────
+
+/**
+ * The user clicked the toolbar button, pressed the shortcut, or used the
+ * context menu on a tab. Each grants temporary access to that tab (activeTab).
+ */
+export const gestureMessageSchema = z.object({
+  type: z.literal('gesture'),
+  tabId: count,
+  /** Opened from "Inspect text overflow here": start the element picker. */
+  inspect: z.boolean(),
+  at: ms,
+});
+
+export { LAST_GESTURE_KEY } from './keys';
+
+// ── Types ───────────────────────────────────────────────────────────────────
+
+export type ElementRef = z.infer<typeof elementRefSchema>;
+export type FindingDto = z.infer<typeof findingSchema>;
+export type IssueDto = z.infer<typeof issueSchema>;
+export type ScanResultDto = z.infer<typeof scanResultSchema>;
+export type StressOptionsDto = z.infer<typeof stressOptionsSchema>;
+export type StressResultDto = z.infer<typeof stressResultSchema>;
+export type RevertResultDto = z.infer<typeof revertResultSchema>;
+export type PageInfo = z.infer<typeof pageInfoSchema>;
+export type PickedElement = z.infer<typeof pickedElementSchema>;
+export type PageRequest = z.infer<typeof pageRequestSchema>;
+export type PageRequestType = PageRequest['type'];
+export type PageMessage = z.infer<typeof pageMessageSchema>;
+export type GestureMessage = z.infer<typeof gestureMessageSchema>;
+
+/** The parameters of a request, without its id and type. */
+export type RequestParams<T extends PageRequestType> = Omit<
+  Extract<PageRequest, { type: T }>,
+  'id' | 'type'
+>;
+export type ResultOf<T extends PageRequestType> = z.infer<(typeof pageResultSchemas)[T]>;
