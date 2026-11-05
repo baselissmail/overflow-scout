@@ -31,7 +31,11 @@
     "test:e2e": "playwright test",
     "size": "size-limit",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:browser",
-    "dogfood": "vite build --config scripts/dogfood/vite.config.ts --logLevel warn && node scripts/dogfood/run.ts"
+    "dogfood": "vite build --config scripts/dogfood/vite.config.ts --logLevel warn && node scripts/dogfood/run.ts",
+    "store:icons": "node scripts/store/icons.ts",
+    "store:promo": "node scripts/store/promo.ts",
+    "store:screenshots": "wxt build && node scripts/store/screenshots.ts",
+    "store:assets": "pnpm store:icons && pnpm store:promo && pnpm store:screenshots"
   },
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",
