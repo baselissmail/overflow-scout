@@ -5,3 +5,6 @@ playwright-report/
 test-results/
 public/
 pnpm-lock.yaml
+
+# Vendored third-party skills (pinned, reviewed; see .claude/skills/README.md)
+.claude/skills/
