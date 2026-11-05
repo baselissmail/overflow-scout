@@ -8,7 +8,7 @@ changes before starting on them.
 1. Branch from `main`: `feat/…`, `fix/…`, `chore/…`, `docs/…`.
 2. Make focused commits using [Conventional Commits](https://www.conventionalcommits.org)
    (`feat(core): detect ancestor clipping`). A git hook checks the message.
-3. Run `pnpm check` (and `pnpm build && pnpm test:e2e` for extension changes).
+3. Run `pnpm check` (and `pnpm build && pnpm build:e2e && pnpm test:e2e` for extension changes).
 4. Open a pull request and complete the checklist in the template. Pull requests are
    squash-merged once CI is green.
 
