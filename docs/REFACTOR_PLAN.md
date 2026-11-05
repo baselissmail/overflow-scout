@@ -500,9 +500,9 @@ Example report (Copy as Markdown):
 
 ### Phase 7 — Brand, listing, publish
 
-- [ ] Name check on the Chrome Web Store. Icon design: a text line cut by a measuring edge, 16/32/48/128 px, plus a 128 px store icon with 96 px artwork and 16 px padding (per Chrome's image guidelines; verify at submission).
-- [ ] Listing assets (§10). Landing page on GitHub Pages with demo GIF, docs, privacy policy, changelog.
-- [ ] Rewrite the README. Final ADR review. `v1.0.0` release via release-please. Submit to the Chrome Web Store, then Edge.
+- [x] Name check on the Chrome Web Store. Icon design: a text line cut by a measuring edge, 16/32/48/128 px, plus a 128 px store icon with 96 px artwork and 16 px padding (per Chrome's image guidelines; verify at submission). _"Overflow Scout" is already listed: it's this project's 0.1.0 (`mfinclnlokodigpdeefonldgmcdgnpim`), so 1.0 ships as an update to that item. The icon is the brand mark: crop marks around a line that runs past its frame, the overflow in red (`store/source/`, rendered by `pnpm store:icons`)._
+- [x] Listing assets (§10). Landing page on GitHub Pages with demo GIF, docs, privacy policy, changelog. _Prepared on 2026-11-06: `store/` holds the listing copy, the icon, five screenshots, and both promo tiles. `site/` holds the landing page and privacy policy, deployed by the Site workflow once the repository is public. The changelog comes from GitHub releases. A demo GIF or video is optional for the store and not made yet._
+- [ ] Rewrite the README. Final ADR review. `v1.0.0` release via release-please. Submit to the Chrome Web Store, then Edge. _README rewritten. release-please is configured to release 1.0.0 and attach the store zip. Submitting needs the owner: [RELEASING.md](RELEASING.md) has the steps and [TESTING.md](TESTING.md) the manual test._
 
 **Exit:** published and live; support channels working.
 
