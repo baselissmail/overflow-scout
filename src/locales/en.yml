@@ -1,6 +1,6 @@
 # Manifest strings. Chrome limits the description to 132 characters.
 extName: Overflow Scout
-extDescription: Find clipped and truncated text before users do. Test with translation-length text and get CSS fixes to try.
+extDescription: Find text that’s cut off or overflowing, test with translation-length text, and get CSS fixes checked on the page.
 actionTitle: Open Overflow Scout
 contextMenuInspect: Measure this element with Overflow Scout
 
