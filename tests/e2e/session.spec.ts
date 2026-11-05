@@ -41,12 +41,12 @@ test.describe('demo page', () => {
     await scan(panel);
     await expect(rows(panel).first()).toBeVisible();
     const filters = panel.getByRole('group', { name: 'Filter by kind' });
-    for (const kind of ['Hidden', 'Truncated', 'Spilling', 'Page scroll', 'Input']) {
+    for (const kind of ['Cut off', 'Truncated', 'Overflows', 'Wider than page', 'Field cut off']) {
       await expect(
         filters.getByRole('button', { name: new RegExp(`^${kind} \\d+`) }),
       ).toBeVisible();
     }
-    await expect(panel.getByText(/text nodes · \d+ ms · 800×/)).toBeVisible();
+    await expect(panel.getByText(/texts checked · \d+ ms · window 800×/)).toBeVisible();
 
     // Hovering a result outlines it on the page; clicking scrolls to it and opens details.
     await rows(panel).first().hover();
@@ -81,7 +81,7 @@ test.describe('demo page', () => {
     const before = await pageText(demo);
 
     await runStress(panel);
-    await expect(panel.getByRole('tab', { name: /^With longer text/ })).toHaveAttribute(
+    await expect(panel.getByRole('tab', { name: /^New with longer text/ })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -152,9 +152,9 @@ test.describe('other pages', () => {
       const tab = document.querySelector('.tab')?.firstChild;
       if (tab instanceof Text) tab.data = 'Overview';
     });
-    await expect(panel.getByText('1 string was reset by the page.')).toBeVisible();
+    await expect(panel.getByText('1 text was changed back by the page.')).toBeVisible();
     await panel.getByRole('button', { name: 'Re-apply' }).click();
-    await expect(panel.getByText('1 string was reset by the page.')).toBeHidden();
+    await expect(panel.getByText('1 text was changed back by the page.')).toBeHidden();
     expect(await page.locator('.tab').first().textContent()).not.toBe('Overview');
   });
 
