@@ -29,7 +29,7 @@ pnpm dev                               # Chrome with the extension loaded and ho
 | `pnpm zip`          | Store-ready zip                                            |
 | `pnpm check`        | Types, lint, formatting, unit and engine tests             |
 | `pnpm test`         | Unit tests (Node)                                          |
-| `pnpm test:browser` | Engine tests in real Chromium (layout-dependent)           |
+| `pnpm test:browser` | Engine and framework tests in real Chromium                |
 | `pnpm test:e2e`     | End-to-end tests against the built extension (build first) |
 | `pnpm size`         | Bundle size budgets (build first)                          |
 
@@ -46,6 +46,7 @@ src/
   locales/      UI strings (en)
 tests/
   engine/       Vitest browser-mode tests (real layout)
+  frameworks/   The same app in React, Vue and Svelte, stressed while it re-renders
   e2e/          Playwright tests with the built extension
 docs/
   REFACTOR_PLAN.md   roadmap and specification

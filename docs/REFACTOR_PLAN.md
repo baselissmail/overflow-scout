@@ -1,6 +1,6 @@
 # Overflow Scout v1.0 — Refactor & Launch Plan
 
-> Status: **Approved 2026-11-04 (all recommendations in §14 accepted)** · Phases 0–1 done · Owner: Basel Issmail
+> Status: **Approved 2026-11-04 (all recommendations in §14 accepted)** · Phases 0–2 done · Owner: Basel Issmail
 > Scope: Take Overflow Scout from prototype (v0.1) to a Chrome Web Store–ready v1.0 that is accurate, fast, private, and a pleasure to use.
 
 ---
@@ -250,8 +250,12 @@ Output: "✔ `white-space: normal` on `.toolbar .btn` resolves it (element grows
 | 11–20          | +80% → +100%                      |
 | 21–30          | +60% → +80%                       |
 | 31–50          | +40% → +60%                       |
-| 51–70          | +30% → +40%                       |
+| 51–70          | +31% → +40%¹                      |
 | > 70           | +30%                              |
+
+¹ The W3C copy prints 151–170% for this row, out of line with the rows around it in a table that otherwise falls as text gets longer; we use 131–140%, the value usually cited from IBM (see `src/core/stress/expansion.ts`).
+
+A **string** is the text of one block: `You have <b>3</b> unread messages` is one 26-character string, not four nodes. Growth is sized by the whole string and split across its pieces; pieces without letters (numbers, prices) are never rewritten. Code, `translate="no"`, editable regions and ligature icon fonts are never stressed ([ADR 0007](adr/0007-stress-text-and-revert.md)).
 
 Intensities: **Realistic** (low end of the range) · **Worst case** (high end, the default) · **Extreme** (2× worst case). An **RTL** toggle sets `dir="rtl"` on `<html>` and is reverted exactly.
 
@@ -260,6 +264,7 @@ All generation uses a **seeded RNG**, so a scan is reproducible and tests are de
 ### 4.2 Ledger (lossless write/revert)
 
 - The ledger records `(node, kind, originalValue)` for `Text.nodeValue`, `input.value`, `placeholder`, and the `<html dir>` attribute. Nothing else is ever touched.
+- **The page's own changes win.** Revert restores a value only if it still holds what we wrote; if the app changed it since, the app's value stays (reverting would show stale text) and the next apply treats it as the new original ([ADR 0007](adr/0007-stress-text-and-revert.md)).
 - A MutationObserver watches stressed nodes. If the app re-renders over our text, the panel shows "Page re-rendered 12 strings · Re-apply".
 - Auto-revert on panel close (`sidePanel.onClosed` and port disconnect), navigation, and tab switch.
 
@@ -440,10 +445,10 @@ Each phase ends with explicit exit criteria. Phases 1 and 2 (engine) can run in 
 
 ### Phase 2 — Stress engine
 
-- [ ] Strategies, expansion table, seeded RNG, ledger, RTL, at-risk diff, breaking-point search.
-- [ ] React, Vue, and Svelte fixture apps; lossless-revert suite.
+- [x] Strategies, expansion table, seeded RNG, ledger, RTL, at-risk diff, breaking-point search (`src/core/stress`). At-risk findings carry behavioral evidence (§3.4): "Width stayed 64px while the text grew 3×."
+- [x] React, Vue, and Svelte fixture apps; lossless-revert suite.
 
-**Exit:** revert invariant 100%; framework suites green; stress budget met.
+**Exit:** revert invariant 100%; framework suites green; stress budget met. _Met 2026-11-05: every corpus page (38) is stressed, scanned and reverted with 5 strategy/intensity/RTL variants, and the DOM is identical afterwards every time. React 19, Vue 3 and Svelte 5 apps re-render while stressed (text updates, keyed moves, insertions, attribute changes) without errors, and after revert they match an unstressed copy exactly. The stress fixture matches all 8 annotated at-risk findings and its 6 "ok" cases exactly. Breaking-point search is exact to the character in ≤ 10 layouts. A stress test of 5,000 text nodes takes ~330 ms of work (budget 500 ms); planning and the single write commit stay under 10 ms per slice; revert takes ~3 ms. The one longer slice (~28 ms) is the browser laying out all the changed text at once, the same work it does to paint the stressed page. The whole engine (scan + stress) is 18.5 kB gzip (injected-runtime budget: 35 kB). Also fixed: frames skipped by the scanner weren't being counted._
 
 ### Phase 3 — Extension shell
 
