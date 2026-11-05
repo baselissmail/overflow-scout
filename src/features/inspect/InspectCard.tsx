@@ -1,8 +1,10 @@
 import { i18n } from '#i18n';
+import { X } from 'lucide-react';
 
 import type { PickedElement } from '@/messaging/protocol';
 import type { Tone } from '@/ui/Chip';
 import { Badge } from '@/ui/Chip';
+import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
 
 type Verdict = NonNullable<PickedElement['breakingPoint']>['verdict'];
@@ -17,9 +19,10 @@ const VERDICT: Readonly<Record<Verdict, { label: () => string; tone: Tone }>> = 
 interface InspectCardProps {
   picking: boolean;
   picked: PickedElement | null;
+  onClose: () => void;
 }
 
-export function InspectCard({ picking, picked }: InspectCardProps) {
+export function InspectCard({ picking, picked, onClose }: InspectCardProps) {
   if (picking) {
     return (
       <p
@@ -38,9 +41,16 @@ export function InspectCard({ picking, picked }: InspectCardProps) {
       aria-label={i18n.t('inspect.heading')}
     >
       <div className="flex min-w-0 flex-col gap-1">
-        <p className="font-mono text-small break-all text-fg-muted" translate="no">
-          {picked.element.selector ?? picked.element.label}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="min-w-0 font-mono text-small break-all text-fg-muted" translate="no">
+            {picked.element.selector ?? picked.element.label}
+          </p>
+          <IconButton
+            label={i18n.t('inspect.close')}
+            icon={<X size={16} strokeWidth={1.5} />}
+            onClick={onClose}
+          />
+        </div>
         <p className="line-clamp-2 break-words" title={picked.text}>
           {picked.text}
         </p>

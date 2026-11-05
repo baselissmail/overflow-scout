@@ -6,13 +6,15 @@ import { LayoutReader } from './layout';
 
 /** Where a finding's text is cut: what a reader sees, and what they lose. */
 export interface TextCut {
-  /** The end of the visible text (at most 80 characters, "…" in front when longer). */
+  /** The end of the visible text (about 80 characters, from a word start, "…" in front when longer). */
   visible: string;
-  /** The start of the text that is cut off or spills (at most 80 characters, "…" after). */
+  /** The start of the text that is cut off or spills (about 80 characters, to a word end, "…" after). */
   hidden: string;
 }
 
 const KEEP = 80;
+/** Up to this many characters are given up so the context starts or ends on a whole word. */
+const WORD_SLACK = 20;
 /** Rects may poke past an edge by subpixel amounts without losing anything. */
 const SLACK = 1;
 
@@ -30,6 +32,35 @@ function ellipsisWidth(doc: Document, style: CSSStyleDeclaration): number {
   if (!context) return 0;
   context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
   return context.measureText('…').width;
+}
+
+const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
+
+/**
+ * The last KEEP characters of the visible text, starting on a whole word when one
+ * starts close by. Scripts without spaces fall back to a character cut.
+ */
+function lastPart(text: string): string {
+  if (text.length <= KEEP) return text;
+  let start = text.length - KEEP;
+  if (text[start - 1] !== ' ') {
+    const space = text.indexOf(' ', start);
+    if (space !== -1 && space - start < WORD_SLACK) start = space + 1;
+    else if (isLowSurrogate(text.charCodeAt(start))) start += 1;
+  }
+  return `…${text.slice(start)}`;
+}
+
+/** The first KEEP characters of the lost text, ending on a whole word when one ends close by. */
+function firstPart(text: string): string {
+  if (text.length <= KEEP) return text;
+  let end = KEEP;
+  if (text[end] !== ' ') {
+    const space = text.lastIndexOf(' ', end);
+    if (space > 0 && end - space < WORD_SLACK) end = space;
+    else if (isLowSurrogate(text.charCodeAt(end))) end -= 1;
+  }
+  return `${text.slice(0, end)}…`;
 }
 
 /** The edges past which the finding's text is lost or out of place. */
@@ -90,8 +121,7 @@ function visiblePrefix(range: Range, node: Text, limits: Limits): number {
     else high = middle - 1;
   }
   // Never split a surrogate pair.
-  const code = node.data.charCodeAt(low);
-  return low > 0 && code >= 0xdc00 && code <= 0xdfff ? low - 1 : low;
+  return low > 0 && isLowSurrogate(node.data.charCodeAt(low)) ? low - 1 : low;
 }
 
 /**
@@ -127,8 +157,6 @@ export function textCut(finding: Finding, options: TraversalOptions = {}): TextC
   const shown = collapse(visible).trimStart();
   const lost = collapse(hidden).trimEnd();
   if (lost.trim() === '') return null;
-  return {
-    visible: shown.length > KEEP ? `…${shown.slice(-KEEP)}` : shown,
-    hidden: lost.length > KEEP ? `${lost.slice(0, KEEP)}…` : lost,
-  };
+  // The split itself stays exact; only the outer ends are shortened.
+  return { visible: lastPart(shown), hidden: firstPart(lost) };
 }

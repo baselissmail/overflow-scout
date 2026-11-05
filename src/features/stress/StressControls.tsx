@@ -2,17 +2,10 @@ import { i18n } from '#i18n';
 
 import type { Settings } from '@/storage/settings';
 import { Button } from '@/ui/Button';
-import { SelectField } from '@/ui/Field';
 import { Segmented } from '@/ui/Segmented';
 import { Switch } from '@/ui/Switch';
 
-import {
-  intensityDescription,
-  intensityOptions,
-  languageOptions,
-  strategyDescription,
-  strategyOptions,
-} from './options';
+import { StressOptionFields } from './StressOptionFields';
 
 export type StressScope = 'page' | 'picked';
 
@@ -46,39 +39,7 @@ export function StressControls({
         onApply();
       }}
     >
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2">
-        <SelectField
-          label={i18n.t('stress.strategy')}
-          value={settings.strategy}
-          options={strategyOptions()}
-          onChange={(strategy) => {
-            onSettings({ strategy });
-          }}
-        />
-        {settings.strategy === 'language' ? (
-          <SelectField
-            label={i18n.t('stress.language')}
-            value={settings.language}
-            options={languageOptions()}
-            onChange={(language) => {
-              onSettings({ language });
-            }}
-          />
-        ) : (
-          <SelectField
-            label={i18n.t('stress.intensity')}
-            value={settings.intensity}
-            options={intensityOptions()}
-            onChange={(intensity) => {
-              onSettings({ intensity });
-            }}
-          />
-        )}
-      </div>
-      <p className="text-small text-fg-muted">
-        {strategyDescription(settings.strategy)}
-        {settings.strategy !== 'language' && ` ${intensityDescription(settings.intensity)}`}
-      </p>
+      <StressOptionFields settings={settings} onSettings={onSettings} />
       <Switch
         label={i18n.t('stress.rtl')}
         description={i18n.t('stress.rtlDescription')}

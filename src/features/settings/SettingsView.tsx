@@ -5,16 +5,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 
 import { useOpenShortcut } from '@/features/page/use-open-shortcut';
-import {
-  intensityDescription,
-  intensityOptions,
-  languageOptions,
-  strategyDescription,
-  strategyOptions,
-} from '@/features/stress/options';
+import { StressOptionFields } from '@/features/stress/StressOptionFields';
 import type { Settings, Theme } from '@/storage/settings';
 import { Button } from '@/ui/Button';
-import { SelectField } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
 import { Kbd } from '@/ui/Kbd';
 import { Segmented } from '@/ui/Segmented';
@@ -113,38 +106,7 @@ export function SettingsView({ settings, onSettings, onBack }: SettingsViewProps
       </Group>
 
       <Group title={i18n.t('settings.defaults')}>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2">
-          <SelectField
-            label={i18n.t('stress.strategy')}
-            value={settings.strategy}
-            options={strategyOptions()}
-            onChange={(strategy) => {
-              onSettings({ strategy });
-            }}
-          />
-          <SelectField
-            label={i18n.t('stress.intensity')}
-            value={settings.intensity}
-            options={intensityOptions()}
-            onChange={(intensity) => {
-              onSettings({ intensity });
-            }}
-          />
-          {settings.strategy === 'language' && (
-            <SelectField
-              label={i18n.t('stress.language')}
-              value={settings.language}
-              options={languageOptions()}
-              onChange={(language) => {
-                onSettings({ language });
-              }}
-            />
-          )}
-        </div>
-        <p className="text-small text-fg-muted">
-          {strategyDescription(settings.strategy)}
-          {settings.strategy !== 'language' && ` ${intensityDescription(settings.intensity)}`}
-        </p>
+        <StressOptionFields settings={settings} onSettings={onSettings} />
         <Switch
           label={i18n.t('stress.rtl')}
           description={i18n.t('stress.rtlDescription')}

@@ -41,7 +41,13 @@ test.describe('demo page', () => {
     await scan(panel);
     await expect(rows(panel).first()).toBeVisible();
     const filters = panel.getByRole('group', { name: 'Filter by kind' });
-    for (const kind of ['Cut off', 'Truncated', 'Overflows', 'Wider than page', 'Field cut off']) {
+    for (const kind of [
+      'Cut off',
+      'Truncated',
+      'Overflows',
+      'Wider than window',
+      'Field cut off',
+    ]) {
       await expect(
         filters.getByRole('button', { name: new RegExp(`^${kind} \\d+`) }),
       ).toBeVisible();
@@ -69,6 +75,11 @@ test.describe('demo page', () => {
     expect(Number(badge)).toBeGreaterThan(0);
     // Everything runs locally (plan §6.4).
     expect(requests.filter((url) => !url.startsWith('chrome-extension://'))).toEqual([]);
+
+    // Clearing the results goes back to the start screen.
+    await panel.getByRole('button', { name: 'Clear results' }).click();
+    await expect(results(panel)).toBeHidden();
+    await expect(panel.getByRole('button', { name: /^Scan page/ })).toBeVisible();
   });
 
   test('stress-tests the page and reverts it exactly', async ({
@@ -88,6 +99,13 @@ test.describe('demo page', () => {
     await expect(rows(panel).first()).toBeVisible();
     expect(await pageText(demo)).not.toBe(before);
     await expect(demo.locator('overflow-scout-root .pill')).toContainText('Stress test active');
+    // The results say how they were made, and the odd-looking text is explained.
+    await expect(
+      panel.getByText(
+        /^Translation length · Realistic · [\d.]+× longer: \d+ new, \d+ already broken$/,
+      ),
+    ).toBeVisible();
+    await expect(panel.getByText(/accented words are added on purpose/)).toBeVisible();
 
     await panel.getByRole('button', { name: 'Revert' }).click();
     await expect(panel.getByRole('button', { name: 'Revert' })).toBeHidden();
@@ -121,6 +139,9 @@ test.describe('demo page', () => {
     await expect(card).toContainText('Add to cart');
     await expect(card).toContainText(/Fits up to \d+ characters|Still fits/);
     await expect(card).toContainText(/a translation needs about 20–22/);
+
+    await card.getByRole('button', { name: 'Close inspection' }).click();
+    await expect(card).toBeHidden();
   });
 });
 

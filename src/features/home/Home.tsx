@@ -65,16 +65,15 @@ export function Home({ disabled, onScan, onStress, onInspect, onDemo }: HomeProp
   return (
     <section className="flex flex-col gap-4" aria-labelledby="home-title">
       <div className="flex flex-col gap-3 rounded-card bg-raised p-3 shadow-raised">
+        {/* What it's for, then the idea shown, then what the button does. */}
+        <h2 id="home-title" className="text-title font-semibold text-balance">
+          {i18n.t('tagline')}
+        </h2>
         <figure className="flex flex-col gap-1.5">
           <OverflowDemo />
           <figcaption className="text-small text-fg-muted">{i18n.t('home.demoCaption')}</figcaption>
         </figure>
-        <div className="flex flex-col gap-1">
-          <h2 id="home-title" className="text-title font-semibold text-balance">
-            {i18n.t('tagline')}
-          </h2>
-          <p className="text-pretty text-fg-muted">{i18n.t('home.scan')}</p>
-        </div>
+        <p className="text-pretty text-fg-muted">{i18n.t('home.scan')}</p>
         <Button
           variant="primary"
           className="self-start"

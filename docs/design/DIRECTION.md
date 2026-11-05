@@ -31,14 +31,16 @@ identity, and everything else stays quiet so they can:
 - **The measure bar**, a ruler, not a progress bar:
 
   ```text
-  has 120 px                    needs 214 px
+  width 120 px                  needs 214 px
   ├───────────────┤╱╱╱╱╱╱╱╱╱╱╱╱┤
   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔ −94 px  (hatched, in the severity color)
   ```
 
   The solid track is the box; the hatched part past its end is the bleed.
-  Ticks every 10 %. The deficit is in the severity color and in words for
-  screen readers. Inspect uses the same bar in characters.
+  Ticks every 10 %. The first label names the axis ("width", "height", or
+  "window" for a page that scrolls sideways). The deficit is in the severity
+  color and in words for screen readers. Inspect uses the same bar in
+  characters, and the home demo draws the same three labels.
 
 The brand mark is the same idea: crop marks around a line that runs out of
 its frame.
@@ -127,9 +129,16 @@ narrow (< 520 px)                         wide (≥ 520 px)
 
 - Left aligned throughout. The list is the spine; the detail replaces it when
   narrow (with Back) and sits beside it when wide.
-- Home leads with the demo and one primary action (Scan page); the other two
-  actions are rows below, not a grid of identical cards. Then the demo link and
-  the shortcut. No tours or modals.
+- Home leads with what it's for (the headline), then the demo, then one primary
+  action (Scan page); the other two actions are rows below, not a grid of
+  identical cards. Then the demo link and the shortcut. No tours or modals.
+- One primary action at a time. While stress text is on the page, that is
+  Revert; Scan again steps down to secondary.
+- The panel scrolls as a whole only when its controls leave the results less
+  than 24 rem (narrow panels, long translations). The header stays pinned and
+  the list keeps its own scroll, so it never collapses to nothing.
+- Every result set has a visible way back: Clear results, next to the severity
+  counts. Every card that opens has a Close.
 - **⌘K / Ctrl+K** opens the command palette: every action that applies right
   now, with its shortcut, filtered as you type (Raycast's pattern).
 - The panel has to pass its own stress test: at 320 px with pseudo-locale text,
@@ -140,8 +149,15 @@ narrow (< 520 px)                         wide (≥ 520 px)
 ## Writing
 
 - Name things by what users see: "Scan page", "Stress test", "Revert". Problems
-  are named by what goes wrong ("Cut off", "Overflows", "Wider than page",
+  are named by what goes wrong ("Cut off", "Overflows", "Wider than window",
   "Field cut off"), each with a one-line definition on hover and in the detail.
+- Severity levels are defined by the kinds they cover, in a popover by the
+  counts: critical (cut off with no sign, or the page scrolls sideways),
+  warning (ellipsis, line clamp, or runs out of its box), notice (fields).
+- Stress results say how they were made: strategy (or language), intensity,
+  and growth. Intensity applies to every strategy, language samples included.
+- Stress text that looks odd says so: the stress bar explains, per strategy,
+  that the accents, brackets or long words are added on purpose.
 - No implementation words in the UI: "texts", not "text nodes" or "strings";
   "window", not "viewport".
 - Every result ends in a next step: the detail leads with "What to do" (a plain

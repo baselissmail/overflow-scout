@@ -221,7 +221,13 @@ export function IssueDetail({
           has={has}
           needs={needs}
           tone={tone}
-          hasLabel={i18n.t('detail.has', [formatPx(has)])}
+          hasLabel={
+            finding.kind === 'page-scroll'
+              ? i18n.t('detail.hasWindow', [formatPx(has)])
+              : axis === 'x'
+                ? i18n.t('detail.hasWidth', [formatPx(has)])
+                : i18n.t('detail.hasHeight', [formatPx(has)])
+          }
           needsLabel={i18n.t('detail.needs', [formatPx(needs)])}
           differenceLabel={i18n.t('detail.short', [formatPx(short)])}
           description={i18n.t(axis === 'x' ? 'detail.measure' : 'detail.measureY', [

@@ -144,9 +144,20 @@ export function OverflowDemo() {
           fill="url(#os-bleed)"
         />
       )}
+      {/* The same three labels as the measure bar in a result's details */}
       <text x={BOX.x} y={BAR.y + 22} className="fill-fg-muted font-mono text-[10px]">
-        {i18n.t('detail.has', [`${String(HAS)} px`])}
+        {i18n.t('detail.hasWidth', [`${String(HAS)} px`])}
       </text>
+      {needs > 0 && (
+        <text
+          x={BOX.x + BAR.width / 2}
+          y={BAR.y + 22}
+          textAnchor="middle"
+          className="fill-fg-muted font-mono text-[10px]"
+        >
+          {i18n.t('detail.needs', [`${String(needs)} px`])}
+        </text>
+      )}
       {overflow > 0 && (
         <text
           x={BOX.x + BAR.width}

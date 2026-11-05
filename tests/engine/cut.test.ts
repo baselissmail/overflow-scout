@@ -80,6 +80,29 @@ describe('textCut', () => {
     expect(`${cut?.visible ?? ''}${cut?.hidden ?? ''}`).toBe(text);
   });
 
+  it('shortens long context to whole words, keeping the split exact', async () => {
+    const words = Array.from({ length: 40 }, (_, index) => `word${String(index)}`).join(' ');
+    const { cut, text } = await cutOf(
+      page(`<div class="lines" id="t" style="height:100px">${words} ${words}</div>`),
+      't',
+    );
+    if (!cut) throw new Error('expected a cut');
+    expect(cut.visible.startsWith('…')).toBe(true);
+    expect(cut.hidden.endsWith('…')).toBe(true);
+    const visible = cut.visible.slice(1);
+    const hidden = cut.hidden.slice(0, -1);
+    // Context starts and ends on whole words…
+    expect(visible).toMatch(/^word\d+/);
+    expect(text.includes(` ${visible.split(' ')[0] ?? ''} `)).toBe(true);
+    expect(hidden).toMatch(/word\d+$/);
+    expect(text.includes(`${visible}${hidden}`)).toBe(true);
+    // …and stays close to the 80-character budget.
+    expect(visible.length).toBeGreaterThan(60);
+    expect(visible.length).toBeLessThanOrEqual(80);
+    expect(hidden.length).toBeGreaterThan(60);
+    expect(hidden.length).toBeLessThanOrEqual(80);
+  });
+
   it('returns null for inputs', async () => {
     const { cut } = await cutOf(
       page('<input id="t" style="width:60px" placeholder="Search products and orders">'),

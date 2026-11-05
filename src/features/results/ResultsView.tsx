@@ -1,13 +1,14 @@
 import { i18n } from '#i18n';
-import { Info, Search } from 'lucide-react';
+import { CircleHelp, Info, Search } from 'lucide-react';
 import type { Dispatch, ReactNode, RefObject, SetStateAction } from 'react';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 import type { PanelController, PanelState } from '@/features/page/controller';
+import { intensityLabel, languageLabel, strategyLabel } from '@/features/stress/options';
 import type { IssueDto, ScanResultDto } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
-import { Chip, TONE_BG } from '@/ui/Chip';
+import { Chip, TONE_BG, TONE_TEXT } from '@/ui/Chip';
 import { EmptyState } from '@/ui/EmptyState';
 import { IconButton } from '@/ui/IconButton';
 import { Popover } from '@/ui/Popover';
@@ -30,6 +31,7 @@ import {
   formatCount,
   kindDescription,
   kindLabel,
+  severityLabel,
 } from './labels';
 
 type Stats = ScanResultDto['stats'];
@@ -129,6 +131,31 @@ function Coverage({ stats, viewport }: { stats: Stats; viewport: string | null }
         </div>
       ))}
     </dl>
+  );
+}
+
+/** Each level, defined by the kinds it covers, so a report can be triaged the same way. */
+function SeverityHelp() {
+  return (
+    <>
+      <p className="mb-2 font-medium">{i18n.t('results.severityHelp.title')}</p>
+      <dl className="flex flex-col gap-2">
+        {SEVERITIES.map((severity) => (
+          <div key={severity} className="flex flex-col">
+            <dt className={`text-small font-medium ${TONE_TEXT[SEVERITY_TONE[severity]]}`}>
+              {severityLabel(severity)}
+            </dt>
+            <dd className="text-small text-fg-muted">
+              {severity === 'critical'
+                ? i18n.t('results.severityHelp.critical')
+                : severity === 'warning'
+                  ? i18n.t('results.severityHelp.warning')
+                  : i18n.t('results.severityHelp.notice')}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </>
   );
 }
 
@@ -292,9 +319,33 @@ function ResultsBody({
                 colorClass: TONE_BG[SEVERITY_TONE[severity]],
               }))}
             />
-            <p className="text-small text-fg-muted tabular-nums" aria-hidden="true">
-              {severityLine(issues)}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-x-2">
+              <span className="flex min-w-0 items-center">
+                <p className="text-small text-fg-muted tabular-nums" aria-hidden="true">
+                  {severityLine(issues)}
+                </p>
+                <Popover
+                  label={i18n.t('results.severityHelp.title')}
+                  trigger={
+                    <IconButton
+                      label={i18n.t('results.severityHelp.title')}
+                      icon={<CircleHelp size={14} strokeWidth={1.5} />}
+                    />
+                  }
+                >
+                  <SeverityHelp />
+                </Popover>
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  controller.clearResults();
+                }}
+              >
+                {i18n.t('actions.clearResults')}
+              </Button>
+            </div>
           </div>
           <div
             role="group"
@@ -437,6 +488,12 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
           )}
           <p className="text-small text-fg-muted tabular-nums">
             {i18n.t('results.stressSummary', [
+              state.stressOptions
+                ? state.stressOptions.strategy === 'language'
+                  ? languageLabel(state.stressOptions.language)
+                  : strategyLabel(state.stressOptions.strategy)
+                : '',
+              state.stressOptions ? intensityLabel(state.stressOptions.intensity) : '',
               String(stress.stats.stress.growth),
               formatCount(stress.atRisk.length),
               formatCount(stress.brokenNow.length),

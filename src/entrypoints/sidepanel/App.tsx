@@ -38,6 +38,7 @@ import { BrandMark } from '@/ui/BrandMark';
 import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
 import { Kbd } from '@/ui/Kbd';
+import { cx } from '@/ui/cx';
 import { useToast } from '@/ui/Toast';
 import { useMediaQuery } from '@/ui/use-media-query';
 
@@ -277,8 +278,10 @@ export function App() {
   }
 
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2">
+    // One scroll for the whole panel, used only when the controls leave the results
+    // too little room (narrow panels, long translations); the list keeps its own.
+    <div className="flex h-dvh flex-col overflow-y-auto">
+      <header className="sticky top-0 z-10 flex shrink-0 items-center gap-2 bg-canvas px-3 pt-3 pb-2">
         <span className="text-accent">
           <BrandMark />
         </span>
@@ -291,7 +294,12 @@ export function App() {
           aria-keyshortcuts={modKey === '⌘' ? 'Meta+K' : 'Control+K'}
           className="inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-control border border-line bg-raised px-2 text-small text-fg-muted transition-[border-color,color] duration-(--duration-press) hover:border-line-strong hover:text-fg"
         >
-          <CommandIcon size={14} strokeWidth={1.5} aria-hidden="true" />
+          <CommandIcon
+            size={14}
+            strokeWidth={1.5}
+            aria-hidden="true"
+            className="hidden min-[360px]:block"
+          />
           {/* On narrow panels the label is only read out, so the title keeps one line. */}
           <span className="sr-only min-[360px]:not-sr-only">{i18n.t('commands.open')}</span>
           <span aria-hidden="true">
@@ -307,7 +315,7 @@ export function App() {
         />
       </header>
 
-      <div className="flex max-h-[60dvh] shrink-0 flex-col gap-3 overflow-y-auto px-3 pb-3">
+      <div className="flex shrink-0 flex-col gap-3 px-3 pb-3">
         {state.page && (
           <SiteAccess
             url={state.page.url}
@@ -329,7 +337,8 @@ export function App() {
         {(hasResults || stressOpen || state.picking || state.picked) && (
           <div className="flex flex-wrap gap-2">
             <Button
-              variant="primary"
+              // While stress text is on, Revert (in the stress bar) is the main action.
+              variant={state.stressActive ? 'secondary' : 'primary'}
               icon={<ScanText {...ICON} />}
               disabled={busy || noTab}
               onClick={scan}
@@ -383,6 +392,7 @@ export function App() {
 
         {state.stressActive && state.stress && (
           <StressBar
+            strategy={state.stressOptions?.strategy ?? settings.strategy}
             pending={state.pending}
             busy={busy}
             onRevert={() => void controller.revert()}
@@ -390,10 +400,16 @@ export function App() {
           />
         )}
 
-        <InspectCard picking={state.picking} picked={state.picked} />
+        <InspectCard
+          picking={state.picking}
+          picked={state.picked}
+          onClose={() => {
+            controller.closeInspect();
+          }}
+        />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
+      <div className={cx('flex flex-1 flex-col px-3 pb-3', hasResults ? 'min-h-96' : 'min-h-0')}>
         {hasResults ? (
           <ResultsView
             state={state}

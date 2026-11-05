@@ -26,6 +26,8 @@ export interface PanelState {
   error: string | null;
   scan: ScanResultDto | null;
   stress: StressResultDto | null;
+  /** The options the latest stress test ran with, so its results can say so. */
+  stressOptions: StressOptionsDto | null;
   /** Which results to show: the latest scan or the latest stress test. */
   showing: 'scan' | 'stress' | null;
   /** Stress text is on the page right now. */
@@ -56,6 +58,7 @@ const INITIAL: PanelState = {
   error: null,
   scan: null,
   stress: null,
+  stressOptions: null,
   showing: null,
   stressActive: false,
   pending: 0,
@@ -133,6 +136,7 @@ export class PanelController {
       const stress = await connection.request('stress', { options, scope, includeInputs });
       this.set({
         stress,
+        stressOptions: options,
         showing: 'stress',
         stressActive: true,
         pending: 0,
@@ -186,6 +190,12 @@ export class PanelController {
 
   async reveal(findingId: string): Promise<void> {
     await this.run(null, (connection) => connection.request('reveal', { findingId }));
+  }
+
+  /** Closes the inspect card and its outline on the page. */
+  closeInspect(): void {
+    this.set({ picked: null });
+    this.highlight(null);
   }
 
   /** Back to the start screen. Stress text, if any, stays until reverted. */
