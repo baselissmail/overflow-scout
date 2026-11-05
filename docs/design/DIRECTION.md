@@ -17,53 +17,68 @@ where they differ, this file is newer. Tokens live in
 References: Chrome DevTools (density, monospace for code), Linear (calm
 hierarchy, keyboard-first), Raycast (fast list with a detail view).
 
-## The one memorable thing: the measure bar
+## The signature: show the cut
 
-Everything else is quiet so the **measure bar** can carry the identity. It is a
-ruler, not a progress bar:
+The product shows the cut instead of describing it. Two devices carry the
+identity, and everything else stays quiet so they can:
 
-```text
-has 120 px                    needs 214 px
-├───────────────┤╱╱╱╱╱╱╱╱╱╱╱╱┤
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔ −94 px  (hatched, in the severity color)
-```
+- **Cut text.** Wherever a finding has text, the panel shows it as readers see
+  it, a **crop mark** where it is cut, and the lost part over a faint **bleed**
+  hatch: `Seasonal collections a▕nd limited editions`. The engine finds the
+  exact split by measuring rendered character rects against the clipping box
+  (`textCut` in `src/core/measure/cut.ts`). It appears in every result row
+  and, large, in the detail's proof card.
+- **The measure bar**, a ruler, not a progress bar:
 
-- The solid track is the box. The hatched part past its end is the text that
-  doesn't fit: a print "bleed".
-- Tick marks every 10 % of the needed width, in the line color.
-- Labels are in monospace with tabular figures. The deficit is in the severity
-  color and also stated in words for screen readers.
-- The same bar shows the room in Inspect: "fits up to 18 characters" against
-  what a translation needs.
+  ```text
+  has 120 px                    needs 214 px
+  ├───────────────┤╱╱╱╱╱╱╱╱╱╱╱╱┤
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔ −94 px  (hatched, in the severity color)
+  ```
+
+  The solid track is the box; the hatched part past its end is the bleed.
+  Ticks every 10 %. The deficit is in the severity color and in words for
+  screen readers. Inspect uses the same bar in characters.
+
+The brand mark is the same idea: crop marks around a line that runs out of
+its frame.
 
 ## Tokens
 
 ### Color
 
-Semantic roles only; components never use raw colors. Light / dark:
+Semantic roles only; components never use raw colors. An ink-tinted ground
+with paper-white raised surfaces, rather than flat white with one accent
+(Impeccable: "a grey screen with one accent colour is the category default").
+Light / dark:
 
 | Role              | Light                 | Dark                  | Use                                          |
 | ----------------- | --------------------- | --------------------- | -------------------------------------------- |
-| `canvas`          | `#FFFFFF`             | `#0E0F11`             | Panel background                             |
-| `surface`         | `#F4F4F6`             | `#18191C`             | Hovered rows, segmented tracks, notices      |
-| `line`            | `#E4E4E7`             | `#2A2B30`             | Dividers and card borders                    |
-| `line-strong`     | `#8B8D98`             | `#6F7079`             | Borders of form controls (3:1, WCAG 1.4.11)  |
-| `fg` / `fg-muted` | `#18181B` / `#5F5F69` | `#EDEDEF` / `#A1A1AA` | Text                                         |
+| `canvas`          | `#F3F4F8`             | `#0B0C10`             | The ground                                   |
+| `raised`          | `#FFFFFF`             | `#14161B`             | Cards, the result list, the detail proof     |
+| `surface`         | `#E9EBF2`             | `#1C1F26`             | Hovered rows, segmented tracks, code wells   |
+| `line`            | `#DFE2EA`             | `#262A33`             | Dividers                                     |
+| `line-strong`     | `#858A99`             | `#6E7381`             | Borders of form controls (3:1, WCAG 1.4.11)  |
+| `fg` / `fg-muted` | `#14161B` / `#555A69` | `#ECEEF3` / `#A3A8B6` | Text                                         |
 | `accent`          | `#3451D1`             | `#8EA2FF`             | Primary actions, focus, selection (ink blue) |
-| `critical`        | `#C62A2F`             | `#FF9592`             | Hidden, page scroll                          |
-| `warning`         | `#9A4A00`             | `#FFC53D`             | Truncated, spilling, the stress bar          |
-| `notice`          | `#6550B9`             | `#B9A6FF`             | Inputs                                       |
-| `ok`              | `#18794E`             | `#3DD68C`             | "Room for translation", fits                 |
-| `scrim`           | black 32 %            | black 60 %            | Behind dialogs                               |
+| `critical`        | `#C2272D`             | `#FF9592`             | Hidden, page scroll                          |
+| `warning`         | `#934600`             | `#FFC53D`             | Truncated, spilling, the stress bar          |
+| `notice`          | `#6049B3`             | `#B9A6FF`             | Inputs                                       |
+| `ok`              | `#16734A`             | `#3DD68C`             | "Room for translation", fits                 |
+| `scrim`           | ink 36 %              | black 60 %            | Behind dialogs                               |
 
-Each severity has a `-soft` background. Every text pair meets 4.5:1 on its
-background in both themes (`src/ui/tokens.test.ts`). Status is always color +
-text, never color alone.
+Each severity has a `-soft` background. Every text pair meets 4.5:1 on canvas,
+raised and its soft background, in both themes (`src/ui/tokens.test.ts`, 56
+pairs). Status is always icon, color and text, never color alone: each kind
+of problem has its own drawn icon (eye-off, ellipsis, an arrow leaving a line,
+horizontal scroll, a text cursor).
 
 ### Type
 
-- `system-ui` stack: 13/18 body, 12/16 secondary, 15/20 titles at 600.
-- `ui-monospace` only for code: selectors, CSS, and pixel measurements. Not for
+- **Geist** for the interface and **Geist Mono** for code (OFL-1.1, bundled
+  with the extension, never fetched). 13/18 body, 12/16 secondary, 15/20
+  titles at 600; the proof card's cut text is set at title size.
+- Mono only for code and data: selectors, CSS, and pixel measurements. Not for
   labels or headings.
 - `tabular-nums` for every number that changes or is compared.
 - **Sentence case** everywhere, matching Chrome. No all-caps labels or eyebrows.
@@ -71,12 +86,26 @@ text, never color alone.
 ### Space, shape, motion
 
 - 4 px grid. Panel padding 12. Rows 36 px (compact).
-- Radius 6 for controls, 10 for cards. Borders, not shadows; shadows only on
-  floating layers (tooltips, popovers, toasts).
-- Motion: 120 ms for hover and press, 180 ms to enter, 240 ms for view changes,
-  `cubic-bezier(0.2, 0, 0, 1)`, opacity and transform only. Motion answers an
-  action; nothing animates on its own except the scanning bar. Off under
-  `prefers-reduced-motion`.
+- Radius 6 for controls, 10 for cards. Raised surfaces sit on the ground with
+  a hairline and a 1 px soft shadow; deeper shadows only on floating layers
+  (palette, dialogs, tooltips, toasts). No glass or blur.
+- The parts the browser draws are themed too: text selection, the caret,
+  thin scrollbars, focus rings, native control accents.
+
+### Motion
+
+One authored moment; everything else answers an action.
+
+- **The moment:** on Home, a button label lengthens the way a translation does
+  until it outgrows its box; the crop mark lands on the edge and the measure
+  bar fills in (about 1.5 s, once).
+- **Continuity:** on narrow panels, list ⇄ detail is a View Transition. The
+  detail's measure bar draws itself: the box first, then the bleed.
+- **Arrival:** when results land, the first eight rows stagger in (20 ms apart)
+  and the counts count up. Never again while filtering or scrolling.
+- **Feedback:** 120 ms press and hover; a light band runs along the scanning bar.
+- Arrivals ease with `cubic-bezier(0.16, 1, 0.3, 1)`. Under
+  `prefers-reduced-motion` all of it is off and content is visible at once.
 
 ## Layout
 
@@ -98,8 +127,11 @@ narrow (< 520 px)                         wide (≥ 520 px)
 
 - Left aligned throughout. The list is the spine; the detail replaces it when
   narrow (with Back) and sits beside it when wide.
-- Home has three actions, each with one line saying what it does, plus the demo
-  link and the shortcut. No tours or modals.
+- Home leads with the demo and one primary action (Scan page); the other two
+  actions are rows below, not a grid of identical cards. Then the demo link and
+  the shortcut. No tours or modals.
+- **⌘K / Ctrl+K** opens the command palette: every action that applies right
+  now, with its shortcut, filtered as you type (Raycast's pattern).
 - The panel has to pass its own stress test: at 320 px with pseudo-locale text,
   nothing in its chrome may clip or spill. Buttons wrap their labels, rows grow,
   and content that is truncated on purpose (long page text, selectors) carries
