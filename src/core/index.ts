@@ -4,7 +4,13 @@
  */
 export { scanDocument, scanDocumentAsync } from './scan';
 export { groupFindings, fingerprint, type Issue } from './group/group';
-export { describeElement, type ElementDescription } from './select/describe';
+export {
+  describeElement,
+  elementLabel,
+  elementSelector,
+  type ElementDescription,
+} from './select/describe';
 export { PRESET_KINDS, PRESET_POOLS, getPreset, type PresetKind } from './text/presets';
+export { sampleText } from './dom';
 export * from './types';
 export * from './stress';

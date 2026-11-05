@@ -43,14 +43,19 @@ function segment(element: Element): string {
   return first ? `${element.localName}.${first}` : element.localName;
 }
 
-/** Describes an element for reports and test selectors. */
-export function describeElement(element: Element): ElementDescription {
+/**
+ * A unique CSS selector for the element. Inside shadow DOM, the host and inner
+ * selectors are joined with Playwright's ` >> ` chaining. Costs up to ~50 ms
+ * on complex pages, so compute it only for elements someone looks at.
+ */
+export function elementSelector(element: Element): string {
   const root = element.getRootNode();
   const inner = uniqueSelector(element);
-  const selector = isShadowRoot(root)
-    ? `${describeElement(root.host).selector} >> ${inner}`
-    : inner;
+  return isShadowRoot(root) ? `${elementSelector(root.host)} >> ${inner}` : inner;
+}
 
+/** Short human-readable path, e.g. `nav › li › a.nav-link`. Cheap. */
+export function elementLabel(element: Element): string {
   const parts: string[] = [];
   for (
     let current: Element | null = element;
@@ -60,5 +65,10 @@ export function describeElement(element: Element): ElementDescription {
     if (current.localName === 'body' || current.localName === 'html') break;
     if (current.localName !== 'slot') parts.unshift(segment(current));
   }
-  return { selector, label: parts.join(' › ') };
+  return parts.join(' › ');
+}
+
+/** Describes an element for reports and test selectors. */
+export function describeElement(element: Element): ElementDescription {
+  return { selector: elementSelector(element), label: elementLabel(element) };
 }
