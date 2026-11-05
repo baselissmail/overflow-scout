@@ -116,7 +116,7 @@ narrow (< 520 px)                         wide (≥ 520 px)
 ┌───────────────────────────────┐         ┌──────────────────┬─────────────────┐
 │ Overflow Scout        ⚙  ?    │         │ list             │ detail          │
 │ shop.example · Always allow   │         │                  │                 │
-│ Scan page  Stress test  Insp. │         │                  │                 │
+│ Scan page  Test with longer … │         │                  │                 │
 │ Hidden 12 Truncated 5 Spill 3 │         │                  │                 │
 │ Broken now | With longer text │         │                  │                 │
 │ / Search…              Sort   │         │                  │                 │
@@ -148,7 +148,13 @@ narrow (< 520 px)                         wide (≥ 520 px)
 
 ## Writing
 
-- Name things by what users see: "Scan page", "Stress test", "Revert". Problems
+- Name things by what users do and see: "Scan page", "Test with longer text",
+  "Measure an element", "Revert". Not tool jargon: "stress test" reads as load
+  testing to QA, and "Inspect" as DevTools. The code keeps `stress` and
+  `inspect` as ids. Once results show, the toolbar uses the short forms
+  "Longer text" and "Measure" so the three actions fit on one row at 400 px;
+  Home and the command palette keep the full names, and the palette also finds
+  them by their old names. Problems
   are named by what goes wrong ("Cut off", "Overflows", "Wider than window",
   "Field cut off"), each with a one-line definition on hover and in the detail.
 - Severity levels are defined by the kinds they cover, in a popover by the

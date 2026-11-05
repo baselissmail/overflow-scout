@@ -236,7 +236,7 @@ export const pageMessageSchema = z.discriminatedUnion('type', [
 export const gestureMessageSchema = z.object({
   type: z.literal('gesture'),
   tabId: count,
-  /** Opened from "Inspect text overflow here": start the element picker. */
+  /** Opened from the context menu ("Measure this element"): start the element picker. */
   inspect: z.boolean(),
   at: ms,
 });

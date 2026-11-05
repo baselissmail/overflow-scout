@@ -190,7 +190,7 @@ Display names are plain descriptions of what goes wrong (changed 2026-11-05 afte
 | Kind (id)                 | Shown as                 | Meaning                                                                          | Severity                                        |
 | ------------------------- | ------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------- |
 | `hidden`                  | **Cut off**              | The box clips its text with no ellipsis; readers lose part of it without knowing | Critical                                        |
-| `page-scroll`             | **Wider than page**      | The element is wider than the window, so the page scrolls sideways               | Critical                                        |
+| `page-scroll`             | **Wider than window**    | The element is wider than the window, so the page scrolls sideways               | Critical                                        |
 | `truncated`               | **Truncated**            | Ellipsis or line-clamp hides the end (often intentional)                         | Warning. User can mark "accepted on this site". |
 | `spilling`                | **Overflows**            | Text runs out of its box and can overlap what's next to it                       | Warning                                         |
 | `input`                   | **Field cut off**        | A placeholder or read-only value is longer than its field                        | Notice                                          |
@@ -289,19 +289,19 @@ Binary search on string length (in place, about 8 iterations, invisible because 
 
 ### 5.2 Surfaces
 
-| Surface                        | Role                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------ |
-| **Side panel**                 | The whole app. Doesn't cover the page (the current 400 px overlay does). |
-| **Page overlay** (shadow root) | Highlights, the picker, and a small "Stress active · Revert" pill        |
-| **Toolbar action**             | Opens the panel. Badge shows the issue count for the tab.                |
-| **Context menu**               | "Inspect text overflow here": opens the panel with the picker active¹    |
-| **No popup**                   | It was a two-button launcher, so it's removed                            |
+| Surface                        | Role                                                                                |
+| ------------------------------ | ----------------------------------------------------------------------------------- |
+| **Side panel**                 | The whole app. Doesn't cover the page (the current 400 px overlay does).            |
+| **Page overlay** (shadow root) | Highlights, the picker, and a small "Stress active · Revert" pill                   |
+| **Toolbar action**             | Opens the panel. Badge shows the issue count for the tab.                           |
+| **Context menu**               | "Measure this element with Overflow Scout": opens the panel with the picker active¹ |
+| **No popup**                   | It was a two-button launcher, so it's removed                                       |
 
 ¹ The right-clicked element can't be known without a content script on every page, which §2.2 rules out, so the picker opens and one click selects it.
 
 ### 5.3 Screens
 
-1. **Home (first run / no results):** page host and permission state. Three action cards: **Scan page**, **Stress test**, **Inspect element**. "Try the demo page" link and a shortcut hint. No modal tours.
+1. **Home (first run / no results):** page host and permission state. Three actions: **Scan page**, **Test with longer text** (the stress test), **Measure an element** (Inspect); the display names changed 2026-11-05 after a first-time-user review. "Try the demo page" link and a shortcut hint. No modal tours.
 2. **Scanning:** thin progress bar, live counter in tabular numbers, Cancel.
 3. **Results:**
    - Summary chips that double as filters (Hidden 12 · Truncated 5 · Spilling 3 · Page scroll 1).

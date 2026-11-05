@@ -18,8 +18,9 @@ async function scan(panel: Page): Promise<void> {
 }
 
 async function runStress(panel: Page): Promise<void> {
-  const form = panel.getByRole('form', { name: 'Stress test' });
-  if (!(await form.isVisible())) await panel.getByRole('button', { name: /^Stress test/ }).click();
+  const form = panel.getByRole('form', { name: 'Test with longer text' });
+  if (!(await form.isVisible()))
+    await panel.getByRole('button', { name: /^(Test with longer text|Longer text)/ }).click();
   await form.getByRole('button', { name: 'Apply and scan' }).click();
   await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
 }
@@ -98,7 +99,7 @@ test.describe('demo page', () => {
     );
     await expect(rows(panel).first()).toBeVisible();
     expect(await pageText(demo)).not.toBe(before);
-    await expect(demo.locator('overflow-scout-root .pill')).toContainText('Stress test active');
+    await expect(demo.locator('overflow-scout-root .pill')).toContainText('Longer test text on');
     // The results say how they were made, and the odd-looking text is explained.
     await expect(
       panel.getByText(
@@ -128,19 +129,19 @@ test.describe('demo page', () => {
     const { page: demo, tabId } = await openTab(`chrome-extension://${extensionId}/demo.html`);
     const panel = await openPanel(tabId);
 
-    await panel.getByRole('button', { name: /^Inspect element/ }).click();
+    await panel.getByRole('button', { name: /^(Measure an element|Measure)/ }).click();
     await expect(panel.getByText('Click an element on the page.', { exact: false })).toBeVisible();
     const button = demo.getByRole('button', { name: 'Add to cart' }).first();
     const box = await button.boundingBox();
     if (!box) throw new Error('The demo button has no box');
     await demo.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 
-    const card = panel.getByRole('region', { name: 'Inspect' });
+    const card = panel.getByRole('region', { name: 'Measure' });
     await expect(card).toContainText('Add to cart');
     await expect(card).toContainText(/Fits up to \d+ characters|Still fits/);
     await expect(card).toContainText(/a translation needs about 20–22/);
 
-    await card.getByRole('button', { name: 'Close inspection' }).click();
+    await card.getByRole('button', { name: 'Close measurement' }).click();
     await expect(card).toBeHidden();
   });
 });

@@ -51,7 +51,7 @@ const STATES: readonly { name: string; enter: (panel: Page) => Promise<void> }[]
     name: 'stress',
     enter: async (panel) => {
       await panel.keyboard.press('Escape');
-      await panel.getByRole('button', { name: /^Stress test/ }).click();
+      await panel.getByRole('button', { name: /^(Test with longer text|Longer text)/ }).click();
       await panel.getByRole('button', { name: 'Apply and scan' }).click();
       await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
     },
@@ -175,7 +175,7 @@ test('runs actions from the command palette', async ({ openTab, openPanel, exten
   await expect(palette).toBeVisible();
 
   await panel.keyboard.type('stress');
-  await expect(palette.getByRole('option', { name: /^Run stress test/ })).toHaveAttribute(
+  await expect(palette.getByRole('option', { name: /^Test with longer text now/ })).toHaveAttribute(
     'aria-selected',
     'true',
   );

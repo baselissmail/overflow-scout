@@ -3,7 +3,7 @@ import { windowOf } from '@/core/dom';
 /**
  * Everything Overflow Scout draws on a page lives in one shadow root under
  * one host element (plan §2.5): highlights, the picker's hover box, and the
- * "Stress test active · Revert" pill. Page elements are never styled or
+ * "Longer test text on · Revert" pill. Page elements are never styled or
  * given attributes.
  *
  * Styles use a constructed stylesheet (`adoptedStyleSheets`), which a strict

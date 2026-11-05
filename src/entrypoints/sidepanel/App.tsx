@@ -151,7 +151,8 @@ export function App() {
           group: actions,
           label: i18n.t('commands.runStress'),
           icon: <WholeWord {...ICON} />,
-          keywords: 'translation pseudo locale longer text',
+          // The names people may know it by.
+          keywords: 'stress test translation pseudo locale expand',
           run: stress,
         },
       !noTab && {
@@ -159,6 +160,7 @@ export function App() {
         group: actions,
         label: i18n.t('commands.stressOptions'),
         icon: <SlidersHorizontal {...ICON} />,
+        keywords: 'stress test strategy intensity settings',
         run: () => {
           setStressOpen(true);
         },
@@ -169,7 +171,7 @@ export function App() {
           group: actions,
           label: state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspect'),
           icon: <Crosshair {...ICON} />,
-          keywords: 'pick element breaking point',
+          keywords: 'inspect pick element fit breaking point',
           run: pick,
         },
       state.stressActive && {
@@ -355,7 +357,7 @@ export function App() {
                 setStressOpen((open) => !open);
               }}
             >
-              {i18n.t('actions.stress')}
+              {i18n.t('actions.stressShort')}
             </Button>
             <Button
               icon={<Crosshair {...ICON} />}
@@ -364,7 +366,7 @@ export function App() {
               className="aria-pressed:border-accent aria-pressed:bg-accent-soft"
               onClick={pick}
             >
-              {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspect')}
+              {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspectShort')}
             </Button>
           </div>
         )}
