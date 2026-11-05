@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Visible and invisible edges</title>
+    <!-- From the Phase 6 code review of the visible-spill rules (ADR 0010). -->
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      /* Room below each wrapper, so text running out of it lands on nothing. */
+      .roomy {
+        margin-bottom: 160px;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      A bordered card filling a padded scroll pane. The address crosses the card's border but
+      stays inside the pane's padding, so it isn't scrolled away: it visibly breaks the card.
+    -->
+    <main class="case" style="width: 400px; height: 120px; padding: 0 120px 0 0; overflow: auto">
+      <div style="border: 1px solid #ccc; font: 16px/1.4 monospace">
+        <p style="margin: 0; white-space: nowrap" data-expect="spilling">
+          shop.example/account/orders/2026-11/receipt-48213
+        </p>
+      </div>
+    </main>
+
+    <!-- Utility CSS gives every box a transparent, zero-size "ring" shadow: not an edge. -->
+    <div class="case roomy" style="width: 300px">
+      <div
+        style="
+          height: 40px;
+          box-shadow:
+            0 0 #0000,
+            0 0 #0000;
+        "
+      >
+        <p style="margin: 0" data-expect="ok">
+          A wrapper with a fixed height and an invisible ring shadow. Its text runs below it, onto
+          nothing, so the page reads normally.
+        </p>
+      </div>
+    </div>
+
+    <!-- A transparent background in a modern color syntax: not an edge either. -->
+    <div class="case roomy" style="width: 300px">
+      <div style="height: 40px; background: oklab(1 0 0 / 0)">
+        <p style="margin: 0" data-expect="ok">
+          A wrapper with a fixed height and a fully transparent background, written in oklab. Its
+          text runs below it, onto nothing.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -98,6 +98,8 @@ export class PanelController {
   private connection: PageConnection | null = null;
   private connecting: Promise<PageConnection> | null = null;
 
+  /** Counts navigations, so work they interrupted ends quietly instead of as an error. */
+  private navigations = 0;
   /** The issues the badge counts, so it can be redone when ignore rules change. */
   private badged: readonly IssueDto[] | null = null;
   private ignored: ReadonlySet<string> = new Set();
@@ -125,6 +127,7 @@ export class PanelController {
    * whether or not its script is still there.
    */
   navigated(): void {
+    this.navigations += 1;
     this.disconnect();
     if (this.state.tabId !== null) this.deps.setBadge(this.state.tabId, null);
     this.set({
@@ -263,6 +266,15 @@ export class PanelController {
     await this.run(null, (connection) => connection.request('reveal', { findingId }));
   }
 
+  /**
+   * The tab started loading. With a connection open, the port closing (or the
+   * page's own `navigated`) handles it; without one, nothing else will: a
+   * restricted-page notice or a half-finished connect would stay on screen.
+   */
+  tabLoading(): void {
+    if (!this.connection) this.navigated();
+  }
+
   /** Closes the inspect card, puts any tried text back, and clears its outline. */
   closeInspect(): void {
     this.set({ picked: null });
@@ -333,14 +345,16 @@ export class PanelController {
   ): Promise<void> {
     if (busy && this.state.busy) return;
     const tabId = this.state.tabId;
+    const navigations = this.navigations;
     if (busy) this.set({ busy, error: null });
     try {
       const connection = await this.ensureConnection();
       await work(connection);
     } catch (error) {
-      // The tab may have changed while we waited; its state is gone already.
+      // The tab may have changed or navigated while we waited; the stale notice says so.
       const cancelled = error instanceof RequestError && error.code === 'cancelled';
-      if (tabId === this.state.tabId && !cancelled && !(error instanceof ConnectionError)) {
+      const moved = tabId !== this.state.tabId || navigations !== this.navigations;
+      if (!moved && !cancelled && !(error instanceof ConnectionError)) {
         this.set({ error: message(error) });
       }
     } finally {

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" style="overflow-y: scroll">
+  <head>
+    <meta charset="utf-8" />
+    <title>Clips the page can scroll to</title>
+    <!--
+      overflow-y: scroll makes overflow-x compute to auto, which still scrolls: the
+      clip past the window's edge is reachable, so it counts. Phase 6 review.
+    -->
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="case"
+      style="width: 1200px; overflow: hidden; white-space: nowrap"
+      data-expect="page-scroll"
+    >
+      <span data-expect="hidden">
+        Free shipping on every order over forty euros, returns within thirty days, a two year
+        warranty on all electronics and household appliances from our partner brands, and gift
+        wrapping on request at checkout for every item in your basket</span
+      >
+    </div>
+  </body>
+</html>

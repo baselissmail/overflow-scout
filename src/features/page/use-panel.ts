@@ -82,6 +82,11 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
     const onActivated = (info: { tabId: number; windowId: number }) => {
       if (pinned === null && info.windowId === windowId) controller.setTarget(info.tabId);
     };
+    const onUpdated = (tabId: number, change: { status?: string }) => {
+      if (tabId === controller.getState().tabId && change.status === 'loading') {
+        controller.tabLoading();
+      }
+    };
     const onRemoved = (tabId: number) => {
       if (tabId === controller.getState().tabId) controller.setTarget(null);
     };
@@ -92,6 +97,7 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
     };
 
     browser.tabs.onActivated.addListener(onActivated);
+    browser.tabs.onUpdated.addListener(onUpdated);
     browser.tabs.onRemoved.addListener(onRemoved);
     browser.runtime.onMessage.addListener(onMessage);
     void start();
@@ -99,6 +105,7 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
     return () => {
       disposed = true;
       browser.tabs.onActivated.removeListener(onActivated);
+      browser.tabs.onUpdated.removeListener(onUpdated);
       browser.tabs.onRemoved.removeListener(onRemoved);
       browser.runtime.onMessage.removeListener(onMessage);
       controller.dispose();

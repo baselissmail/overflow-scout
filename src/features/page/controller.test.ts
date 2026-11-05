@@ -157,6 +157,48 @@ describe('PanelController', () => {
     expect(controller.getState().stale).toBe(false);
   });
 
+  it('starts over when a tab with no connection loads, and ignores loads it is connected to', async () => {
+    const setBadge = vi.fn();
+    const controller = new PanelController({
+      connect: () => Promise.reject(new ConnectionError({ reason: 'restricted' })),
+      setBadge,
+      capture: () => Promise.reject(new Error('restricted')),
+    });
+    controller.setTarget(3);
+    await controller.scan();
+    expect(controller.getState().connection).toBe('unavailable');
+    controller.tabLoading();
+    expect(controller.getState()).toMatchObject({ connection: 'idle', failure: null });
+
+    // Connected: the port closing or the page's own event decides instead.
+    const { controller: connected, fake } = setup({ scan: SCAN });
+    await connected.scan();
+    connected.tabLoading();
+    expect(fake.close).not.toHaveBeenCalled();
+    expect(connected.getState()).toMatchObject({ connection: 'ready', stale: false });
+  });
+
+  it('ends work a route change interrupts quietly, as stale results', async () => {
+    const { controller, fake } = setup();
+    let fail: (error: Error) => void = () => undefined;
+    fake.request.mockImplementation((type: PageRequestType) =>
+      type === 'scan'
+        ? new Promise((_, reject) => {
+            fail = reject;
+          })
+        : Promise.resolve(null),
+    );
+    const scanning = controller.scan();
+    await vi.waitFor(() => {
+      expect(fake.request).toHaveBeenCalledWith('scan', { includeInputs: true });
+    });
+    // The single-page app changes route mid-scan; the port closes under the request.
+    fake.emit({ type: 'navigated' });
+    fail(new Error('The page went away.'));
+    await scanning;
+    expect(controller.getState()).toMatchObject({ error: null, busy: null, connection: 'idle' });
+  });
+
   it('tracks stress state from page events', async () => {
     const { controller, fake } = setup({
       stress: { brokenNow: [], atRisk: SCAN.issues, stats: {} },
