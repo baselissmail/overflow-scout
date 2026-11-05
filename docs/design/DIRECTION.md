@@ -167,7 +167,12 @@ narrow (< 520 px)                         wide (≥ 520 px)
 - No implementation words in the UI: "texts", not "text nodes" or "strings";
   "window", not "viewport".
 - Every result ends in a next step: the detail leads with "What to do" (a plain
-  instruction, CSS to try and where), before the evidence.
+  instruction, CSS to try and where), before the evidence. Each fix says what
+  happened when the page tried it ("Fixes it. The box gets 22 px taller."),
+  with an icon and words, never color alone.
+- Reports are written for the person who fixes the bug: what goes wrong, where,
+  by how much, why, and what fixed it, in that order. Page text is quoted and
+  escaped; CSS and selectors are code.
 - Every empty or error state says what happened and offers the next action.
 - Numbers are numerals with the unit: "94 px", "12 places".
 - No exclamation marks, no "All good!". Say what was checked.

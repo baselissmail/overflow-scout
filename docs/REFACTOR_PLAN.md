@@ -471,11 +471,11 @@ Each phase ends with explicit exit criteria. Phases 1 and 2 (engine) can run in 
 
 ### Phase 5 — Inspect, fixes, reporting
 
-- [ ] Inspect flow, presets, live fit meter, breaking point.
-- [ ] Verified-fix trials (§3.5) with exact style restore.
-- [ ] Screenshot cropped to the element (captureVisibleTab + canvas crop, accounting for devicePixelRatio). Copy as Markdown. JSON export. Ignore rules.
+- [x] Inspect flow, presets, live fit meter, breaking point. _Shown as "Measure an element". "Try other text" has a length slider, real-world text (names, products, links, emails, long text) and the user's own text; the page shows it live and the card says whether it fits or what breaks. A DevTools-style hover box while picking is not in yet._
+- [x] Verified-fix trials (§3.5) with exact style restore. _Each fix is tried invisibly when a result opens and says whether it fixes the problem, helps, or does nothing, and how the box changes size. When wrapping only moves the overflow downwards, the trials add the height fix and try the fixes together. "Preview on page" keeps a fix applied until it's stopped. See ADR 0009._
+- [x] Screenshot cropped to the element (captureVisibleTab + canvas crop, accounting for devicePixelRatio). Copy as Markdown. JSON export. Ignore rules. _Screenshots need `activeTab` (a toolbar click); without it the panel says so (ADR 0009). Ignore rules match the issue's fingerprint per site, not a selector, so they hold across scans; Settings lists them._
 
-**Exit:** e2e for each; Markdown renders correctly when pasted into GitHub and Jira.
+**Exit:** e2e for each; Markdown renders correctly when pasted into GitHub and Jira. _Met for GitHub on 2026-11-05: the copied report rendered through GitHub's Markdown API with its heading, nested lists and code spans intact, and escaped page text stayed literal. Jira Cloud converts pasted Markdown with the same syntax; checking it in a real Jira project is part of the manual pre-release check. e2e covers verified fixes and preview, Copy report and JSON export, the screenshot refusal, ignore rules, and the Measure flow; cropping is tested in a real browser._
 
 Example report (Copy as Markdown):
 
