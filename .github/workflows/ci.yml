@@ -55,6 +55,10 @@ jobs:
       - name: Bundle size budgets
         run: pnpm size
 
+      - name: Build e2e variant
+        # Same as production, plus host access to the test origin (wxt.config.ts).
+        run: pnpm build:e2e
+
       - name: End-to-end tests
         run: pnpm test:e2e
 
