@@ -30,7 +30,8 @@
     "test:browser": "vitest run --project browser",
     "test:e2e": "playwright test",
     "size": "size-limit",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:browser"
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:browser",
+    "dogfood": "vite build --config scripts/dogfood/vite.config.ts --logLevel warn && node scripts/dogfood/run.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",

@@ -3,6 +3,7 @@
 coverage/
 playwright-report/
 test-results/
+.dogfood/
 public/
 pnpm-lock.yaml
 

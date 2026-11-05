@@ -31,16 +31,17 @@ pnpm exec playwright install chromium  # once, for engine and e2e tests
 pnpm dev                               # Chrome with the extension loaded and hot reload
 ```
 
-| Command             | What it does                                                |
-| ------------------- | ----------------------------------------------------------- |
-| `pnpm build`        | Production build in `.output/chrome-mv3`                    |
-| `pnpm zip`          | Store-ready zip                                             |
-| `pnpm check`        | Types, lint, formatting, unit and engine tests              |
-| `pnpm test`         | Unit tests (Node)                                           |
-| `pnpm test:browser` | Engine and framework tests in real Chromium                 |
-| `pnpm build:e2e`    | Build for e2e tests (production + access to a test origin)  |
-| `pnpm test:e2e`     | End-to-end tests (run `pnpm build && pnpm build:e2e` first) |
-| `pnpm size`         | Bundle size budgets (build first)                           |
+| Command             | What it does                                                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`        | Production build in `.output/chrome-mv3`                                                                                     |
+| `pnpm zip`          | Store-ready zip                                                                                                              |
+| `pnpm check`        | Types, lint, formatting, unit and engine tests                                                                               |
+| `pnpm test`         | Unit tests (Node)                                                                                                            |
+| `pnpm test:browser` | Engine and framework tests in real Chromium                                                                                  |
+| `pnpm build:e2e`    | Build for e2e tests (production + access to a test origin)                                                                   |
+| `pnpm test:e2e`     | End-to-end tests (run `pnpm build && pnpm build:e2e` first)                                                                  |
+| `pnpm size`         | Bundle size budgets (build first)                                                                                            |
+| `pnpm dogfood`      | Run the engine on real sites and write contact sheets to `.dogfood/` (needs the network; [results](docs/dogfood/2026-11.md)) |
 
 To load a build manually, open `chrome://extensions`, enable Developer mode, choose
 **Load unpacked** and select `.output/chrome-mv3`.
