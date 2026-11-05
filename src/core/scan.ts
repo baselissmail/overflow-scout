@@ -29,6 +29,8 @@ import { SEVERITY_BY_KIND } from './types';
 
 /** Overflow along the line direction below this many CSS px is rounding noise. */
 const LINE_TOLERANCE = 1;
+/** Text that runs sideways out of its box by less than this is a glyph's overhang. */
+const SPILL_TOLERANCE = 2;
 /** Canvas and layout text widths differ slightly. */
 const PLACEHOLDER_TOLERANCE = 2;
 /** Clip boxes smaller than this hide text on purpose (visually-hidden patterns). */
@@ -65,6 +67,22 @@ const TEXT_INPUT_TYPES = new Set(['text', 'search', 'email', 'url', 'tel', 'pass
 
 /** When one element has several text problems, report the most serious one. */
 const TEXT_KIND_PRECEDENCE: readonly FindingKind[] = ['hidden', 'truncated', 'spilling'];
+
+/** Room beyond the text, in px, that shows a box was sized by layout rather than by its text. */
+const PLACED_ROOM = 12;
+
+/** How far up, and how many boxes, to look for something spilled text lands on. */
+const NEIGHBOUR_DEPTH = 4;
+const NEIGHBOUR_LIMIT = 200;
+
+/** The alpha of a computed color (`rgb()`, `rgba()`); other formats count as opaque. */
+function alphaOf(color: string): number {
+  if (color === 'transparent') return 0;
+  const match = /^rgba?\(([^)]*)\)$/.exec(color);
+  if (!match) return 1;
+  const parts = (match[1] ?? '').split(/[\s,/]+/).filter(Boolean);
+  return parts.length >= 4 ? Number(parts[3]) : 1;
+}
 
 type Target = { type: 'text'; node: Text } | { type: 'input'; element: HTMLInputElement };
 
@@ -207,8 +225,16 @@ class ScanSession {
       // Text that is entirely out of view is hidden on purpose: off-canvas
       // panels, collapsed sections, carousel slides, visually-hidden labels.
       if (clip.visibleFraction === 0) return;
-      const x = clip.x > tolerance.x ? clip.x : 0;
+      // Cropped on purpose: the cut lies past the page's edge (hero art bleeding
+      // off-screen), or the text's own box was placed past it (a carousel's next slide).
+      const cropped =
+        clip.x > tolerance.x &&
+        (this.cutOffPage(clip.xBy, geometry.bounds) ||
+          this.boxPlacedPast(host, clip.xBy, geometry.bounds));
+      const x = clip.x > tolerance.x && !cropped ? clip.x : 0;
       const y = clip.y > tolerance.y ? clip.y : 0;
+      // What a crop hides isn't spilling either: it's out of view.
+      if (cropped && y === 0) return;
       const clipperX = x > 0 ? clip.xBy : null;
       const clipperY = y > 0 ? clip.yBy : null;
       if (clipperX ?? clipperY) {
@@ -255,6 +281,53 @@ class ScanSession {
     if (clipperX) return { kind: 'truncated', mechanism: 'ellipsis', container: clipperX };
     if (clipperY) return { kind: 'truncated', mechanism: 'line-clamp', container: clipperY };
     return null;
+  }
+
+  /**
+   * True when a box cuts text horizontally at an edge outside the page's
+   * reachable width: the window shows the page's edge there, not the cut.
+   */
+  private cutOffPage(clipper: Element | null, bounds: Bounds): boolean {
+    if (!clipper) return false;
+    const box = this.layout.paddingBox(clipper);
+    const root = this.doc.documentElement;
+    const { scrollX } = this.layout.view;
+    const body = this.doc.body as Element | null;
+    const hidesX = [root, body].some(
+      (element) => element && this.layout.style(element).overflowX !== 'visible',
+    );
+    const reachable = hidesX ? root.clientWidth : Math.max(root.clientWidth, root.scrollWidth);
+    const cutRight = bounds.right - box.right >= box.left - bounds.left;
+    // At the edge itself the cut shows; only past it is it out of sight.
+    return cutRight ? box.right + scrollX > reachable + 1 : box.left + scrollX < -1;
+  }
+
+  /**
+   * True when the text sits in a box of its own that is placed past the
+   * clipping edge (a carousel's next slide peeking in, a product mock bleeding
+   * off a hero frame): that box is cropped; its text didn't outgrow it. Walking
+   * up from the text, the first box that ends inside the clip edge means the
+   * text did outgrow it; a box that crosses the edge with room to spare beyond
+   * the text means the box was placed there.
+   */
+  private boxPlacedPast(host: Element, clipper: Element | null, bounds: Bounds): boolean {
+    if (!clipper) return false;
+    const edge = this.layout.paddingBox(clipper);
+    const right = bounds.right - edge.right >= edge.left - bounds.left;
+    for (let element: Element | null = host; element && element !== clipper;) {
+      if (this.isComparableBox(this.layout.style(element))) {
+        const box = this.layout.rect(element);
+        if (right ? box.right <= edge.right + 1 : box.left >= edge.left - 1) return false;
+        // Room inside the content box: a button's own padding isn't room to spare.
+        const style = this.layout.style(element);
+        const room = right
+          ? box.right - px(style.borderRightWidth) - px(style.paddingRight) - bounds.right
+          : bounds.left - (box.left + px(style.borderLeftWidth) + px(style.paddingLeft));
+        if (room > PLACED_ROOM) return true;
+      }
+      element = flatParent(element);
+    }
+    return false;
   }
 
   /** Above or before the page origin, where scrolling can't reach (LTR: left; RTL: right). */
@@ -324,11 +397,32 @@ class ScanSession {
         const x = clipsX ? 0 : Math.max(0, past[sideX]);
         const y = clipsY || !checkY ? 0 : Math.max(0, past[sideY]);
         if (x > tolerance.x || y > tolerance.y) {
-          const keptX = x > tolerance.x && !this.endsAtScrollEdge(element, sideX) ? x : 0;
-          const keptY = y > tolerance.y && !this.endsAtScrollEdge(element, sideY) ? y : 0;
-          return keptX > 0 || keptY > 0
-            ? { container: element, overflow: { x: keptX, y: keptY } }
-            : null;
+          const edge = {
+            left: rect.left - overhang.left,
+            right: rect.right + overhang.right,
+            top: rect.top - overhang.top,
+            bottom: rect.bottom + overhang.bottom,
+          };
+          const scrollsX = x > tolerance.x && this.endsAtScrollEdge(element, sideX);
+          const scrollsY = y > tolerance.y && this.endsAtScrollEdge(element, sideY);
+          // Sideways, text that outgrew its box always shows (it runs into margins, the next
+          // column, or off-screen), unless by less than a glyph's overhang. When a wider box
+          // of its own runs past this one instead (a mock bleeding out of its column), it shows
+          // only past a visible edge or onto something else, as it does downwards.
+          const placedX = x > tolerance.x && this.boxPlacedPast(start, element, visible);
+          const keptX =
+            x > Math.max(tolerance.x, SPILL_TOLERANCE) &&
+            !scrollsX &&
+            (!placedX || this.spillShows(element, sideX, visible, edge))
+              ? x
+              : 0;
+          const keptY =
+            y > tolerance.y && !scrollsY && this.spillShows(element, sideY, visible, edge) ? y : 0;
+          if (keptX > 0 || keptY > 0)
+            return { container: element, overflow: { x: keptX, y: keptY } };
+          // Reachable by scrolling: that container's content, not a spill.
+          if (scrollsX || scrollsY) return null;
+          // An edge no one sees, with nothing underneath: an outer box may still show it.
         }
         if (clipsX || clipsY) {
           const box = this.layout.paddingBox(element);
@@ -355,6 +449,81 @@ class ScanSession {
     return null;
   }
 
+  /**
+   * Whether content running past a box's edge can be seen as broken: the edge
+   * itself is visible (a border, a shadow, or a background unlike what's
+   * behind it), or the content lands on a neighbouring box. Layout wrappers
+   * (a `100vh` shell, a fixed-height hero row, a column a mock bleeds out of)
+   * have neither, so content running out of them reads as if the box were
+   * bigger.
+   */
+  private spillShows(element: Element, side: keyof Bounds, visible: Bounds, edge: Bounds): boolean {
+    if (this.hasVisibleEdge(element, side)) return true;
+    const region: Bounds =
+      side === 'right'
+        ? { ...visible, left: edge.right }
+        : side === 'left'
+          ? { ...visible, right: edge.left }
+          : side === 'bottom'
+            ? { ...visible, top: edge.bottom }
+            : { ...visible, bottom: edge.top };
+    return this.overlapsNeighbour(element, region);
+  }
+
+  private hasVisibleEdge(element: Element, side: keyof Bounds): boolean {
+    const style = this.layout.style(element);
+    const border = (property: string) => style.getPropertyValue(`border-${side}-${property}`);
+    const borderStyle = border('style');
+    if (
+      px(border('width')) > 0 &&
+      borderStyle !== 'none' &&
+      borderStyle !== 'hidden' &&
+      alphaOf(border('color')) > 0
+    ) {
+      return true;
+    }
+    if (style.boxShadow !== 'none' || style.backgroundImage !== 'none') return true;
+    return alphaOf(style.backgroundColor) > 0 && style.backgroundColor !== this.backdropOf(element);
+  }
+
+  /** The color behind an element: its nearest painted ancestor, or the canvas. */
+  private backdropOf(element: Element): string {
+    for (let ancestor = flatParent(element); ancestor; ancestor = flatParent(ancestor)) {
+      const style = this.layout.style(ancestor);
+      if (style.backgroundImage !== 'none') return 'image';
+      if (alphaOf(style.backgroundColor) > 0) return style.backgroundColor;
+    }
+    return 'rgb(255, 255, 255)';
+  }
+
+  /** True when a region overlaps an in-flow sibling of the box or of its nearby ancestors. */
+  private overlapsNeighbour(element: Element, region: Bounds): boolean {
+    let checked = 0;
+    let node: Element | null = element;
+    for (let depth = 0; node && depth < NEIGHBOUR_DEPTH && !isRootElement(node); depth += 1) {
+      // A positioned layer overlaps its siblings by design (stacked illustrations, overlays).
+      const position = this.layout.style(node).position;
+      if (position === 'absolute' || position === 'fixed') break;
+      const parent: Element | null = node.parentElement;
+      for (const sibling of parent ? Array.from(parent.children) : []) {
+        if (sibling === node) continue;
+        checked += 1;
+        // Past this many, assume something is there rather than spend more time.
+        if (checked > NEIGHBOUR_LIMIT) return true;
+        const style = this.layout.style(sibling);
+        if (style.display === 'none' || style.visibility !== 'visible') continue;
+        // Overlays and decorations positioned over the area aren't "what comes next".
+        if (style.position === 'absolute' || style.position === 'fixed') continue;
+        const rect = this.layout.rect(sibling);
+        const width = Math.min(rect.right, region.right) - Math.max(rect.left, region.left);
+        const height = Math.min(rect.bottom, region.bottom) - Math.max(rect.top, region.top);
+        if (width > 1 && height > 1) return true;
+      }
+      node = flatParent(node);
+    }
+    return false;
+  }
+
   /** Boxes that text is compared against; inline, `contents` and table-internal boxes are not. */
   private isComparableBox(style: CSSStyleDeclaration): boolean {
     return (
@@ -379,8 +548,13 @@ class ScanSession {
     ) {
       const style = this.layout.style(ancestor);
       if (!this.isComparableBox(style)) continue;
-      if (Math.abs(this.layout.paddingBox(ancestor)[side] - edge) > 1) return false;
       const overflow = horizontal ? style.overflowX : style.overflowY;
+      // A scroll container's padding scrolls with its content: nothing else can sit there.
+      const padding =
+        overflow === 'auto' || overflow === 'scroll'
+          ? px(style.getPropertyValue(`padding-${side}`))
+          : 0;
+      if (Math.abs(this.layout.paddingBox(ancestor)[side] - edge) > padding + 1) return false;
       if (overflow === 'auto' || overflow === 'scroll') return true;
       if (overflow !== 'visible') return false;
     }
