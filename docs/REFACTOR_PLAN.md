@@ -1,6 +1,6 @@
 # Overflow Scout v1.0 — Refactor & Launch Plan
 
-> Status: **Approved 2026-11-04 (all recommendations in §14 accepted)** · Phases 0–3 done · Owner: Basel Issmail
+> Status: **Approved 2026-11-04 (all recommendations in §14 accepted)** · Phases 0–4 done · Owner: Basel Issmail
 > Scope: Take Overflow Scout from prototype (v0.1) to a Chrome Web Store–ready v1.0 that is accurate, fast, private, and a pleasure to use.
 
 ---
@@ -461,11 +461,11 @@ Each phase ends with explicit exit criteria. Phases 1 and 2 (engine) can run in 
 
 ### Phase 4 — Design system and side panel UI
 
-- [ ] Install the chosen Claude Code skills (§11). Write `docs/design/DIRECTION.md` (references: DevTools, Linear, Raycast; tokens from §5.5).
-- [ ] Tokens, primitives (Button, IconButton, Chip, Tabs, Tooltip, Popover, Toast, Slider, Segmented, Kbd, EmptyState, MeasureBar), and patterns (ResultRow, IssueDetail, StressBar).
-- [ ] All screens from §5.3, all states from §5.4, theme, motion, i18n plumbing.
+- [x] Install the chosen Claude Code skills (§11). Write `docs/design/DIRECTION.md` (references: DevTools, Linear, Raycast; tokens from §5.5). _Each skill was read in full and pinned to a commit (`.claude/skills/README.md`). `web-design-guidelines` downloads its rules from a branch on every run, so a pinned copy of the rules sits behind a local skill instead; `vercel-react-best-practices` is mostly Next.js and its repository has no license, so its applicable rules are summarized in DIRECTION.md._
+- [x] Tokens, primitives (Button, IconButton, Chip, Tabs, Tooltip, Popover, Toast, Segmented, Kbd, EmptyState, MeasureBar, plus Switch, SelectField, Dialog, ProgressBar), and patterns (ResultRow, IssueDetail, StressBar). _Slider moves to Phase 5, where the length slider uses it._
+- [x] All screens from §5.3, all states from §5.4, theme, motion, i18n plumbing. _Not yet: streaming results while a scan runs (the live count updates; results arrive at the end), and the Phase 5 parts of Issue detail and Inspect (verified fixes, screenshot, copy report, ignore, length slider, presets)._
 
-**Exit:** axe clean · keyboard-only walkthrough passes · visual snapshots approved · **side panel passes its own scan** at 320 px with pseudo-locale.
+**Exit:** axe clean · keyboard-only walkthrough passes · visual snapshots approved · **side panel passes its own scan** at 320 px with pseudo-locale. _Met 2026-11-05: axe reports no serious or critical issues on Home, results, detail, stress results, Settings and the shortcuts sheet, in light and dark; a keyboard-only e2e walkthrough covers Tab, j/k, Enter, Esc, / and ?; token contrast is unit-tested (40 pairs, both themes); the panel stresses itself with pseudo-locale text at 320 px in six states and nothing clips or spills (truncation is allowed only where a `title` carries the full text). That test found and fixed three real layout bugs before review. Screen captures at 320, 400 and 600 px in both themes are uploaded by CI for review; pixel-diff baselines need a fixed Linux font setup and come with Phase 6. Side panel JS: 133 kB gzip (budget 200)._
 
 ### Phase 5 — Inspect, fixes, reporting
 
