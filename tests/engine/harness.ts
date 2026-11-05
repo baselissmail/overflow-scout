@@ -39,10 +39,10 @@ export async function loadFixture(html: string): Promise<{ doc: Document; dispos
 }
 
 /** Every annotated element, including those inside open shadow roots. */
-function annotatedElements(root: Document | ShadowRoot): Element[] {
-  const found = Array.from(root.querySelectorAll('[data-expect]'));
+function annotatedElements(root: Document | ShadowRoot, attribute: string): Element[] {
+  const found = Array.from(root.querySelectorAll(`[${attribute}]`));
   for (const element of root.querySelectorAll('*')) {
-    if (element.shadowRoot) found.push(...annotatedElements(element.shadowRoot));
+    if (element.shadowRoot) found.push(...annotatedElements(element.shadowRoot, attribute));
   }
   return found;
 }
@@ -65,9 +65,14 @@ function describe(element: Element): string {
 /**
  * Scores findings against annotations. `data-expect` lists the kinds expected
  * on an element (space separated) or `ok`; findings on unannotated elements
- * are false positives.
+ * are false positives. Stress tests score at-risk findings against
+ * `data-at-risk` the same way.
  */
-export function scoreFixture(doc: Document, findings: readonly Finding[]): FixtureScore {
+export function scoreFixture(
+  doc: Document,
+  findings: readonly Finding[],
+  attribute: 'data-expect' | 'data-at-risk' = 'data-expect',
+): FixtureScore {
   const score: FixtureScore = {
     truePositives: 0,
     falsePositives: 0,
@@ -76,8 +81,8 @@ export function scoreFixture(doc: Document, findings: readonly Finding[]): Fixtu
     limitations: [],
   };
   const expected = new Map<Element, Set<string>>();
-  for (const element of annotatedElements(doc)) {
-    const kinds = (element.getAttribute('data-expect') ?? '').split(/\s+/).filter(Boolean);
+  for (const element of annotatedElements(doc, attribute)) {
+    const kinds = (element.getAttribute(attribute) ?? '').split(/\s+/).filter(Boolean);
     expected.set(element, new Set(kinds.filter((kind) => kind !== 'ok')));
   }
   const report = (element: Element, message: string) => {

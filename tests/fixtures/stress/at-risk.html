@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fine now, broken with longer text</title>
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      input {
+        font: inherit;
+      }
+      .clip {
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .tabs {
+        display: flex;
+        gap: 8px;
+      }
+      .tab {
+        flex: 0 0 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .badge {
+        width: 160px;
+        height: 22px;
+        line-height: 22px;
+        overflow: hidden;
+      }
+      .crumb {
+        width: 180px;
+      }
+      .crumb a {
+        white-space: nowrap;
+      }
+      .banner {
+        display: inline-block;
+        white-space: nowrap;
+        font-size: 36px;
+      }
+      .truncate {
+        width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A short label in a fixed-width box: 4 characters become 12 -->
+    <div class="case clip" style="width: 64px" data-expect="ok" data-at-risk="hidden">Save</div>
+
+    <!-- Fixed-width tabs with an ellipsis -->
+    <nav class="case tabs">
+      <a class="tab" href="#overview" data-expect="ok" data-at-risk="truncated">Overview</a>
+      <a class="tab" href="#billing" data-expect="ok" data-at-risk="truncated">Billing</a>
+    </nav>
+
+    <!-- A fixed-height badge: the longer text wraps onto a hidden second line -->
+    <div class="case badge" data-expect="ok" data-at-risk="hidden">New feature</div>
+
+    <!-- A link that can't wrap, in a narrow column without clipping -->
+    <div class="case crumb">
+      <a href="#orders" data-expect="ok" data-at-risk="spilling">View all orders</a>
+    </div>
+
+    <!-- A headline that can't wrap: longer, it overflows its column and the page -->
+    <div class="case">
+      <div class="banner" data-expect="ok" data-at-risk="spilling page-scroll">
+        Spring collection now available in stores
+      </div>
+    </div>
+
+    <!-- A placeholder in a narrow field -->
+    <input
+      class="case"
+      style="width: 100px"
+      placeholder="Search"
+      data-expect="ok"
+      data-at-risk="input"
+    />
+
+    <!-- Already truncated: broken now, so not "at risk" -->
+    <div class="case truncate" data-expect="truncated" data-at-risk="ok">
+      A title that is already far too long
+    </div>
+
+    <!-- Room to grow -->
+    <p class="case" style="max-width: 420px" data-expect="ok" data-at-risk="ok">
+      Paragraphs wrap freely, so they get taller with longer text instead of being cut off or
+      spilling out of their box.
+    </p>
+    <button class="case" data-expect="ok" data-at-risk="ok">Continue</button>
+
+    <!-- Never stressed: code, translate="no", and text without letters -->
+    <div class="case clip" style="width: 120px">
+      <code data-expect="ok" data-at-risk="ok">npm test</code>
+    </div>
+    <div class="case clip" style="width: 150px" translate="no" data-expect="ok" data-at-risk="ok">
+      Overflow Scout
+    </div>
+    <div class="case clip" style="width: 60px" data-expect="ok" data-at-risk="ok">1,024</div>
+  </body>
+</html>

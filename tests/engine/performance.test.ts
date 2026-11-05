@@ -1,12 +1,13 @@
 import { describe, expect, inject, it } from 'vitest';
 
-import { scanDocumentAsync } from '@/core';
+import { runStressTest, scanDocumentAsync } from '@/core';
 
 import { loadFixture } from './harness';
 
 /** Budgets from docs/REFACTOR_PLAN.md §3.7. CI runners are slower and noisier. */
 const SCALE = inject('ci') ? 3 : 1;
 const BUDGET_MS = 300 * SCALE;
+const STRESS_BUDGET_MS = 500 * SCALE;
 const LONG_TASK_MS = 50;
 
 /** 1,250 cards × 4 text nodes = 5,000 text nodes; every fourth title overflows. */
@@ -47,6 +48,42 @@ describe('scan performance', () => {
       expect(result.findings.filter((finding) => finding.kind === 'truncated')).toHaveLength(313);
       expect(stats.durationMs).toBeLessThanOrEqual(BUDGET_MS);
       expect(stats.longestSliceMs).toBeLessThan(LONG_TASK_MS);
+    } finally {
+      dispose();
+    }
+  });
+
+  it('stress-tests 5,000 text nodes within budget and without long tasks', async () => {
+    const { doc, dispose } = await loadFixture(syntheticPage(1250));
+    try {
+      const result = await runStressTest(doc);
+      const { stress, stressed, durationMs, longestSliceMs } = result.stats;
+      const revertStart = performance.now();
+      result.session.revert();
+      const revertMs = performance.now() - revertStart;
+      console.info(
+        `Stress test: ${String(durationMs)} ms of work (stress ${String(stress.durationMs)} ms, ` +
+          `stressed scan ${String(stressed.durationMs)} ms), longest slice ${String(longestSliceMs)} ms ` +
+          `(stress ${String(stress.longestSliceMs)} ms, stressed scan ${String(stressed.longestSliceMs)} ms), ` +
+          `${String(stress.strings)} strings, ${String(result.atRisk.length)} at risk, ` +
+          `revert ${revertMs.toFixed(1)} ms`,
+      );
+
+      expect(stress.textNodes).toBeGreaterThanOrEqual(3750);
+      // Short titles fit now; at worst-case length many are cut off too. Nothing
+      // else on the page is at risk: descriptions wrap and buttons grow.
+      expect(result.atRisk.length).toBeGreaterThan(0);
+      for (const finding of result.atRisk) {
+        expect(finding.kind).toBe('truncated');
+        expect(finding.element.className).toBe('title');
+      }
+      expect(durationMs).toBeLessThanOrEqual(STRESS_BUDGET_MS);
+      // Planning and the single write commit never block the page.
+      expect(stress.longestSliceMs).toBeLessThan(LONG_TASK_MS);
+      expect(revertMs).toBeLessThan(LONG_TASK_MS);
+      // The stressed scan's first read makes the browser lay out every changed
+      // string at once: the same work it does to paint the stressed page.
+      expect(stressed.longestSliceMs).toBeLessThan(LONG_TASK_MS * SCALE);
     } finally {
       dispose();
     }

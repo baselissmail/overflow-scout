@@ -15,6 +15,13 @@ and the test compares the engine's findings with them.
   in precision and recall but does not fail the test. Remove it when fixed.
 - `<meta name="fixture-viewport" content="375x667">` changes the viewport (the
   default is 1024×768).
+- `data-at-risk="<kinds>"` (pages in `stress/` only) states what the stress
+  test must report as "breaks with longer text" under the default strategy
+  (translation length, worst case), or `ok`. It is scored the same way as
+  `data-expect`, and `data-expect` still describes the page before stress.
+
+Every page is also stressed and reverted with each strategy by
+`tests/engine/revert.test.ts`, which checks the DOM is identical afterwards.
 
 ## Folders
 
@@ -30,6 +37,7 @@ and the test compares the engine's findings with them.
 | `layout/`      | Transforms, zoom, sticky/fixed, `content-visibility`      |
 | `known-good/`  | Ordinary pages that must produce no findings at all       |
 | `limitations/` | Documented gaps (`data-limitation`)                       |
+| `stress/`      | Fine now, broken with longer text (`data-at-risk`)        |
 
 ## Writing a good case
 

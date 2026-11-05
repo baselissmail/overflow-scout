@@ -1,22 +1,20 @@
+import { walkTree } from './collect';
 import { diagnose } from './diagnose/diagnose';
 import {
-  FILTER_ACCEPT,
-  FILTER_REJECT,
   SHOW_ELEMENT,
   SHOW_TEXT,
   TEXT_NODE,
   flatParent,
-  isElement,
   isHtmlElement,
   isInput,
   isRootElement,
   sampleText,
-  windowOf,
 } from './dom';
 import { ClipResolver } from './measure/clip';
 import type { Bounds } from './measure/layout';
 import { LayoutReader, px } from './measure/layout';
 import { clipOverflow, measureText } from './measure/text';
+import { runInSlices, runToEnd } from './schedule';
 import type {
   Axis,
   Finding,
@@ -25,6 +23,7 @@ import type {
   ScanOptions,
   ScanResult,
   ScanStats,
+  SliceTiming,
 } from './types';
 import { SEVERITY_BY_KIND } from './types';
 
@@ -53,23 +52,6 @@ function toleranceFor(style: CSSStyleDeclaration): Tolerance {
   return vertical ? { x: across, y: LINE_TOLERANCE } : { x: LINE_TOLERANCE, y: across };
 }
 
-/** Subtrees that don't render page text we can measure. */
-const SKIPPED_SUBTREES = new Set([
-  'script',
-  'style',
-  'noscript',
-  'template',
-  'head',
-  'svg',
-  'math',
-  'select',
-  'datalist',
-  'textarea',
-  'canvas',
-  'video',
-  'audio',
-]);
-const FRAME_TAGS = new Set(['iframe', 'frame', 'object', 'embed']);
 /** Internal table boxes: cells may legitimately extend past them (rowspan, colspan). */
 const INTERNAL_TABLE_DISPLAYS = new Set([
   'table-row',
@@ -114,18 +96,16 @@ function union(a: Bounds, b: Bounds): Bounds {
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
+type Counts = Omit<ScanStats, keyof SliceTiming>;
+
 class ScanSession {
-  readonly stats: ScanStats = {
+  readonly counts: Counts = {
     textNodes: 0,
     inputs: 0,
     skippedInvisible: 0,
     skippedForeign: 0,
     shadowRoots: 0,
     framesSkipped: 0,
-    durationMs: 0,
-    wallMs: 0,
-    slices: 0,
-    longestSliceMs: 0,
   };
   readonly findings: Finding[] = [];
 
@@ -146,7 +126,7 @@ class ScanSession {
 
   /** The whole scan as small steps; drivers decide when to pause between them. */
   *steps(): Generator<void, void, void> {
-    for (const target of this.targets(this.doc)) {
+    for (const target of this.targets()) {
       if (target.type === 'text') this.checkText(target.node);
       else this.checkInput(target.element);
       yield;
@@ -161,71 +141,42 @@ class ScanSession {
     this.clips.reset();
   }
 
-  recordSlice(durationMs: number): void {
-    this.stats.slices += 1;
-    this.stats.durationMs += durationMs;
-    this.stats.longestSliceMs = Math.max(this.stats.longestSliceMs, durationMs);
-  }
-
-  result(): ScanResult {
+  result(timing: SliceTiming): ScanResult {
     const root = this.doc.documentElement;
     return {
       findings: this.findings,
-      stats: {
-        ...this.stats,
-        durationMs: round(this.stats.durationMs),
-        wallMs: round(this.stats.wallMs),
-        longestSliceMs: round(this.stats.longestSliceMs),
-      },
+      stats: { ...this.counts, ...timing },
       viewport: { width: root.clientWidth, height: root.clientHeight },
     };
   }
 
   // ── Collection ────────────────────────────────────────────────────────────
 
-  private walker(root: Document | ShadowRoot, show: number): TreeWalker {
-    const { ignore } = this.options;
-    return this.doc.createTreeWalker(root, show, {
-      acceptNode: (node) => {
-        if (!isElement(node)) return FILTER_ACCEPT;
-        if (FRAME_TAGS.has(node.localName)) return FILTER_REJECT;
-        if (SKIPPED_SUBTREES.has(node.localName) || ignore?.(node)) return FILTER_REJECT;
-        return FILTER_ACCEPT;
+  private get scope(): Document | Element {
+    return this.options.root ?? this.doc;
+  }
+
+  private *targets(): Generator<Target> {
+    const nodes = walkTree(this.doc, this.scope, SHOW_ELEMENT | SHOW_TEXT, this.options, {
+      onFrame: () => {
+        this.counts.framesSkipped += 1;
+      },
+      onShadowRoot: () => {
+        this.counts.shadowRoots += 1;
       },
     });
-  }
-
-  private shadowRootOf(element: Element): ShadowRoot | null {
-    return element.shadowRoot ?? this.options.openShadowRoot?.(element) ?? null;
-  }
-
-  private *targets(root: Document | ShadowRoot): Generator<Target> {
-    const walker = this.walker(root, SHOW_ELEMENT | SHOW_TEXT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    for (const node of nodes) {
       if (node.nodeType === TEXT_NODE) {
         const text = node as Text;
         if (/\S/.test(text.data)) yield { type: 'text', node: text };
-        continue;
-      }
-      const element = node as Element;
-      if (FRAME_TAGS.has(element.localName)) this.stats.framesSkipped += 1;
-      if (isInput(element)) yield { type: 'input', element };
-      const shadow = this.shadowRootOf(element);
-      if (shadow) {
-        this.stats.shadowRoots += 1;
-        yield* this.targets(shadow);
+      } else if (isInput(node as Element)) {
+        yield { type: 'input', element: node as HTMLInputElement };
       }
     }
   }
 
-  private *elements(root: Document | ShadowRoot): Generator<Element> {
-    const walker = this.walker(root, SHOW_ELEMENT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const element = node as Element;
-      yield element;
-      const shadow = this.shadowRootOf(element);
-      if (shadow) yield* this.elements(shadow);
-    }
+  private elements(): Generator<Element> {
+    return walkTree(this.doc, this.scope, SHOW_ELEMENT, this.options) as Generator<Element>;
   }
 
   // ── Text ──────────────────────────────────────────────────────────────────
@@ -233,22 +184,22 @@ class ScanSession {
   private checkText(node: Text): void {
     const host = node.parentElement;
     if (!isHtmlElement(host)) {
-      this.stats.skippedForeign += 1;
+      this.counts.skippedForeign += 1;
       return;
     }
     const layoutParent = node.assignedSlot ?? host;
     if (!this.layout.isRendered(layoutParent)) {
-      this.stats.skippedInvisible += 1;
+      this.counts.skippedInvisible += 1;
       return;
     }
     const geometry = measureText(this.range, node);
     if (!geometry) return;
     if (this.isUnreachable(geometry.bounds)) {
       // Parked where no one can scroll to, e.g. skip links waiting for focus.
-      this.stats.skippedInvisible += 1;
+      this.counts.skippedInvisible += 1;
       return;
     }
-    this.stats.textNodes += 1;
+    this.counts.textNodes += 1;
 
     const tolerance = toleranceFor(this.layout.style(host));
     const clip = clipOverflow(geometry, this.clips.forContent(layoutParent));
@@ -440,7 +391,7 @@ class ScanSession {
 
   private checkInput(input: HTMLInputElement): void {
     if (!TEXT_INPUT_TYPES.has(input.type) || !this.layout.isRendered(input)) return;
-    this.stats.inputs += 1;
+    this.counts.inputs += 1;
 
     const style = this.layout.style(input);
     const contentWidth = input.clientWidth - px(style.paddingLeft) - px(style.paddingRight);
@@ -514,7 +465,7 @@ class ScanSession {
       return rect.width === 0 && rect.height === 0 ? 0 : pastEdge(rect.left, rect.right);
     };
 
-    for (const element of this.elements(this.doc)) {
+    for (const element of this.elements()) {
       yield;
       if (isRootElement(element)) continue;
       const excess = beyond(element);
@@ -628,32 +579,13 @@ class ScanSession {
   }
 }
 
-function defaultClock(doc: Document): () => number {
-  const { performance } = windowOf(doc);
-  return () => performance.now();
-}
-
-/** `scheduler.yield()` resumes ahead of other queued tasks (Chrome 129+; we require 142). */
-function defaultYield(view: Window): () => Promise<void> {
-  return () => view.scheduler.yield();
-}
-
 /**
- * Scans a document synchronously. Use for tests and small documents; the
- * extension uses `scanDocumentAsync` so long scans never block the page.
+ * Scans a document synchronously. Use for tests, small documents, and scoped
+ * checks that must not pause; the extension uses `scanDocumentAsync` for pages.
  */
 export function scanDocument(doc: Document, options: ScanOptions = {}): ScanResult {
   const session = new ScanSession(doc, options);
-  const now = options.now ?? defaultClock(doc);
-  const started = now();
-  const steps = session.steps();
-  while (!steps.next().done) {
-    // Run every step without pausing.
-  }
-  const elapsed = now() - started;
-  session.recordSlice(elapsed);
-  session.stats.wallMs = elapsed;
-  return session.result();
+  return session.result(runToEnd(doc, session.steps(), options));
 }
 
 /**
@@ -665,22 +597,8 @@ export async function scanDocumentAsync(
   options: ScanOptions = {},
 ): Promise<ScanResult> {
   const session = new ScanSession(doc, options);
-  const now = options.now ?? defaultClock(doc);
-  const sliceMs = options.sliceMs ?? 8;
-  const yieldToHost = options.yieldToHost ?? defaultYield(windowOf(doc));
-
-  const steps = session.steps();
-  const started = now();
-  let sliceStart = started;
-  while (!steps.next().done) {
-    if (now() - sliceStart >= sliceMs) {
-      session.recordSlice(now() - sliceStart);
-      await yieldToHost();
-      session.resetLayout();
-      sliceStart = now();
-    }
-  }
-  session.recordSlice(now() - sliceStart);
-  session.stats.wallMs = now() - started;
-  return session.result();
+  const timing = await runInSlices(doc, session.steps(), options, () => {
+    session.resetLayout();
+  });
+  return session.result(timing);
 }

@@ -7,3 +7,4 @@ export { groupFindings, fingerprint, type Issue } from './group/group';
 export { describeElement, type ElementDescription } from './select/describe';
 export { PRESET_KINDS, PRESET_POOLS, getPreset, type PresetKind } from './text/presets';
 export * from './types';
+export * from './stress';
