@@ -185,16 +185,18 @@ Batching: **write all → read all → (restore all)** in one synchronous pass, 
 
 ### 3.3 Issue taxonomy
 
-| Type            | Meaning                                                       | Severity                                        |
-| --------------- | ------------------------------------------------------------- | ----------------------------------------------- |
-| **Hidden**      | Text cut off with no visual cue (clipped by self or ancestor) | Critical                                        |
-| **Page scroll** | Element causes horizontal page scroll                         | Critical                                        |
-| **Truncated**   | Ellipsis or line-clamp hides content (often intentional)      | Warning. User can mark "accepted on this site". |
-| **Spilling**    | Text overflows its box visibly, overlapping neighbors         | Warning                                         |
-| **Input**       | Input value or placeholder doesn't fit                        | Notice                                          |
-| _At risk_ (tag) | Fine now, broken under the current stress strategy            | Inherits type, tagged "with longer text"        |
+Display names are plain descriptions of what goes wrong (changed 2026-11-05 after a first-time-user review; the engine's kinds keep their original ids). Each has a one-line definition in the panel.
 
-Status is always shown as **color + icon + text label**, never color alone.
+| Kind (id)                 | Shown as                 | Meaning                                                                          | Severity                                        |
+| ------------------------- | ------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `hidden`                  | **Cut off**              | The box clips its text with no ellipsis; readers lose part of it without knowing | Critical                                        |
+| `page-scroll`             | **Wider than page**      | The element is wider than the window, so the page scrolls sideways               | Critical                                        |
+| `truncated`               | **Truncated**            | Ellipsis or line-clamp hides the end (often intentional)                         | Warning. User can mark "accepted on this site". |
+| `spilling`                | **Overflows**            | Text runs out of its box and can overlap what's next to it                       | Warning                                         |
+| `input`                   | **Field cut off**        | A placeholder or read-only value is longer than its field                        | Notice                                          |
+| _At risk_ (stress result) | **New with longer text** | Fine now, broken under the current stress strategy                               | Inherits type                                   |
+
+Status is always shown as **icon + color + text label**, never color alone.
 
 ### 3.4 Diagnosis: honest "likely cause"
 
@@ -257,7 +259,7 @@ Output: "✔ `white-space: normal` on `.toolbar .btn` resolves it (element grows
 
 A **string** is the text of one block: `You have <b>3</b> unread messages` is one 26-character string, not four nodes. Growth is sized by the whole string and split across its pieces; pieces without letters (numbers, prices) are never rewritten. Code, `translate="no"`, editable regions and ligature icon fonts are never stressed ([ADR 0007](adr/0007-stress-text-and-revert.md)).
 
-Intensities: **Realistic** (low end of the range) · **Worst case** (high end, the default) · **Extreme** (2× worst case). An **RTL** toggle sets `dir="rtl"` on `<html>` and is reverted exactly.
+Intensities: **Realistic** (low end of the range; the panel's default, because it finds what a translation will actually hit and so what's worth fixing) · **Worst case** (high end; the engine API's default) · **Extreme** (2× worst case). An **RTL** toggle sets `dir="rtl"` on `<html>` and is reverted exactly.
 
 All generation uses a **seeded RNG**, so a scan is reproducible and tests are deterministic.
 

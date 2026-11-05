@@ -139,7 +139,13 @@ narrow (< 520 px)                         wide (≥ 520 px)
 
 ## Writing
 
-- Name things by what users see: "Scan page", "Stress test", "Revert".
+- Name things by what users see: "Scan page", "Stress test", "Revert". Problems
+  are named by what goes wrong ("Cut off", "Overflows", "Wider than page",
+  "Field cut off"), each with a one-line definition on hover and in the detail.
+- No implementation words in the UI: "texts", not "text nodes" or "strings";
+  "window", not "viewport".
+- Every result ends in a next step: the detail leads with "What to do" (a plain
+  instruction, CSS to try and where), before the evidence.
 - Every empty or error state says what happened and offers the next action.
 - Numbers are numerals with the unit: "94 px", "12 places".
 - No exclamation marks, no "All good!". Say what was checked.
