@@ -83,6 +83,38 @@ describe('scanDocument', () => {
     }
   });
 
+  it('counts frames it leaves out', async () => {
+    const { doc, dispose } = await loadFixture(
+      page('<iframe title="Embedded"></iframe><object></object><p>Text</p>'),
+    );
+    try {
+      expect(scanDocument(doc).stats.framesSkipped).toBe(2);
+    } finally {
+      dispose();
+    }
+  });
+
+  it('scans only inside a root element when given one', async () => {
+    const { doc, dispose } = await loadFixture(
+      page(
+        '<div class="clip" id="outside">A label outside that is far too long</div>' +
+          '<section id="scope"><div class="clip" id="inside">A label inside that is far too long</div></section>',
+      ),
+    );
+    try {
+      const scope = doc.getElementById('scope');
+      const inside = doc.getElementById('inside');
+      if (!scope || !inside) throw new Error('missing fixture element');
+      const scoped = scanDocument(doc, { root: scope });
+      expect(scoped.findings.map((finding) => finding.element)).toEqual([inside]);
+      expect(scoped.stats.textNodes).toBe(1);
+      // The root itself is included.
+      expect(scanDocument(doc, { root: inside }).findings).toHaveLength(1);
+    } finally {
+      dispose();
+    }
+  });
+
   it('gives the same findings when scanning in slices', async () => {
     const rows = Array.from({ length: 200 }, (_, index) =>
       index % 3 === 0

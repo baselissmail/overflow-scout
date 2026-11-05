@@ -65,7 +65,7 @@ export interface Finding {
   diagnosis: Diagnosis;
 }
 
-export interface ScanStats {
+export interface ScanStats extends SliceTiming {
   /** Text nodes measured. */
   textNodes: number;
   inputs: number;
@@ -76,12 +76,6 @@ export interface ScanStats {
   shadowRoots: number;
   /** Frames are not scanned in v1 (plan §1.4). */
   framesSkipped: number;
-  /** Time spent working, excluding pauses between slices. */
-  durationMs: number;
-  /** Wall-clock time from start to finish. */
-  wallMs: number;
-  slices: number;
-  longestSliceMs: number;
 }
 
 export interface ScanResult {
@@ -90,15 +84,39 @@ export interface ScanResult {
   viewport: { width: number; height: number };
 }
 
-export interface ScanOptions {
+/** Which parts of the page the engine visits. Shared by scanning and stress testing. */
+export interface TraversalOptions {
   /** Leave out elements (and their subtrees), e.g. the extension's own UI host. */
   ignore?: (element: Element) => boolean;
   /** Opens closed shadow roots; the extension passes `chrome.dom.openOrClosedShadowRoot`. */
   openShadowRoot?: (element: Element) => ShadowRoot | null;
-  /** Work budget per slice for `scanDocumentAsync`, in ms. Default 8. */
+}
+
+/** How long-running work is split into slices so it never blocks the page. */
+export interface SliceOptions {
+  /** Work budget per slice, in ms. Default 8. */
   sliceMs?: number;
   /** Clock, injectable for tests. Defaults to the document's `performance.now`. */
   now?: () => number;
-  /** Yields to the host between slices. Defaults to `scheduler.yield()` or a macrotask. */
+  /** Yields to the host between slices. Defaults to `scheduler.yield()`. */
   yieldToHost?: () => Promise<void>;
+}
+
+/** Time spent on sliced work. */
+export interface SliceTiming {
+  /** Time spent working, excluding pauses between slices. */
+  durationMs: number;
+  /** Wall-clock time from start to finish. */
+  wallMs: number;
+  slices: number;
+  longestSliceMs: number;
+}
+
+export interface ScanOptions extends TraversalOptions, SliceOptions {
+  /**
+   * Only measure text and inputs inside this element (inclusive). Ancestors
+   * still count as clippers, and only elements inside it are reported as
+   * page-scroll culprits. Default: the whole document.
+   */
+  root?: Element;
 }
