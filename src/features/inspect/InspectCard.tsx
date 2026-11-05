@@ -1,23 +1,17 @@
 import { i18n } from '#i18n';
 
 import type { PickedElement } from '@/messaging/protocol';
+import type { Tone } from '@/ui/Chip';
+import { Badge } from '@/ui/Chip';
+import { MeasureBar } from '@/ui/MeasureBar';
 
 type Verdict = NonNullable<PickedElement['breakingPoint']>['verdict'];
 
-const VERDICT: Readonly<Record<Verdict, { label: () => string; className: string }>> = {
-  fits: { label: () => i18n.t('inspect.verdict.fits'), className: 'bg-notice-soft text-notice' },
-  'at-risk': {
-    label: () => i18n.t('inspect.verdict.atRisk'),
-    className: 'bg-warning-soft text-warning',
-  },
-  'will-break': {
-    label: () => i18n.t('inspect.verdict.willBreak'),
-    className: 'bg-critical-soft text-critical',
-  },
-  broken: {
-    label: () => i18n.t('inspect.verdict.broken'),
-    className: 'bg-critical-soft text-critical',
-  },
+const VERDICT: Readonly<Record<Verdict, { label: () => string; tone: Tone }>> = {
+  fits: { label: () => i18n.t('inspect.verdict.fits'), tone: 'ok' },
+  'at-risk': { label: () => i18n.t('inspect.verdict.atRisk'), tone: 'warning' },
+  'will-break': { label: () => i18n.t('inspect.verdict.willBreak'), tone: 'critical' },
+  broken: { label: () => i18n.t('inspect.verdict.broken'), tone: 'critical' },
 };
 
 interface InspectCardProps {
@@ -28,7 +22,10 @@ interface InspectCardProps {
 export function InspectCard({ picking, picked }: InspectCardProps) {
   if (picking) {
     return (
-      <p className="rounded-card border border-line p-3 text-fg-muted" role="status">
+      <p
+        className="animate-enter rounded-card border border-accent bg-accent-soft p-3"
+        role="status"
+      >
         {i18n.t('inspect.hint')}
       </p>
     );
@@ -37,23 +34,43 @@ export function InspectCard({ picking, picked }: InspectCardProps) {
   const point = picked.breakingPoint;
   return (
     <section
-      className="flex flex-col gap-2 rounded-card border border-line p-3"
+      className="flex animate-enter flex-col gap-3 rounded-card border border-line p-3"
       aria-label={i18n.t('inspect.heading')}
     >
-      <p className="truncate font-mono text-small text-fg-muted">{picked.element.label}</p>
-      <p className="line-clamp-2 break-words">{picked.text}</p>
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="font-mono text-small break-all text-fg-muted" translate="no">
+          {picked.element.selector ?? picked.element.label}
+        </p>
+        <p className="line-clamp-2 break-words" title={picked.text}>
+          {picked.text}
+        </p>
+      </div>
       {point ? (
         <>
-          <span
-            className={`self-start rounded-control px-1.5 text-small font-semibold ${VERDICT[point.verdict].className}`}
-          >
-            {VERDICT[point.verdict].label()}
-          </span>
-          <p className="tabular-nums">
-            {point.fitsUpTo === null
-              ? i18n.t('inspect.fitsAll', [String(point.maxTested)])
-              : i18n.t('inspect.fitsUpTo', [String(point.fitsUpTo)])}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={VERDICT[point.verdict].tone}>{VERDICT[point.verdict].label()}</Badge>
+            <span className="tabular-nums">
+              {point.fitsUpTo === null
+                ? i18n.t('inspect.fitsAll', [String(point.maxTested)])
+                : i18n.t('inspect.fitsUpTo', [String(point.fitsUpTo)])}
+            </span>
+          </div>
+          <MeasureBar
+            has={point.fitsUpTo ?? point.maxTested}
+            needs={point.needs.worst}
+            tone={VERDICT[point.verdict].tone}
+            hasLabel={i18n.t('inspect.has', [String(point.fitsUpTo ?? point.maxTested)])}
+            needsLabel={i18n.t('inspect.needsChars', [String(point.needs.worst)])}
+            differenceLabel={
+              (point.fitsUpTo ?? point.maxTested) >= point.needs.worst
+                ? `+${String((point.fitsUpTo ?? point.maxTested) - point.needs.worst)}`
+                : `−${String(point.needs.worst - (point.fitsUpTo ?? 0))}`
+            }
+            description={i18n.t('inspect.measure', [
+              String(point.fitsUpTo ?? point.maxTested),
+              String(point.needs.worst),
+            ])}
+          />
           <p className="text-small text-fg-muted tabular-nums">
             {i18n.t('inspect.needs', [
               String(point.length),

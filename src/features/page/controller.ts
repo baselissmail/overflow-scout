@@ -2,13 +2,14 @@ import type {
   IssueDto,
   PageInfo,
   PickedElement,
+  ProgressPhase,
   ScanResultDto,
   StressOptionsDto,
   StressResultDto,
 } from '@/messaging/protocol';
 
 import type { ConnectionFailure, PageConnection } from './connection';
-import { ConnectionError } from './connection';
+import { ConnectionError, RequestError } from './connection';
 
 export type Busy = 'connect' | 'scan' | 'stress' | 'revert' | 'reapply';
 
@@ -19,6 +20,8 @@ export interface PanelState {
   failure: ConnectionFailure | null;
   page: PageInfo | null;
   busy: Busy | null;
+  /** Live progress of the scan or stress test in progress. */
+  progress: { phase: ProgressPhase; textNodes: number } | null;
   error: string | null;
   scan: ScanResultDto | null;
   stress: StressResultDto | null;
@@ -32,6 +35,8 @@ export interface PanelState {
   stale: boolean;
   picking: boolean;
   picked: PickedElement | null;
+  /** Counts reverts done from the page's own button, so the panel can confirm them. */
+  revertedOnPage: number;
 }
 
 export interface ControllerDeps {
@@ -46,6 +51,7 @@ const INITIAL: PanelState = {
   failure: null,
   page: null,
   busy: null,
+  progress: null,
   error: null,
   scan: null,
   stress: null,
@@ -55,6 +61,7 @@ const INITIAL: PanelState = {
   stale: false,
   picking: false,
   picked: null,
+  revertedOnPage: 0,
 };
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -108,17 +115,21 @@ export class PanelController {
     if (inspect) await this.pick(true);
   }
 
-  async scan(): Promise<void> {
+  async scan(includeInputs = true): Promise<void> {
     await this.run('scan', async (connection) => {
-      const scan = await connection.request('scan', {});
+      const scan = await connection.request('scan', { includeInputs });
       this.set({ scan, showing: 'scan', stale: false, picked: null });
       this.badge(scan.issues);
     });
   }
 
-  async stress(options: StressOptionsDto): Promise<void> {
+  async stress(
+    options: StressOptionsDto,
+    scope: 'page' | 'picked' = 'page',
+    includeInputs = true,
+  ): Promise<void> {
     await this.run('stress', async (connection) => {
-      const stress = await connection.request('stress', { options });
+      const stress = await connection.request('stress', { options, scope, includeInputs });
       this.set({
         stress,
         showing: 'stress',
@@ -150,6 +161,21 @@ export class PanelController {
       await connection.request('pick', { active });
       this.set({ picking: active, ...(active && { picked: null }) });
     });
+  }
+
+  /** Stops the scan or stress test in progress. */
+  cancel(): void {
+    this.connection?.request('cancel', {}).catch(() => undefined);
+  }
+
+  /** The unique selector of a finding (only the first instance of an issue carries one). */
+  async selector(findingId: string): Promise<string | null> {
+    try {
+      const connection = await this.ensureConnection();
+      return await connection.request('selector', { findingId });
+    } catch {
+      return null;
+    }
   }
 
   /** Highlights a finding on the page; quiet if the page isn't connected. */
@@ -193,11 +219,12 @@ export class PanelController {
       await work(connection);
     } catch (error) {
       // The tab may have changed while we waited; its state is gone already.
-      if (tabId === this.state.tabId && !(error instanceof ConnectionError)) {
+      const cancelled = error instanceof RequestError && error.code === 'cancelled';
+      if (tabId === this.state.tabId && !cancelled && !(error instanceof ConnectionError)) {
         this.set({ error: message(error) });
       }
     } finally {
-      if (busy && tabId === this.state.tabId) this.set({ busy: null });
+      if (busy && tabId === this.state.tabId) this.set({ busy: null, progress: null });
     }
   }
 
@@ -245,11 +272,19 @@ export class PanelController {
     connection.onEvent((event) => {
       if (connection !== this.connection) return;
       switch (event.type) {
+        case 'progress':
+          if (this.state.busy)
+            this.set({ progress: { phase: event.phase, textNodes: event.textNodes } });
+          break;
         case 'pending':
           this.set({ pending: event.count });
           break;
         case 'reverted':
-          this.set({ stressActive: false, pending: 0 });
+          this.set({
+            stressActive: false,
+            pending: 0,
+            revertedOnPage: this.state.revertedOnPage + 1,
+          });
           break;
         case 'picked':
           this.set({ picking: false, picked: event.picked });

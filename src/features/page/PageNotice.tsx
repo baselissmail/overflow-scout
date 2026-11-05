@@ -1,107 +1,149 @@
 import { i18n } from '#i18n';
-import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { browser } from 'wxt/browser';
 
-import type { PanelController, PanelState } from './controller';
+import { Button } from '@/ui/Button';
+import { cx } from '@/ui/cx';
 
-const noticeClass = 'flex flex-col gap-2 rounded-card border p-3';
+import type { PanelController, PanelState } from './controller';
+import { useOpenShortcut } from './use-open-shortcut';
 
 interface PageNoticeProps {
   state: PanelState;
   controller: PanelController;
+  onDemo: () => void;
+  onScan: () => void;
+  onAccessGranted: (origin: string) => void;
 }
 
-/** Explains why the panel can't work on a page, with the one action that helps (plan §5.4). */
-export function PageNotice({ state, controller }: PageNoticeProps) {
+function Notice({
+  tone,
+  message,
+  action,
+}: {
+  tone: 'neutral' | 'critical';
+  message: string;
+  action?: ReactNode;
+}) {
+  return (
+    <section
+      role={tone === 'critical' ? 'alert' : 'status'}
+      className={cx(
+        'flex animate-enter flex-col items-start gap-2 rounded-card border p-3',
+        tone === 'critical' ? 'border-critical bg-critical-soft' : 'border-line bg-surface',
+      )}
+    >
+      <p>{message}</p>
+      {action}
+    </section>
+  );
+}
+
+/** Every dead end explains itself and offers the one action that helps (plan §5.4). */
+export function PageNotice({
+  state,
+  controller,
+  onDemo,
+  onScan,
+  onAccessGranted,
+}: PageNoticeProps) {
+  const shortcut = useOpenShortcut();
   const { failure } = state;
 
   if (state.connection === 'unavailable' && failure) {
     switch (failure.reason) {
       case 'restricted':
         return (
-          <section className={`${noticeClass} border-line bg-surface`} role="status">
-            <p>{i18n.t('page.restricted')}</p>
-          </section>
+          <Notice
+            tone="neutral"
+            message={i18n.t('page.restricted')}
+            action={
+              <Button size="sm" onClick={onDemo}>
+                {i18n.t('actions.openDemo')}
+              </Button>
+            }
+          />
         );
       case 'file-access':
+        return <Notice tone="neutral" message={i18n.t('page.fileAccess')} />;
+      case 'no-access': {
+        const { origin } = failure;
         return (
-          <section className={`${noticeClass} border-line bg-surface`} role="status">
-            <p>{i18n.t('page.fileAccess')}</p>
-          </section>
+          <Notice
+            tone="neutral"
+            message={
+              shortcut ? i18n.t('page.noAccessShortcut', [shortcut]) : i18n.t('page.noAccess')
+            }
+            // Chrome reveals the URL only in some errors; otherwise it's offered once connected.
+            action={
+              origin && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    // Must run inside the click: Chrome only prompts during a user gesture.
+                    void browser.permissions
+                      .request({ origins: [`${origin}/*`] })
+                      .then((granted) => {
+                        if (!granted) return;
+                        onAccessGranted(new URL(origin).host);
+                        onScan();
+                      });
+                  }}
+                >
+                  {i18n.t('actions.alwaysAllow')}
+                </Button>
+              )
+            }
+          />
         );
-      case 'no-access':
-        return <NoAccess origin={failure.origin} controller={controller} />;
+      }
       case 'error':
         return (
-          <section className={`${noticeClass} border-critical bg-critical-soft`} role="alert">
-            <p>{i18n.t('page.error', [failure.message])}</p>
-          </section>
+          <Notice
+            tone="critical"
+            message={i18n.t('page.error', [failure.message])}
+            action={
+              <Button size="sm" onClick={onScan}>
+                {i18n.t('actions.retry')}
+              </Button>
+            }
+          />
         );
     }
   }
 
   if (state.error) {
     return (
-      <section className={`${noticeClass} border-critical bg-critical-soft`} role="alert">
-        <p>{i18n.t('page.error', [state.error])}</p>
-        <button
-          type="button"
-          className="self-start rounded-control border border-line bg-canvas px-2 py-1 font-medium"
-          onClick={() => {
-            controller.dismissError();
-          }}
-        >
-          {i18n.t('actions.retry')}
-        </button>
-      </section>
+      <Notice
+        tone="critical"
+        message={i18n.t('page.error', [state.error])}
+        action={
+          <Button
+            size="sm"
+            onClick={() => {
+              controller.dismissError();
+            }}
+          >
+            {i18n.t('actions.close')}
+          </Button>
+        }
+      />
     );
   }
 
-  if (state.stale) {
+  if (state.stale && state.busy === null) {
     return (
-      <section className={`${noticeClass} border-line bg-surface`} role="status">
-        <p>{i18n.t('page.stale')}</p>
-      </section>
+      <Notice
+        tone="neutral"
+        message={i18n.t('page.stale')}
+        action={
+          <Button size="sm" onClick={onScan}>
+            {i18n.t('actions.scanAgain')}
+          </Button>
+        }
+      />
     );
   }
 
   return null;
-}
-
-/** The keyboard shortcut that opens the panel, as the user has it set (or none). */
-function useOpenShortcut(): string | null {
-  const [shortcut, setShortcut] = useState<string | null>(null);
-  useEffect(() => {
-    void browser.commands.getAll().then((commands) => {
-      const open = commands.find((command) => command.name === '_execute_action');
-      // An unset shortcut is reported as an empty string.
-      const value = open?.shortcut;
-      setShortcut(value === undefined || value === '' ? null : value);
-    });
-  }, []);
-  return shortcut;
-}
-
-function NoAccess({ origin, controller }: { origin: string | null; controller: PanelController }) {
-  const shortcut = useOpenShortcut();
-  return (
-    <section className={`${noticeClass} border-line bg-surface`} role="status">
-      <p>{shortcut ? i18n.t('page.noAccessShortcut', [shortcut]) : i18n.t('page.noAccess')}</p>
-      {/* Chrome reveals the URL only in some errors; otherwise it's offered once connected. */}
-      {origin && (
-        <button
-          type="button"
-          className="self-start rounded-control border border-line bg-canvas px-2 py-1 font-medium"
-          onClick={() => {
-            // Must run inside the click: Chrome only prompts during a user gesture.
-            void browser.permissions.request({ origins: [`${origin}/*`] }).then(async (granted) => {
-              if (granted) await controller.scan();
-            });
-          }}
-        >
-          {i18n.t('actions.alwaysAllow')}
-        </button>
-      )}
-    </section>
-  );
 }

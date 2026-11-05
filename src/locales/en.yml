@@ -9,33 +9,55 @@ overlay:
   stressActive: Stress test active
   revert: Revert
 
-# Side panel
+# Side panel. Sentence case, plain verbs; see docs/design/DIRECTION.md.
 tagline: Find text that gets cut off, before your users do.
 actions:
   scan: Scan page
   scanAgain: Scan again
   stress: Stress test
-  stressAgain: Run again
   inspect: Inspect element
   stopInspecting: Stop inspecting
   demo: Try the demo page
+  openDemo: Open the demo page
   revert: Revert
   reapply: Re-apply
   alwaysAllow: Always allow on this site
   retry: Try again
+  cancel: Cancel
+  back: Back to results
+  jump: Show on page
+  copySelector: Copy selector
+  copied: Copied
+  settings: Settings
+  shortcuts: Keyboard shortcuts
+  close: Close
+  runStress: Run a stress test
+  previous: Previous place
+  next: Next place
+home:
+  scan: Find text that is cut off, truncated or spilling right now.
+  stress: Lengthen every string to translation length and see what breaks.
+  inspect: Pick an element and see how much text fits in it.
+  shortcut: Open this panel with $1.
 busy:
   connecting: Connecting to the page…
   scanning: Scanning…
-  stressing: Stress testing…
+  baseline: Measuring the page…
+  apply: Lengthening text…
+  stressed: Measuring with longer text…
   reverting: Reverting…
+  textNodes:
+    1: 1 text node
+    n: $1 text nodes
 page:
   restricted: Chrome doesn't allow extensions on this page.
   noAccess: Click the Overflow Scout button in the toolbar to work on this page.
   noAccessShortcut: Click the Overflow Scout button in the toolbar, or press $1, to work on this page.
-  alwaysAllowed: Always allowed on this site
   fileAccess: To scan local files, turn on “Allow access to file URLs” for Overflow Scout on the Extensions page.
   error: 'Couldn’t reach the page: $1'
   stale: Results are from the previous page.
+  alwaysAllowed: Always allowed on this site
+  accessGranted: Overflow Scout can now work on $1 without a click.
   reset:
     1: 1 string was reset by the page.
     n: $1 strings were reset by the page.
@@ -46,23 +68,64 @@ results:
   none: No overflow in $1 text nodes at $2.
   noneNow: Nothing was broken before the stress test.
   noneAtRisk: Nothing else breaks with longer text.
+  noMatches: No results match these filters.
+  selectHint: Choose a result to see how much text doesn’t fit, and why.
   footer: $1 text nodes · $2 ms · $3
   footerStress: $1 text nodes · $2 ms
   places:
     1: 1 place
     n: $1 places
+  filters: Filter by kind
+  search: Search results
+  searchPlaceholder: Search results…
+  sort: Sort results
+  sortSeverity: Severity
+  sortPage: Page order
+  coverage: What was checked
+  coverageTextNodes: Text nodes measured
+  coverageInputs: Inputs checked
+  coverageInvisible: Hidden text skipped
+  coverageForeign: SVG and MathML text skipped
+  coverageShadowRoots: Shadow roots
+  coverageFrames: Frames not scanned
+  coverageTime: Time
+  coverageViewport: Viewport
 kind:
   hidden: Hidden
   pageScroll: Page scroll
   truncated: Truncated
   spilling: Spilling
   input: Input
+severity:
+  critical: Critical
+  warning: Warning
+  notice: Notice
+detail:
+  place: Place $1 of $2
+  has: has $1
+  needs: needs $1
+  short: −$1
+  measure: Needs $1, has $2, $3 short.
+  measureY: Needs $1 of height, has $2, $3 short.
+  text: Text
+  before: Before
+  after: With longer text
+  cause: Likely cause
+  confidenceHigh: High confidence
+  confidenceMedium: Medium confidence
+  noCause: No single CSS property explains this.
+  selector: Selector
+  growth: Text $1× longer
 stress:
   heading: Stress test
   strategy: Strategy
   intensity: Intensity
   language: Language
   rtl: Right-to-left layout
+  rtlDescription: Sets the page direction to right-to-left while stress text is on.
+  scope: Scope
+  scopePage: Whole page
+  scopePicked: Picked element
   apply: Apply and scan
   active: Stress text is on the page. Revert to restore it exactly.
   growth: $1 strings, $2× longer
@@ -71,6 +134,11 @@ strategy:
   pseudo: Pseudo-locale
   longWords: Long words
   language: Language samples
+strategyDescription:
+  translation: Adds accented copies of each string’s words, up to the length a translation needs.
+  pseudo: Accents every letter and brackets each string. A missing ] means the end was cut off.
+  longWords: Adds a long word, URL or email address that can’t wrap.
+  language: Replaces text with real text in another language and script.
 intensity:
   realistic: Realistic
   worst: Worst case
@@ -89,8 +157,47 @@ inspect:
   fitsUpTo: Fits up to $1 characters.
   fitsAll: Still fits at $1 characters.
   needs: Now $1 characters; a translation needs about $2–$3.
+  has: fits $1
+  needsChars: needs $1
+  measure: Fits up to $1 characters; a translation needs about $2.
   verdict:
     fits: Room for translation
     atRisk: May break in translation
     willBreak: Will break in translation
     broken: Already broken
+settings:
+  heading: Settings
+  appearance: Appearance
+  theme: Theme
+  themeSystem: System
+  themeLight: Light
+  themeDark: Dark
+  defaults: Stress test defaults
+  scanning: Scanning
+  includeInputs: Check inputs
+  includeInputsDescription: Placeholders and read-only values that don’t fit.
+  sites: Site access
+  sitesDescription: Sites where Overflow Scout works without a click.
+  sitesNone: None yet. Use “Always allow on this site” while scanning a page.
+  remove: Remove
+  removeSite: Remove access to $1
+  shortcut: Keyboard shortcut
+  shortcutCurrent: Opens the panel with $1.
+  shortcutNone: No shortcut is set.
+  changeShortcut: Change shortcut
+  about: About
+  version: Version $1
+  privacy: Everything runs in your browser. Overflow Scout collects no data and makes no network requests.
+  credit: Made by Basel Issmail. Open source under the MIT license.
+shortcuts:
+  heading: Keyboard shortcuts
+  next: Next result
+  previous: Previous result
+  open: Open the selected result
+  close: Close details or stop the picker
+  search: Search results
+  help: Show keyboard shortcuts
+  panel: Open this panel
+toast:
+  label: Notifications
+  revertedOnPage: Stress text was reverted from the page.
