@@ -33,6 +33,8 @@ actions:
   copyCss: Copy CSS
   copyReport: Copy report
   copyScreenshot: Copy screenshot
+  ignore: Ignore on this site
+  unignore: Stop ignoring
   preview: Preview on page
   previewAll: Preview them together
   stopPreview: Stop preview
@@ -101,6 +103,11 @@ results:
       n: $1 notices
   filterLabel: Filter
   clearFilters: Clear filters
+  ignoredLabel: Ignored
+  showIgnored:
+    1: Show 1 ignored
+    n: Show $1 ignored
+  hideIgnored: Hide ignored
   selectHint: Choose a result to see how much text doesn’t fit, and why.
   footer: $1 texts checked · $2 ms · window $3
   footerStress: $1 texts checked · $2 ms
@@ -268,6 +275,12 @@ settings:
   scanning: Scanning
   includeInputs: Check fields
   includeInputsDescription: Placeholders and read-only values that don’t fit.
+  ignored: Ignored results
+  ignoredDescription: Results you chose to ignore, per site. They stay out of the list, the badge and reports.
+  ignoredNone: None yet. Use “Ignore on this site” in a result’s details.
+  unignore: Stop ignoring $1
+  localFiles: Local files
+  demoPage: Demo page
   sites: Site access
   sitesDescription: Sites where Overflow Scout works without a click.
   sitesNone: None yet. Use “Always allow on this site” while scanning a page.

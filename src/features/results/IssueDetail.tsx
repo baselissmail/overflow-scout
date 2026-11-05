@@ -6,6 +6,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCopy,
+  Eye,
+  EyeOff,
   LocateFixed,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -51,6 +53,10 @@ export interface IssueDetailProps {
   report: ReportContext | null;
   /** A PNG of the finding on the page, cropped to it. */
   onScreenshot: (findingId: string) => Promise<Blob>;
+  /** Ignored on this site; ignoring needs a site (null on pages without one). */
+  ignored: boolean;
+  onIgnore: (() => void) | null;
+  onUnignore: () => void;
 }
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
@@ -66,6 +72,9 @@ export function IssueDetail({
   onPreview,
   report,
   onScreenshot,
+  ignored,
+  onIgnore,
+  onUnignore,
 }: IssueDetailProps) {
   const [copied, markCopied] = useCopied();
   const [shotCopied, markShotCopied] = useCopied();
@@ -200,78 +209,100 @@ export function IssueDetail({
           differenceLabel={i18n.t('detail.short', [formatPx(short)])}
           description={measurementSentence(measured)}
         />
-        <Button
-          variant="primary"
-          size="sm"
-          className="self-start"
-          icon={<LocateFixed size={14} strokeWidth={1.5} />}
-          onClick={() => {
-            onReveal(finding.id);
-          }}
-        >
-          {i18n.t('actions.jump')}
-        </Button>
-        {report && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<LocateFixed size={14} strokeWidth={1.5} />}
+            onClick={() => {
+              onReveal(finding.id);
+            }}
+          >
+            {i18n.t('actions.jump')}
+          </Button>
+          {report && (
+            <Button
+              size="sm"
+              icon={
+                copied ? (
+                  <Check size={14} strokeWidth={1.5} className="text-ok" />
+                ) : (
+                  <ClipboardCopy size={14} strokeWidth={1.5} />
+                )
+              }
+              onClick={() => {
+                const markdown = issueMarkdown(
+                  issue,
+                  { finding, cut, selector, fixes: fixes ?? null },
+                  report,
+                );
+                void navigator.clipboard.writeText(markdown).then(markCopied);
+              }}
+            >
+              {copied ? i18n.t('actions.copied') : i18n.t('actions.copyReport')}
+            </Button>
+          )}
           <Button
             size="sm"
+            disabled={shooting}
             icon={
-              copied ? (
+              shotCopied ? (
                 <Check size={14} strokeWidth={1.5} className="text-ok" />
               ) : (
-                <ClipboardCopy size={14} strokeWidth={1.5} />
+                <Camera size={14} strokeWidth={1.5} />
               )
             }
             onClick={() => {
-              const markdown = issueMarkdown(
-                issue,
-                { finding, cut, selector, fixes: fixes ?? null },
-                report,
-              );
-              void navigator.clipboard.writeText(markdown).then(markCopied);
+              setShooting(true);
+              const image = onScreenshot(finding.id);
+              // The clipboard gets the promise at once, so the click still counts as the gesture.
+              navigator.clipboard
+                .write([new ClipboardItem({ 'image/png': image })])
+                .then(markShotCopied, async () => {
+                  // No clipboard (or the capture failed): save the file instead, or say why not.
+                  const name = `${screenshotName(report?.url ?? '', finding.element.label)}.png`;
+                  const blob = await image;
+                  downloadBlob(name, blob);
+                  toast(i18n.t('detail.screenshotSaved'));
+                })
+                .catch((error: unknown) => {
+                  toast(
+                    error instanceof CaptureNotAllowed
+                      ? i18n.t('detail.screenshotNeedsClick')
+                      : i18n.t('detail.screenshotFailed', [
+                          error instanceof Error ? error.message : String(error),
+                        ]),
+                  );
+                })
+                .finally(() => {
+                  setShooting(false);
+                });
             }}
           >
-            {copied ? i18n.t('actions.copied') : i18n.t('actions.copyReport')}
+            {shotCopied ? i18n.t('actions.copied') : i18n.t('actions.copyScreenshot')}
           </Button>
-        )}
-        <Button
-          size="sm"
-          disabled={shooting}
-          icon={
-            shotCopied ? (
-              <Check size={14} strokeWidth={1.5} className="text-ok" />
-            ) : (
-              <Camera size={14} strokeWidth={1.5} />
+          {ignored ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<Eye size={14} strokeWidth={1.5} />}
+              onClick={onUnignore}
+            >
+              {i18n.t('actions.unignore')}
+            </Button>
+          ) : (
+            onIgnore && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<EyeOff size={14} strokeWidth={1.5} />}
+                onClick={onIgnore}
+              >
+                {i18n.t('actions.ignore')}
+              </Button>
             )
-          }
-          onClick={() => {
-            setShooting(true);
-            const image = onScreenshot(finding.id);
-            // The clipboard gets the promise at once, so the click still counts as the gesture.
-            navigator.clipboard
-              .write([new ClipboardItem({ 'image/png': image })])
-              .then(markShotCopied, async () => {
-                // No clipboard (or the capture failed): save the file instead, or say why not.
-                const name = `${screenshotName(report?.url ?? '', finding.element.label)}.png`;
-                const blob = await image;
-                downloadBlob(name, blob);
-                toast(i18n.t('detail.screenshotSaved'));
-              })
-              .catch((error: unknown) => {
-                toast(
-                  error instanceof CaptureNotAllowed
-                    ? i18n.t('detail.screenshotNeedsClick')
-                    : i18n.t('detail.screenshotFailed', [
-                        error instanceof Error ? error.message : String(error),
-                      ]),
-                );
-              })
-              .finally(() => {
-                setShooting(false);
-              });
-          }}
-        >
-          {shotCopied ? i18n.t('actions.copied') : i18n.t('actions.copyScreenshot')}
-        </Button>
+          )}
+        </div>
       </section>
 
       {/* The next step comes first; the evidence follows. */}

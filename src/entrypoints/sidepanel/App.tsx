@@ -31,12 +31,14 @@ import { SiteAccess } from '@/features/page/SiteAccess';
 import { usePanel } from '@/features/page/use-panel';
 import { downloadText, exportResults } from '@/features/report/export';
 import { ResultsView } from '@/features/results/ResultsView';
+import { ignoredOn, useIgnoreRules } from '@/features/results/use-ignore';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { applyTheme, useSettings } from '@/features/settings/use-settings';
 import { ShortcutsDialog } from '@/features/shortcuts/ShortcutsDialog';
 import { StressBar } from '@/features/stress/StressBar';
 import type { StressScope } from '@/features/stress/StressControls';
 import { StressControls } from '@/features/stress/StressControls';
+import { siteOf } from '@/storage/ignore';
 import { BrandMark } from '@/ui/BrandMark';
 import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
@@ -59,6 +61,12 @@ function isTyping(target: EventTarget | null): boolean {
 export function App() {
   const { state, controller } = usePanel();
   const [settings, updateSettings] = useSettings();
+  const ignore = useIgnoreRules();
+  const ignoredIds = ignoredOn(ignore.rules, state.page ? siteOf(state.page.url) : null);
+  useEffect(() => {
+    // The toolbar badge counts what the panel shows: ignored issues are left out.
+    controller.setIgnored(ignoredIds);
+  }, [controller, ignoredIds]);
   const [view, setView] = useState<'main' | 'settings'>('main');
   const [stressOpen, setStressOpen] = useState(false);
   const [scope, setScope] = useState<StressScope>('page');
@@ -210,7 +218,7 @@ export function App() {
         icon: <ClipboardCopy {...ICON} />,
         keywords: 'export markdown github jira bug',
         run: () => {
-          const exported = exportResults(state);
+          const exported = exportResults(state, ignoredIds);
           if (!exported) return;
           void navigator.clipboard.writeText(exported.markdown).then(() => {
             toast(i18n.t('report.copied'));
@@ -224,7 +232,7 @@ export function App() {
         icon: <FileJson {...ICON} />,
         keywords: 'export download data',
         run: () => {
-          const exported = exportResults(state);
+          const exported = exportResults(state, ignoredIds);
           if (exported) downloadText(exported.jsonName, exported.json, 'application/json');
         },
       },
@@ -299,6 +307,7 @@ export function App() {
         <SettingsView
           settings={settings}
           onSettings={updateSettings}
+          ignore={ignore}
           onBack={() => {
             setView('main');
           }}
@@ -444,6 +453,7 @@ export function App() {
           <ResultsView
             state={state}
             controller={controller}
+            ignore={ignore}
             wide={wide}
             searchRef={searchRef}
             onRunStress={() => {

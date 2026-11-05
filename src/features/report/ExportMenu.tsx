@@ -12,7 +12,14 @@ import { downloadText, exportResults } from './export';
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
 
 /** Copy or save every result: Markdown for bug trackers, JSON for scripts. */
-export function ExportMenu({ state }: { state: PanelState }) {
+export function ExportMenu({
+  state,
+  ignored,
+}: {
+  state: PanelState;
+  /** Issues ignored on this site, left out of the export. */
+  ignored: ReadonlySet<string>;
+}) {
   const toast = useToast();
   return (
     <Popover
@@ -25,7 +32,7 @@ export function ExportMenu({ state }: { state: PanelState }) {
           variant="primary"
           icon={<ClipboardCopy {...ICON} />}
           onClick={() => {
-            const exported = exportResults(state);
+            const exported = exportResults(state, ignored);
             if (!exported) return;
             void navigator.clipboard.writeText(exported.markdown).then(() => {
               toast(i18n.t('report.copied'));
@@ -37,7 +44,7 @@ export function ExportMenu({ state }: { state: PanelState }) {
         <Button
           icon={<FileDown {...ICON} />}
           onClick={() => {
-            const exported = exportResults(state);
+            const exported = exportResults(state, ignored);
             if (exported) downloadText(exported.markdownName, exported.markdown, 'text/markdown');
           }}
         >
@@ -46,7 +53,7 @@ export function ExportMenu({ state }: { state: PanelState }) {
         <Button
           icon={<FileJson {...ICON} />}
           onClick={() => {
-            const exported = exportResults(state);
+            const exported = exportResults(state, ignored);
             if (exported) downloadText(exported.jsonName, exported.json, 'application/json');
           }}
         >

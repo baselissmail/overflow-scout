@@ -9,7 +9,13 @@
  */
 import * as z from 'zod/mini';
 
-import { FIX_KEYS, SAMPLE_LANGUAGES, STRESS_INTENSITIES, STRESS_STRATEGIES } from '@/core';
+import {
+  FINDING_KINDS,
+  FIX_KEYS,
+  SAMPLE_LANGUAGES,
+  STRESS_INTENSITIES,
+  STRESS_STRATEGIES,
+} from '@/core';
 
 /** Name of the panel ↔ page port. */
 export const PAGE_PORT = 'overflow-scout/page';
@@ -20,13 +26,7 @@ const px = z.number();
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
-export const findingKindSchema = z.enum([
-  'hidden',
-  'page-scroll',
-  'truncated',
-  'spilling',
-  'input',
-]);
+export const findingKindSchema = z.enum(FINDING_KINDS);
 export const severitySchema = z.enum(['critical', 'warning', 'notice']);
 const mechanismSchema = z.enum([
   'clip',

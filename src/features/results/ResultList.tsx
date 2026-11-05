@@ -19,6 +19,8 @@ export interface ResultListProps {
   onSelect: (issue: IssueDto) => void;
   onOpen: (issue: IssueDto) => void;
   onHighlight: (findingId: string | null) => void;
+  /** Issues ignored on this site, shown only when asked for, and marked. */
+  ignored: ReadonlySet<string>;
 }
 
 const rowId = (issue: IssueDto) => `result-${issue.id}`;
@@ -28,10 +30,12 @@ function ResultRow({
   issue,
   selected,
   viewportWidth,
+  ignored,
 }: {
   issue: IssueDto;
   selected: boolean;
   viewportWidth: number;
+  ignored: boolean;
 }) {
   const [first] = issue.instances;
   if (!first) return null;
@@ -81,6 +85,9 @@ function ResultRow({
             {i18n.t('results.places', places, [formatCount(places)])}
           </span>
         )}
+        {ignored && (
+          <span className="text-small text-fg-muted">{i18n.t('results.ignoredLabel')}</span>
+        )}
       </span>
       {body}
       <span
@@ -110,6 +117,7 @@ export function ResultList({
   onSelect,
   onOpen,
   onHighlight,
+  ignored,
 }: ResultListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   // TanStack Virtual returns fresh functions each render, so the React Compiler
@@ -231,6 +239,7 @@ export function ResultList({
                   issue={issue}
                   selected={issue.id === selectedId}
                   viewportWidth={viewportWidth}
+                  ignored={ignored.has(issue.id)}
                 />
               </div>
             </div>

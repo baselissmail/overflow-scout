@@ -91,6 +91,10 @@ export class PanelController {
   private connection: PageConnection | null = null;
   private connecting: Promise<PageConnection> | null = null;
 
+  /** The issues the badge counts, so it can be redone when ignore rules change. */
+  private badged: readonly IssueDto[] | null = null;
+  private ignored: ReadonlySet<string> = new Set();
+
   constructor(private readonly deps: ControllerDeps) {}
 
   getState = (): PanelState => this.state;
@@ -279,7 +283,22 @@ export class PanelController {
   }
 
   private badge(issues: readonly IssueDto[]): void {
-    if (this.state.tabId !== null) this.deps.setBadge(this.state.tabId, issues);
+    this.badged = issues;
+    if (this.state.tabId === null) return;
+    this.deps.setBadge(
+      this.state.tabId,
+      issues.filter((issue) => !this.ignored.has(issue.id)),
+    );
+  }
+
+  /**
+   * Issues ignored on the current site (by fingerprint). The toolbar badge
+   * leaves them out; the panel decides whether to show them.
+   */
+  setIgnored(ids: ReadonlySet<string>): void {
+    if (ids.size === this.ignored.size && [...ids].every((id) => this.ignored.has(id))) return;
+    this.ignored = ids;
+    if (this.badged) this.badge(this.badged);
   }
 
   private async run(

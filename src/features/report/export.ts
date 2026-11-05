@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 
 import type { PanelState } from '@/features/page/controller';
+import type { IssueDto, ScanResultDto, StressResultDto } from '@/messaging/protocol';
 
 import { browserName, exportFileName, resultsJson } from './json';
 import type { ReportContext } from './markdown';
@@ -21,11 +22,26 @@ export function reportContext(state: PanelState): ReportContext | null {
   };
 }
 
-/** The results on screen as Markdown and JSON, with file names for saving them. */
-export function exportResults(state: PanelState, now = new Date()) {
+/** The results without the issues ignored on this site. */
+function withoutIgnored<T extends ScanResultDto | StressResultDto>(
+  results: T,
+  ignored: ReadonlySet<string>,
+): T {
+  const keep = (issues: readonly IssueDto[]) => issues.filter((issue) => !ignored.has(issue.id));
+  return 'issues' in results
+    ? { ...results, issues: keep(results.issues) }
+    : { ...results, atRisk: keep(results.atRisk), brokenNow: keep(results.brokenNow) };
+}
+
+/**
+ * The results on screen as Markdown and JSON, with file names for saving
+ * them. Issues ignored on this site are left out.
+ */
+export function exportResults(state: PanelState, ignored: ReadonlySet<string>, now = new Date()) {
   const context = reportContext(state);
-  const results = state.showing === 'stress' ? state.stress : state.scan;
-  if (!context || !results) return null;
+  const shown = state.showing === 'stress' ? state.stress : state.scan;
+  if (!context || !shown) return null;
+  const results = withoutIgnored(shown, ignored);
   return {
     markdown: resultsMarkdown(results, context),
     markdownName: exportFileName(context.url, now, 'md'),

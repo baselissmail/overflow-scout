@@ -168,6 +168,43 @@ test.describe('demo page', () => {
     expect(data.issues.length).toBeGreaterThan(3);
   });
 
+  test('ignores an issue on this site until it is shown again', async ({
+    extensionId,
+    openTab,
+    openPanel,
+  }) => {
+    const { page: demo, tabId } = await openTab(`chrome-extension://${extensionId}/demo.html`);
+    await demo.setViewportSize({ width: 800, height: 900 });
+    const panel = await openPanel(tabId);
+    const jacket = rows(panel).filter({ hasText: 'Waterproof hiking jacket' });
+
+    await scan(panel);
+    await expect(jacket).toBeVisible();
+    const total = await rows(panel).count();
+    await jacket.click();
+    await panel.getByRole('button', { name: 'Ignore on this site' }).click();
+    await expect(jacket).toHaveCount(0);
+    await expect(rows(panel)).toHaveCount(total - 1);
+
+    // It stays ignored across scans: the rule matches the issue's fingerprint.
+    await scan(panel);
+    await expect(rows(panel)).toHaveCount(total - 1);
+    await panel.getByRole('button', { name: 'Show 1 ignored' }).click();
+    await expect(jacket).toContainText('Ignored');
+    await jacket.click();
+    await panel.getByRole('button', { name: 'Stop ignoring' }).click();
+    await expect(panel.getByRole('button', { name: /ignored/i })).toHaveCount(0);
+    await expect(jacket).not.toContainText('Ignored');
+
+    // Ignored results are listed in Settings, by site, to undo later.
+    await panel.getByRole('button', { name: 'Ignore on this site' }).click();
+    await panel.getByRole('button', { name: 'Settings' }).click();
+    const group = panel.getByRole('region', { name: 'Ignored results' });
+    await expect(group).toContainText('Cut off · Demo page');
+    await group.getByRole('button', { name: /^Stop ignoring/ }).click();
+    await expect(group).toContainText('None yet.');
+  });
+
   test('stress-tests the page and reverts it exactly', async ({
     extensionId,
     openTab,

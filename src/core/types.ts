@@ -3,8 +3,10 @@
  * the extension runtime turns them into serializable DTOs before messaging.
  */
 
-/** What kind of overflow problem a finding describes (plan §3.3). */
-export type FindingKind = 'hidden' | 'page-scroll' | 'truncated' | 'spilling' | 'input';
+/** What kinds of overflow problem a finding can describe (plan §3.3). */
+export const FINDING_KINDS = ['hidden', 'page-scroll', 'truncated', 'spilling', 'input'] as const;
+
+export type FindingKind = (typeof FINDING_KINDS)[number];
 
 export type Severity = 'critical' | 'warning' | 'notice';
 
