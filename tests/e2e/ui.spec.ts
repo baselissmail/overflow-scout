@@ -32,7 +32,8 @@ async function scan(panel: Page): Promise<void> {
 }
 
 /** The states every check walks through, in order. */
-const STATES: readonly { name: string; enter: (panel: Page) => Promise<void> }[] = [
+/** The states every check walks through, in order; `demo` is the page the panel works on. */
+const STATES: readonly { name: string; enter: (panel: Page, demo: Page) => Promise<void> }[] = [
   { name: 'home', enter: () => Promise.resolve() },
   { name: 'results', enter: scan },
   {
@@ -51,7 +52,7 @@ const STATES: readonly { name: string; enter: (panel: Page) => Promise<void> }[]
     name: 'stress',
     enter: async (panel) => {
       await panel.keyboard.press('Escape');
-      await panel.getByRole('button', { name: /^Stress test/ }).click();
+      await panel.getByRole('button', { name: /^(Test with longer text|Longer text)/ }).click();
       await panel.getByRole('button', { name: 'Apply and scan' }).click();
       await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
     },
@@ -79,6 +80,20 @@ const STATES: readonly { name: string; enter: (panel: Page) => Promise<void> }[]
       await expect(panel.getByRole('dialog', { name: 'Commands' })).toBeVisible();
     },
   },
+  {
+    name: 'measure',
+    enter: async (panel, demo) => {
+      await panel.keyboard.press('Escape');
+      await panel.getByRole('button', { name: /^(Measure an element|Measure)$/ }).click();
+      // The page is a background tab here, so it's clicked by position (no frames to wait for).
+      const box = await demo.locator('article.card button.buy').first().boundingBox();
+      if (!box) throw new Error('The demo button has no box');
+      await demo.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      const card = panel.getByRole('region', { name: 'Measure' });
+      await card.getByRole('button', { name: 'Name' }).click();
+      await expect(card.getByText(/at \d+ characters|Fits at/)).toBeVisible();
+    },
+  },
 ];
 
 for (const theme of ['light', 'dark'] as const satisfies readonly Theme[]) {
@@ -87,13 +102,13 @@ for (const theme of ['light', 'dark'] as const satisfies readonly Theme[]) {
     openPanel,
     extensionId,
   }) => {
-    const { panel } = await openOnDemo(openTab, openPanel, extensionId);
+    const { demo, panel } = await openOnDemo(openTab, openPanel, extensionId);
     // Start in the theme, as a user's OS setting would (axe samples mid-transition otherwise).
     await panel.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
     await panel.reload();
     const problems: string[] = [];
     for (const state of STATES) {
-      await state.enter(panel);
+      await state.enter(panel, demo);
       const { violations } = await new AxeBuilder({ page: panel })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
         .analyze();
@@ -175,7 +190,7 @@ test('runs actions from the command palette', async ({ openTab, openPanel, exten
   await expect(palette).toBeVisible();
 
   await panel.keyboard.type('stress');
-  await expect(palette.getByRole('option', { name: /^Run stress test/ })).toHaveAttribute(
+  await expect(palette.getByRole('option', { name: /^Test with longer text now/ })).toHaveAttribute(
     'aria-selected',
     'true',
   );
@@ -196,7 +211,7 @@ test('runs actions from the command palette', async ({ openTab, openPanel, exten
  * is accepted only where the full text is available on hover (a `title`).
  */
 test('passes its own stress test at 320 px', async ({ openTab, openPanel, extensionId }) => {
-  const { panel } = await openOnDemo(openTab, openPanel, extensionId);
+  const { demo, panel } = await openOnDemo(openTab, openPanel, extensionId);
   await panel.setViewportSize({ width: 320, height: 720 });
   await panel.waitForFunction(() => 'overflowScout' in window);
 
@@ -218,7 +233,7 @@ test('passes its own stress test at 320 px', async ({ openTab, openPanel, extens
 
   const problems: string[] = [];
   for (const state of STATES) {
-    await state.enter(panel);
+    await state.enter(panel, demo);
     problems.push(...(await selfTest()).map((problem) => `${state.name}: ${problem}`));
   }
   expect(problems).toEqual([]);
@@ -229,12 +244,12 @@ test('captures key screens for review', async ({ openTab, openPanel, extensionId
   mkdirSync(SCREENS, { recursive: true });
   for (const theme of ['light', 'dark'] as const) {
     for (const width of [320, 400, 600]) {
-      const { panel } = await openOnDemo(openTab, openPanel, extensionId);
+      const { demo, panel } = await openOnDemo(openTab, openPanel, extensionId);
       await panel.setViewportSize({ width, height: 720 });
       await panel.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
       await panel.reload();
       for (const state of STATES) {
-        await state.enter(panel);
+        await state.enter(panel, demo);
         await panel.screenshot({ path: `${SCREENS}${state.name}-${String(width)}-${theme}.png` });
       }
       await panel.close();

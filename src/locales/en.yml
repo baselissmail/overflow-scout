@@ -1,12 +1,12 @@
 # Manifest strings. Chrome limits the description to 132 characters.
 extName: Overflow Scout
-extDescription: Find clipped and truncated text before users do. Stress-test with translation-length text and get CSS fixes to try.
+extDescription: Find clipped and truncated text before users do. Test with translation-length text and get CSS fixes to try.
 actionTitle: Open Overflow Scout
-contextMenuInspect: Inspect text overflow here
+contextMenuInspect: Measure this element with Overflow Scout
 
-# Drawn on the page while stress text is applied
+# Drawn on the page while longer test text is applied
 overlay:
-  stressActive: Stress test active
+  stressActive: Longer test text on
   revert: Revert
 
 # Side panel. Sentence case, plain verbs; see docs/design/DIRECTION.md.
@@ -14,9 +14,12 @@ tagline: Find text that gets cut off, before your users do.
 actions:
   scan: Scan page
   scanAgain: Scan again
-  stress: Stress test
-  inspect: Inspect element
-  stopInspecting: Stop inspecting
+  stress: Test with longer text
+  inspect: Measure an element
+  stopInspecting: Stop measuring
+  # Toolbar labels once results are showing; Home and the palette use the full names.
+  stressShort: Longer text
+  inspectShort: Measure
   demo: Try the demo page
   openDemo: Open the demo page
   revert: Revert
@@ -28,11 +31,18 @@ actions:
   jump: Show on page
   copySelector: Copy selector
   copyCss: Copy CSS
+  copyReport: Copy report
+  copyScreenshot: Copy screenshot
+  ignore: Ignore on this site
+  unignore: Stop ignoring
+  preview: Preview on page
+  previewAll: Preview them together
+  stopPreview: Stop preview
   copied: Copied
   settings: Settings
   shortcuts: Keyboard shortcuts
   close: Close
-  runStress: Run a stress test
+  runStress: Test with longer text
   clearResults: Clear results
   previous: Previous place
   next: Next place
@@ -70,9 +80,9 @@ results:
   brokenNow: Already broken
   atRisk: New with longer text
   stressSummary: '$1 · $2 · $3× longer: $4 new, $5 already broken'
-  restored: The page is back to normal. These results are from the stress test.
+  restored: The page is back to normal. These results are from the longer-text test.
   none: No overflow in $1 texts, in a $2 window.
-  noneNow: Nothing was broken before the stress test.
+  noneNow: Nothing was broken before the text was lengthened.
   noneAtRisk: Nothing else breaks with longer text.
   noMatches: No results match these filters.
   severitySummary: $1 critical, $2 warnings, $3 notices
@@ -93,6 +103,11 @@ results:
       n: $1 notices
   filterLabel: Filter
   clearFilters: Clear filters
+  ignoredLabel: Ignored
+  showIgnored:
+    1: Show 1 ignored
+    n: Show $1 ignored
+  hideIgnored: Hide ignored
   selectHint: Choose a result to see how much text doesn’t fit, and why.
   footer: $1 texts checked · $2 ms · window $3
   footerStress: $1 texts checked · $2 ms
@@ -155,7 +170,27 @@ detail:
   growth: Text $1× longer
   whatToDo: What to do
   on: On $1
-  suggestionNote: Based on the likely cause below; not yet tried on the page.
+  suggestionNote: Based on the likely cause below; not tried on the page.
+  trying: Trying each fix on the page…
+  screenshotSaved: The clipboard isn’t available, so the screenshot was saved to your downloads.
+  screenshotFailed: 'Couldn’t take a screenshot: $1'
+  screenshotNeedsClick: Chrome allows screenshots only after you click the Overflow Scout button in the toolbar. Click it, then try again.
+  tried: Each fix was tried on the page for a moment, then removed. Nothing was changed.
+fix:
+  fixes: Fixes it.
+  togetherFixes: Together, these fix it.
+  improves: Helps, but $1 still doesn’t fit.
+  togetherImproves: Together these help, but $1 still doesn’t fit.
+  noChange: Doesn’t fix it on its own.
+  togetherNoChange: Even together, these don’t fix it. The cause may be on another element.
+  wider: $1 wider
+  narrower: $1 narrower
+  taller: $1 taller
+  shorter: $1 shorter
+  sizeOne: The box gets $1.
+  sizeTwo: The box gets $1 and $2.
+  sizeSame: The box keeps its size.
+  addedNote: Also needed, found by trying the fixes above
 advice:
   whiteSpace: Let the text wrap onto another line.
   textOverflow: The ellipsis hides the end. If the full text matters, let it wrap, or show it on hover with a title.
@@ -172,22 +207,22 @@ advice:
   pageWidth: Keep the element within the window.
   field: Widen the field, or shorten the text.
 stress:
-  heading: Stress test
+  heading: Test with longer text
   strategy: Strategy
   intensity: Intensity
   language: Language
   rtl: Right-to-left layout
-  rtlDescription: Sets the page direction to right-to-left while stress text is on.
+  rtlDescription: Sets the page direction to right-to-left while longer test text is on.
   scope: Scope
   scopePage: Whole page
   scopePicked: Picked element
   apply: Apply and scan
-  active: Stress text is on the page. Revert puts every text back exactly.
+  active: Longer test text is on the page. Revert puts every text back exactly.
   activeTranslation: The accented words are added on purpose, to make each text as long as a translation.
   activePseudo: The accents and [brackets] are added on purpose. A missing ] shows where a text was cut.
   activeLongWords: The long words, links and email addresses are added on purpose, to test text that can’t wrap.
   activeLanguage: The text is replaced with real text in another language, to test other scripts.
-  scopePickedHint: To test one element, pick it with Inspect element first.
+  scopePickedHint: To test one element, pick it with Measure an element first.
 strategy:
   translation: Translation length
   pseudo: Pseudo-locale
@@ -214,8 +249,8 @@ language:
   ja: Japanese
   th: Thai
 inspect:
-  heading: Inspect
-  close: Close inspection
+  heading: Measure
+  close: Close measurement
   hint: Click an element on the page. Press Esc to cancel.
   noText: This element has no text to grow.
   fitsUpTo: Fits up to $1 characters.
@@ -224,6 +259,24 @@ inspect:
   has: fits $1
   needsChars: needs $1
   measure: Fits up to $1 characters; a translation needs about $2.
+  tryHeading: Try other text
+  tryHint: The text changes on the page while you try. It goes back when you close this.
+  length: Length
+  chars:
+    1: 1 character
+    n: $1 characters
+  tryFits: Fits at $1.
+  tryBreaks: $1 at $2, $3 short.
+  presets: Real-world text
+  preset:
+    longName: Name
+    product: Product
+    url: Link
+    email: Email
+    longText: Long text
+  custom: Your own text
+  try: Try
+  reset: Put the text back
   verdict:
     fits: Room for translation
     atRisk: May break in translation
@@ -236,10 +289,16 @@ settings:
   themeSystem: System
   themeLight: Light
   themeDark: Dark
-  defaults: Stress test defaults
+  defaults: Longer text defaults
   scanning: Scanning
   includeInputs: Check fields
   includeInputsDescription: Placeholders and read-only values that don’t fit.
+  ignored: Ignored results
+  ignoredDescription: Results you chose to ignore, per site. They stay out of the list, the badge and reports.
+  ignoredNone: None yet. Use “Ignore on this site” in a result’s details.
+  unignore: Stop ignoring $1
+  localFiles: Local files
+  demoPage: Demo page
   sites: Site access
   sitesDescription: Sites where Overflow Scout works without a click.
   sitesNone: None yet. Use “Always allow on this site” while scanning a page.
@@ -271,14 +330,41 @@ commands:
   groupResults: Results
   groupView: View
   groupHelp: Help
-  runStress: Run stress test now
-  stressOptions: Stress test options
+  runStress: Test with longer text now
+  stressOptions: Longer text options
   clearResults: Clear results
+  copyReport: Copy report as Markdown
+  saveJson: Save results as JSON
   search: Search results
   themeSystem: Use the system theme
   themeLight: Use the light theme
   themeDark: Use the dark theme
   changeShortcut: Change the keyboard shortcut
+report:
+  title: Overflow Scout report
+  export: Export results
+  copyMarkdown: Copy report (Markdown)
+  saveMarkdown: Save as Markdown
+  saveJson: Save as JSON
+  exportNote: For GitHub, Jira or scripts. It covers the results on screen, and nothing leaves your browser unless you paste it.
+  copied: Report copied. Paste it into GitHub or Jira.
+  page: Page
+  window: window $1
+  testLabel: Tested with
+  test: $1 · $2 · $3× longer text
+  severity: Severity
+  longer: With longer text
+  cut: Where it’s cut
+  cutLost: Readers see $1 and lose $2.
+  cutSpills: Readers see $1, and $2 runs out of the box.
+  size: Size
+  on: on
+  fixesTried: Fixes, tried on the page
+  fixesSuggested: Fixes to try
+  found: Found
+  issues:
+    1: 1 issue
+    n: $1 issues
 toast:
   label: Notifications
   restored:

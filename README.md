@@ -16,9 +16,9 @@ Everything runs locally in your browser. No data leaves your device.
 ## Using it
 
 Click the Overflow Scout button in the toolbar (or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>)
-to open the side panel for the current tab, then choose **Scan page**, **Stress test** or
-**Inspect element**. Right-click a page and choose **Inspect text overflow here** to go straight
-to the picker. Nothing runs on a page until you ask, and closing the panel puts the page back
+to open the side panel for the current tab, then choose **Scan page**, **Test with longer text**
+or **Measure an element**. Right-click a page and choose **Measure this element with Overflow
+Scout** to go straight to the picker. Nothing runs on a page until you ask, and closing the panel puts the page back
 exactly as it was. **Try the demo page** in the panel opens a page with overflow bugs on purpose.
 
 ## Development

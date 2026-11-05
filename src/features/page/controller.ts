@@ -2,12 +2,17 @@ import type {
   IssueDto,
   PageInfo,
   PickedElement,
+  PreviewKey,
+  TextTrialDto,
+  TextValueDto,
   ProgressPhase,
   ResultOf,
   ScanResultDto,
   StressOptionsDto,
   StressResultDto,
 } from '@/messaging/protocol';
+
+import { cropImage } from '@/features/report/screenshot';
 
 import type { ConnectionFailure, PageConnection } from './connection';
 import { ConnectionError, RequestError } from './connection';
@@ -42,10 +47,17 @@ export interface PanelState {
   restored: { texts: number; seq: number } | null;
 }
 
+/** Chrome refused to capture the tab: the toolbar button wasn't clicked since it loaded. */
+export class CaptureNotAllowed extends Error {
+  override name = 'CaptureNotAllowed';
+}
+
 export interface ControllerDeps {
   connect: (tabId: number) => Promise<{ connection: PageConnection; page: PageInfo }>;
   /** Shows the issue count on the toolbar button for a tab; null clears it. */
   setBadge: (tabId: number, issues: readonly IssueDto[] | null) => void;
+  /** A PNG data URL of what the tab shows (`tabs.captureVisibleTab`). */
+  capture: (tabId: number) => Promise<string>;
 }
 
 const INITIAL: PanelState = {
@@ -80,6 +92,10 @@ export class PanelController {
   private readonly listeners = new Set<() => void>();
   private connection: PageConnection | null = null;
   private connecting: Promise<PageConnection> | null = null;
+
+  /** The issues the badge counts, so it can be redone when ignore rules change. */
+  private badged: readonly IssueDto[] | null = null;
+  private ignored: ReadonlySet<string> = new Set();
 
   constructor(private readonly deps: ControllerDeps) {}
 
@@ -183,6 +199,51 @@ export class PanelController {
     }
   }
 
+  /** Tries each suggested fix on the page and reports what it does; null if that can't run. */
+  async fixes(findingId: string): Promise<ResultOf<'fixes'>> {
+    try {
+      const connection = await this.ensureConnection();
+      return await connection.request('fixes', { findingId });
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Keeps a fix (or all of them) applied on the page so it can be seen; `null`
+   * stops it. Resolves false when the page couldn't apply it.
+   */
+  async preview(findingId: string, key: PreviewKey | null): Promise<boolean> {
+    try {
+      const connection = await this.ensureConnection();
+      await connection.request('preview', { findingId, key });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * A PNG of a finding on the page, cropped to it with its outline. Rejects
+   * with the reason when the tab can't be captured.
+   */
+  async screenshot(findingId: string): Promise<Blob> {
+    const { tabId } = this.state;
+    if (tabId === null) throw new Error('No tab to work on.');
+    const connection = await this.ensureConnection();
+    const frame = await connection.request('frame', { findingId });
+    if (!frame) throw new Error('This result is from an earlier scan. Scan again.');
+    let image: string;
+    try {
+      image = await this.deps.capture(tabId);
+    } catch (error) {
+      // Chrome allows captures only with activeTab (a click on the toolbar button) or <all_urls>.
+      const message = error instanceof Error ? error.message : String(error);
+      throw /activeTab|all_urls/.test(message) ? new CaptureNotAllowed(message) : error;
+    }
+    return cropImage(image, frame.rect, frame.viewport);
+  }
+
   /** Highlights a finding on the page; quiet if the page isn't connected. */
   highlight(findingId: string | null): void {
     this.connection?.request('highlight', { findingId }).catch(() => undefined);
@@ -192,10 +253,24 @@ export class PanelController {
     await this.run(null, (connection) => connection.request('reveal', { findingId }));
   }
 
-  /** Closes the inspect card and its outline on the page. */
+  /** Closes the inspect card, puts any tried text back, and clears its outline. */
   closeInspect(): void {
     this.set({ picked: null });
+    this.connection?.request('tryText', { value: null }).catch(() => undefined);
     this.highlight(null);
+  }
+
+  /**
+   * Puts a text in the picked element and measures it; `null` puts the
+   * element's own text back. Null when the page can't be reached.
+   */
+  async tryText(value: TextValueDto | null): Promise<TextTrialDto | null> {
+    try {
+      const connection = await this.ensureConnection();
+      return await connection.request('tryText', { value });
+    } catch {
+      return null;
+    }
   }
 
   /** Back to the start screen. Stress text, if any, stays until reverted. */
@@ -224,7 +299,22 @@ export class PanelController {
   }
 
   private badge(issues: readonly IssueDto[]): void {
-    if (this.state.tabId !== null) this.deps.setBadge(this.state.tabId, issues);
+    this.badged = issues;
+    if (this.state.tabId === null) return;
+    this.deps.setBadge(
+      this.state.tabId,
+      issues.filter((issue) => !this.ignored.has(issue.id)),
+    );
+  }
+
+  /**
+   * Issues ignored on the current site (by fingerprint). The toolbar badge
+   * leaves them out; the panel decides whether to show them.
+   */
+  setIgnored(ids: ReadonlySet<string>): void {
+    if (ids.size === this.ignored.size && [...ids].every((id) => this.ignored.has(id))) return;
+    this.ignored = ids;
+    if (this.badged) this.badge(this.badged);
   }
 
   private async run(

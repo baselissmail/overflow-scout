@@ -1,10 +1,12 @@
 import { i18n } from '#i18n';
 import {
   Ban,
-  Eraser,
+  ClipboardCopy,
   Command as CommandIcon,
   Crosshair,
+  Eraser,
   ExternalLink,
+  FileJson,
   Keyboard,
   Monitor,
   Moon,
@@ -16,7 +18,7 @@ import {
   Sun,
   WholeWord,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 
 import type { Command } from '@/features/commands/CommandPalette';
@@ -27,13 +29,17 @@ import { PageNotice } from '@/features/page/PageNotice';
 import { ScanProgress } from '@/features/page/ScanProgress';
 import { SiteAccess } from '@/features/page/SiteAccess';
 import { usePanel } from '@/features/page/use-panel';
+import { downloadText, exportResults } from '@/features/report/export';
 import { ResultsView } from '@/features/results/ResultsView';
+import { ignoredOn, useIgnoreRules } from '@/features/results/use-ignore';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { applyTheme, useSettings } from '@/features/settings/use-settings';
 import { ShortcutsDialog } from '@/features/shortcuts/ShortcutsDialog';
 import { StressBar } from '@/features/stress/StressBar';
 import type { StressScope } from '@/features/stress/StressControls';
 import { StressControls } from '@/features/stress/StressControls';
+import type { TextValueDto } from '@/messaging/protocol';
+import { siteOf } from '@/storage/ignore';
 import { BrandMark } from '@/ui/BrandMark';
 import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
@@ -56,6 +62,16 @@ function isTyping(target: EventTarget | null): boolean {
 export function App() {
   const { state, controller } = usePanel();
   const [settings, updateSettings] = useSettings();
+  const ignore = useIgnoreRules();
+  const tryText = useCallback(
+    (value: TextValueDto | null) => controller.tryText(value),
+    [controller],
+  );
+  const ignoredIds = ignoredOn(ignore.rules, state.page ? siteOf(state.page.url) : null);
+  useEffect(() => {
+    // The toolbar badge counts what the panel shows: ignored issues are left out.
+    controller.setIgnored(ignoredIds);
+  }, [controller, ignoredIds]);
   const [view, setView] = useState<'main' | 'settings'>('main');
   const [stressOpen, setStressOpen] = useState(false);
   const [scope, setScope] = useState<StressScope>('page');
@@ -151,7 +167,8 @@ export function App() {
           group: actions,
           label: i18n.t('commands.runStress'),
           icon: <WholeWord {...ICON} />,
-          keywords: 'translation pseudo locale longer text',
+          // The names people may know it by.
+          keywords: 'stress test translation pseudo locale expand',
           run: stress,
         },
       !noTab && {
@@ -159,6 +176,7 @@ export function App() {
         group: actions,
         label: i18n.t('commands.stressOptions'),
         icon: <SlidersHorizontal {...ICON} />,
+        keywords: 'stress test strategy intensity settings',
         run: () => {
           setStressOpen(true);
         },
@@ -169,7 +187,7 @@ export function App() {
           group: actions,
           label: state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspect'),
           icon: <Crosshair {...ICON} />,
-          keywords: 'pick element breaking point',
+          keywords: 'inspect pick element fit breaking point',
           run: pick,
         },
       state.stressActive && {
@@ -197,6 +215,31 @@ export function App() {
         keys: ['/'],
         // Looked up when run: commands are built during render, where refs aren't read.
         run: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+      },
+      hasResults && {
+        id: 'copy-report',
+        group: results,
+        label: i18n.t('commands.copyReport'),
+        icon: <ClipboardCopy {...ICON} />,
+        keywords: 'export markdown github jira bug',
+        run: () => {
+          const exported = exportResults(state, ignoredIds);
+          if (!exported) return;
+          void navigator.clipboard.writeText(exported.markdown).then(() => {
+            toast(i18n.t('report.copied'));
+          });
+        },
+      },
+      hasResults && {
+        id: 'save-json',
+        group: results,
+        label: i18n.t('commands.saveJson'),
+        icon: <FileJson {...ICON} />,
+        keywords: 'export download data',
+        run: () => {
+          const exported = exportResults(state, ignoredIds);
+          if (exported) downloadText(exported.jsonName, exported.json, 'application/json');
+        },
       },
       hasResults &&
         !busy && {
@@ -269,6 +312,7 @@ export function App() {
         <SettingsView
           settings={settings}
           onSettings={updateSettings}
+          ignore={ignore}
           onBack={() => {
             setView('main');
           }}
@@ -355,7 +399,7 @@ export function App() {
                 setStressOpen((open) => !open);
               }}
             >
-              {i18n.t('actions.stress')}
+              {i18n.t('actions.stressShort')}
             </Button>
             <Button
               icon={<Crosshair {...ICON} />}
@@ -364,7 +408,7 @@ export function App() {
               className="aria-pressed:border-accent aria-pressed:bg-accent-soft"
               onClick={pick}
             >
-              {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspect')}
+              {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspectShort')}
             </Button>
           </div>
         )}
@@ -406,6 +450,7 @@ export function App() {
           onClose={() => {
             controller.closeInspect();
           }}
+          onTryText={tryText}
         />
       </div>
 
@@ -414,6 +459,7 @@ export function App() {
           <ResultsView
             state={state}
             controller={controller}
+            ignore={ignore}
             wide={wide}
             searchRef={searchRef}
             onRunStress={() => {

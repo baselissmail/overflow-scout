@@ -9,7 +9,13 @@
  */
 import * as z from 'zod/mini';
 
-import { SAMPLE_LANGUAGES, STRESS_INTENSITIES, STRESS_STRATEGIES } from '@/core';
+import {
+  FINDING_KINDS,
+  FIX_KEYS,
+  SAMPLE_LANGUAGES,
+  STRESS_INTENSITIES,
+  STRESS_STRATEGIES,
+} from '@/core';
 
 /** Name of the panel ↔ page port. */
 export const PAGE_PORT = 'overflow-scout/page';
@@ -20,13 +26,7 @@ const px = z.number();
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
-export const findingKindSchema = z.enum([
-  'hidden',
-  'page-scroll',
-  'truncated',
-  'spilling',
-  'input',
-]);
+export const findingKindSchema = z.enum(FINDING_KINDS);
 export const severitySchema = z.enum(['critical', 'warning', 'notice']);
 const mechanismSchema = z.enum([
   'clip',
@@ -144,6 +144,33 @@ export const pageInfoSchema = z.object({
   viewport: viewportSchema,
 });
 
+export const fixKeySchema = z.enum(FIX_KEYS);
+
+/** A fix tried on the page for one measurement (plan §3.5). */
+const trialSchema = z.object({
+  outcome: z.enum(['fixes', 'improves', 'no-change']),
+  /** CSS pixels that still don't fit, per axis. */
+  remaining: z.object({ x: px, y: px }),
+  /** How the box changes size with the fix. */
+  change: z.object({ width: px, height: px }),
+});
+
+export const fixTrialsSchema = z.object({
+  trials: z.array(z.object({ key: fixKeySchema, trial: trialSchema })),
+  /** Fixes the trials showed are needed too (e.g. the height a wrapped label needs). */
+  added: z.array(z.object({ key: fixKeySchema, css: z.string(), element: elementRefSchema })),
+  /** Every CSS fix at once, when no single one fixes it. */
+  combined: z.nullable(trialSchema),
+});
+
+/** What the picked element does with a text tried in it (Inspect's slider and presets). */
+export const textTrialSchema = z.object({
+  length: count,
+  fits: z.boolean(),
+  breaksAs: z.nullable(findingKindSchema),
+  overflow: z.object({ x: px, y: px }),
+});
+
 export const pickedElementSchema = z.object({
   element: elementRefSchema,
   size: viewportSchema,
@@ -184,6 +211,35 @@ export const pageRequestSchema = z.discriminatedUnion('type', [
   /** The selector and cut of one finding, for places that didn't arrive with them. */
   z.object({ id, type: z.literal('details'), findingId: z.string() }),
   z.object({ id, type: z.literal('pick'), active: z.boolean() }),
+  /**
+   * Puts a text in the picked element and measures it: a length (grown or
+   * shortened from its own text) or a given text. It stays on the page until
+   * the next try, `null`, another pick, or other work.
+   */
+  z.object({
+    id,
+    type: z.literal('tryText'),
+    value: z.nullable(
+      z.union([
+        z.object({ length: count.check(z.maximum(5000)) }),
+        z.object({ text: z.string().check(z.maxLength(5000)) }),
+      ]),
+    ),
+  }),
+  /** Scrolls a finding into view for a screenshot and says where it is in the window. */
+  z.object({ id, type: z.literal('frame'), findingId: z.string() }),
+  /** Tries each suggested fix for one measurement, then restores the page exactly. */
+  z.object({ id, type: z.literal('fixes'), findingId: z.string() }),
+  /**
+   * Keeps one fix (or all of them) applied so it can be seen on the page, until
+   * the next preview, a scan or stress test, or the session ends. `null` stops it.
+   */
+  z.object({
+    id,
+    type: z.literal('preview'),
+    findingId: z.string(),
+    key: z.nullable(z.union([fixKeySchema, z.literal('all')])),
+  }),
 ]);
 
 /** What each request resolves to. */
@@ -203,6 +259,17 @@ export const pageResultSchemas = {
     }),
   ),
   pick: z.null(),
+  fixes: z.nullable(fixTrialsSchema),
+  tryText: z.nullable(textTrialSchema),
+  frame: z.nullable(
+    z.object({
+      /** The finding's box, its text and its container, in CSS pixels from the window's corner. */
+      rect: z.object({ x: px, y: px, width: px, height: px }),
+      /** The window's size in CSS pixels, scrollbars included, as a capture of it shows. */
+      viewport: viewportSchema,
+    }),
+  ),
+  preview: z.null(),
 } as const;
 
 export const progressPhaseSchema = z.enum(['scan', 'baseline', 'apply', 'stressed']);
@@ -236,7 +303,7 @@ export const pageMessageSchema = z.discriminatedUnion('type', [
 export const gestureMessageSchema = z.object({
   type: z.literal('gesture'),
   tabId: count,
-  /** Opened from "Inspect text overflow here": start the element picker. */
+  /** Opened from the context menu ("Measure this element"): start the element picker. */
   inspect: z.boolean(),
   at: ms,
 });
@@ -255,6 +322,11 @@ export type StressResultDto = z.infer<typeof stressResultSchema>;
 export type RevertResultDto = z.infer<typeof revertResultSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type PickedElement = z.infer<typeof pickedElementSchema>;
+export type FixTrialsDto = z.infer<typeof fixTrialsSchema>;
+export type TextTrialDto = z.infer<typeof textTrialSchema>;
+export type TextValueDto = NonNullable<RequestParams<'tryText'>['value']>;
+export type TrialDto = FixTrialsDto['trials'][number]['trial'];
+export type PreviewKey = NonNullable<RequestParams<'preview'>['key']>;
 export type PageRequest = z.infer<typeof pageRequestSchema>;
 export type ProgressPhase = z.infer<typeof progressPhaseSchema>;
 export type PageRequestType = PageRequest['type'];

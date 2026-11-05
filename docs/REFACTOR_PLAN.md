@@ -190,7 +190,7 @@ Display names are plain descriptions of what goes wrong (changed 2026-11-05 afte
 | Kind (id)                 | Shown as                 | Meaning                                                                          | Severity                                        |
 | ------------------------- | ------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------- |
 | `hidden`                  | **Cut off**              | The box clips its text with no ellipsis; readers lose part of it without knowing | Critical                                        |
-| `page-scroll`             | **Wider than page**      | The element is wider than the window, so the page scrolls sideways               | Critical                                        |
+| `page-scroll`             | **Wider than window**    | The element is wider than the window, so the page scrolls sideways               | Critical                                        |
 | `truncated`               | **Truncated**            | Ellipsis or line-clamp hides the end (often intentional)                         | Warning. User can mark "accepted on this site". |
 | `spilling`                | **Overflows**            | Text runs out of its box and can overlap what's next to it                       | Warning                                         |
 | `input`                   | **Field cut off**        | A placeholder or read-only value is longer than its field                        | Notice                                          |
@@ -289,19 +289,19 @@ Binary search on string length (in place, about 8 iterations, invisible because 
 
 ### 5.2 Surfaces
 
-| Surface                        | Role                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------ |
-| **Side panel**                 | The whole app. Doesn't cover the page (the current 400 px overlay does). |
-| **Page overlay** (shadow root) | Highlights, the picker, and a small "Stress active · Revert" pill        |
-| **Toolbar action**             | Opens the panel. Badge shows the issue count for the tab.                |
-| **Context menu**               | "Inspect text overflow here": opens the panel with the picker active¹    |
-| **No popup**                   | It was a two-button launcher, so it's removed                            |
+| Surface                        | Role                                                                                |
+| ------------------------------ | ----------------------------------------------------------------------------------- |
+| **Side panel**                 | The whole app. Doesn't cover the page (the current 400 px overlay does).            |
+| **Page overlay** (shadow root) | Highlights, the picker, and a small "Stress active · Revert" pill                   |
+| **Toolbar action**             | Opens the panel. Badge shows the issue count for the tab.                           |
+| **Context menu**               | "Measure this element with Overflow Scout": opens the panel with the picker active¹ |
+| **No popup**                   | It was a two-button launcher, so it's removed                                       |
 
 ¹ The right-clicked element can't be known without a content script on every page, which §2.2 rules out, so the picker opens and one click selects it.
 
 ### 5.3 Screens
 
-1. **Home (first run / no results):** page host and permission state. Three action cards: **Scan page**, **Stress test**, **Inspect element**. "Try the demo page" link and a shortcut hint. No modal tours.
+1. **Home (first run / no results):** page host and permission state. Three actions: **Scan page**, **Test with longer text** (the stress test), **Measure an element** (Inspect); the display names changed 2026-11-05 after a first-time-user review. "Try the demo page" link and a shortcut hint. No modal tours.
 2. **Scanning:** thin progress bar, live counter in tabular numbers, Cancel.
 3. **Results:**
    - Summary chips that double as filters (Hidden 12 · Truncated 5 · Spilling 3 · Page scroll 1).
@@ -471,11 +471,11 @@ Each phase ends with explicit exit criteria. Phases 1 and 2 (engine) can run in 
 
 ### Phase 5 — Inspect, fixes, reporting
 
-- [ ] Inspect flow, presets, live fit meter, breaking point.
-- [ ] Verified-fix trials (§3.5) with exact style restore.
-- [ ] Screenshot cropped to the element (captureVisibleTab + canvas crop, accounting for devicePixelRatio). Copy as Markdown. JSON export. Ignore rules.
+- [x] Inspect flow, presets, live fit meter, breaking point. _Shown as "Measure an element". "Try other text" has a length slider, real-world text (names, products, links, emails, long text) and the user's own text; the page shows it live and the card says whether it fits or what breaks. A DevTools-style hover box while picking is not in yet._
+- [x] Verified-fix trials (§3.5) with exact style restore. _Each fix is tried invisibly when a result opens and says whether it fixes the problem, helps, or does nothing, and how the box changes size. When wrapping only moves the overflow downwards, the trials add the height fix and try the fixes together. "Preview on page" keeps a fix applied until it's stopped. See ADR 0009._
+- [x] Screenshot cropped to the element (captureVisibleTab + canvas crop, accounting for devicePixelRatio). Copy as Markdown. JSON export. Ignore rules. _Screenshots need `activeTab` (a toolbar click); without it the panel says so (ADR 0009). Ignore rules match the issue's fingerprint per site, not a selector, so they hold across scans; Settings lists them._
 
-**Exit:** e2e for each; Markdown renders correctly when pasted into GitHub and Jira.
+**Exit:** e2e for each; Markdown renders correctly when pasted into GitHub and Jira. _Met for GitHub on 2026-11-05: the copied report rendered through GitHub's Markdown API with its heading, nested lists and code spans intact, and escaped page text stayed literal. Jira Cloud converts pasted Markdown with the same syntax; checking it in a real Jira project is part of the manual pre-release check. e2e covers verified fixes and preview, Copy report and JSON export, the screenshot refusal, ignore rules, and the Measure flow; cropping is tested in a real browser._
 
 Example report (Copy as Markdown):
 

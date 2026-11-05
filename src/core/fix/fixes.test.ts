@@ -1,37 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
-import type { FindingDto } from '@/messaging/protocol';
+import type { Mechanism } from '../types';
+import type { FixSource } from './fixes';
+import { fixCss, fixesFor } from './fixes';
 
-import { adviseFor } from './advice';
-
+/** The rules only read the mechanism and the causes; elements can be any value. */
 function finding(
-  mechanism: FindingDto['mechanism'],
+  mechanism: Mechanism,
   causes: [property: string, value: string, element?: string][],
-): FindingDto {
+): FixSource<string> {
   return {
-    id: 'f1',
-    kind: 'hidden',
-    severity: 'critical',
     mechanism,
-    axes: ['x'],
-    overflow: { x: 20, y: 0 },
-    text: 'Save changes',
-    element: { label: 'button.save' },
-    container: { label: 'button.save' },
     diagnosis: {
-      confidence: 'high',
       causes: causes.map(([property, value, element = 'button.save']) => ({
-        element: { label: element },
+        element,
         property,
         value,
-        note: '',
       })),
     },
-    box: { width: 100, height: 20 },
   };
 }
 
-describe('adviseFor', () => {
+const adviseFor = (source: FixSource<string>) =>
+  fixesFor(source).map((fix) => ({ key: fix.key, css: fixCss(fix), element: fix.element }));
+
+describe('fixesFor', () => {
   it('puts the direct fix first and hiding overflow last', () => {
     const advice = adviseFor(
       finding('clip', [

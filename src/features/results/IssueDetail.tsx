@@ -1,16 +1,32 @@
 import { i18n } from '#i18n';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, LocateFixed } from 'lucide-react';
+import {
+  ArrowLeft,
+  Camera,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCopy,
+  Eye,
+  EyeOff,
+  LocateFixed,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import type { FindingDto, IssueDto, ResultOf } from '@/messaging/protocol';
+import type { ReportContext } from '@/features/report/markdown';
+import { CaptureNotAllowed } from '@/features/page/controller';
+import { downloadBlob, screenshotName } from '@/features/report/export';
+import { issueMarkdown } from '@/features/report/markdown';
+import type { FixTrialsDto, IssueDto, PreviewKey, ResultOf } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
 import { Badge, TONE_TEXT } from '@/ui/Chip';
 import { CutText } from '@/ui/CutText';
 import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
+import { useToast } from '@/ui/Toast';
 
-import type { AdviceKey } from './advice';
-import { adviseFor } from './advice';
+import { CopyButton, useCopied } from './CopyButton';
+import { Fixes } from './Fixes';
+import { measurement, measurementSentence } from './measure';
 import {
   KindIcon,
   SEVERITY_TONE,
@@ -30,85 +46,20 @@ export interface IssueDetailProps {
   onReveal: (findingId: string) => void;
   onHighlight: (findingId: string | null) => void;
   loadDetails: (findingId: string) => Promise<Details>;
+  /** Tries each suggested fix on the page; null when that can't run. */
+  loadFixes: (findingId: string) => Promise<FixTrialsDto | null>;
+  onPreview: (findingId: string, key: PreviewKey | null) => Promise<boolean>;
+  /** Where the results come from; null hides Copy report. */
+  report: ReportContext | null;
+  /** A PNG of the finding on the page, cropped to it. */
+  onScreenshot: (findingId: string) => Promise<Blob>;
+  /** Ignored on this site; ignoring needs a site (null on pages without one). */
+  ignored: boolean;
+  onIgnore: (() => void) | null;
+  onUnignore: () => void;
 }
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
-
-function adviceText(key: AdviceKey): string {
-  switch (key) {
-    case 'whiteSpace':
-      return i18n.t('advice.whiteSpace');
-    case 'overflowWrap':
-      return i18n.t('advice.overflowWrap');
-    case 'lineClamp':
-      return i18n.t('advice.lineClamp');
-    case 'textOverflow':
-      return i18n.t('advice.textOverflow');
-    case 'maxWidth':
-      return i18n.t('advice.maxWidth');
-    case 'minWidth':
-      return i18n.t('advice.minWidth');
-    case 'height':
-      return i18n.t('advice.height');
-    case 'maxHeight':
-      return i18n.t('advice.maxHeight');
-    case 'width':
-      return i18n.t('advice.width');
-    case 'flex':
-      return i18n.t('advice.flex');
-    case 'grid':
-      return i18n.t('advice.grid');
-    case 'pageWidth':
-      return i18n.t('advice.pageWidth');
-    case 'field':
-      return i18n.t('advice.field');
-    case 'overflow':
-      return i18n.t('advice.overflow');
-  }
-}
-
-/** A copy button that confirms inline for 1.2 s (no toast for a local action). */
-function CopyButton({ text, label }: { text: string; label: string }) {
-  const [copied, markCopied] = useCopied();
-  return (
-    <IconButton
-      label={copied ? i18n.t('actions.copied') : label}
-      icon={copied ? <Check {...ICON} className="text-ok" /> : <Copy {...ICON} />}
-      onClick={() => {
-        void navigator.clipboard.writeText(text).then(markCopied);
-      }}
-    />
-  );
-}
-
-/** What the box offers and what the text needs, on the axis that overflows. */
-function measurement(finding: FindingDto, viewport: { width: number }) {
-  if (finding.kind === 'page-scroll') {
-    return { has: viewport.width, needs: viewport.width + finding.overflow.x, axis: 'x' as const };
-  }
-  const axis = finding.overflow.x > 0 ? 'x' : 'y';
-  const has = axis === 'x' ? finding.box.width : finding.box.height;
-  return { has, needs: has + finding.overflow[axis], axis };
-}
-
-function useCopied(): [boolean, () => void] {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => {
-      setCopied(false);
-    }, 1200);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [copied]);
-  return [
-    copied,
-    () => {
-      setCopied(true);
-    },
-  ];
-}
 
 export function IssueDetail({
   issue,
@@ -117,7 +68,18 @@ export function IssueDetail({
   onReveal,
   onHighlight,
   loadDetails,
+  loadFixes,
+  onPreview,
+  report,
+  onScreenshot,
+  ignored,
+  onIgnore,
+  onUnignore,
 }: IssueDetailProps) {
+  const [copied, markCopied] = useCopied();
+  const [shotCopied, markShotCopied] = useCopied();
+  const [shooting, setShooting] = useState(false);
+  const toast = useToast();
   const [index, setIndex] = useState(0);
   const finding = issue.instances[Math.min(index, issue.instances.length - 1)];
   // Only the first place of an issue arrives with its selector and cut; others load on demand.
@@ -125,6 +87,21 @@ export function IssueDetail({
   const details = loaded?.id === finding?.id ? loaded?.details : undefined;
   const selector = finding?.element.selector ?? details?.selector ?? null;
   const cut = finding?.cut !== undefined ? finding.cut : (details?.cut ?? null);
+
+  // Fix trials for the finding shown: undefined while they run, null when they couldn't.
+  const [trials, setTrials] = useState<{ id: string; result: FixTrialsDto | null } | null>(null);
+  const fixes = finding && trials?.id === finding.id ? trials.result : undefined;
+
+  useEffect(() => {
+    if (!finding) return;
+    let current = true;
+    void loadFixes(finding.id).then((result) => {
+      if (current) setTrials({ id: finding.id, result });
+    });
+    return () => {
+      current = false;
+    };
+  }, [finding, loadFixes]);
 
   useEffect(() => {
     if (!finding) return;
@@ -141,9 +118,9 @@ export function IssueDetail({
   }, [finding, loadDetails, onHighlight]);
 
   if (!finding) return null;
-  const advice = adviseFor(finding);
   const tone = SEVERITY_TONE[issue.severity];
-  const { has, needs, axis } = measurement(finding, viewport);
+  const measured = measurement(finding, viewport);
+  const { has, needs, axis } = measured;
   const short = needs - has;
   const places = issue.instances.length;
   const go = (next: number) => {
@@ -230,53 +207,106 @@ export function IssueDetail({
           }
           needsLabel={i18n.t('detail.needs', [formatPx(needs)])}
           differenceLabel={i18n.t('detail.short', [formatPx(short)])}
-          description={i18n.t(axis === 'x' ? 'detail.measure' : 'detail.measureY', [
-            formatPx(needs),
-            formatPx(has),
-            formatPx(short),
-          ])}
+          description={measurementSentence(measured)}
         />
-        <Button
-          variant="primary"
-          size="sm"
-          className="self-start"
-          icon={<LocateFixed size={14} strokeWidth={1.5} />}
-          onClick={() => {
-            onReveal(finding.id);
-          }}
-        >
-          {i18n.t('actions.jump')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<LocateFixed size={14} strokeWidth={1.5} />}
+            onClick={() => {
+              onReveal(finding.id);
+            }}
+          >
+            {i18n.t('actions.jump')}
+          </Button>
+          {report && (
+            <Button
+              size="sm"
+              icon={
+                copied ? (
+                  <Check size={14} strokeWidth={1.5} className="text-ok" />
+                ) : (
+                  <ClipboardCopy size={14} strokeWidth={1.5} />
+                )
+              }
+              onClick={() => {
+                const markdown = issueMarkdown(
+                  issue,
+                  { finding, cut, selector, fixes: fixes ?? null },
+                  report,
+                );
+                void navigator.clipboard.writeText(markdown).then(markCopied);
+              }}
+            >
+              {copied ? i18n.t('actions.copied') : i18n.t('actions.copyReport')}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            disabled={shooting}
+            icon={
+              shotCopied ? (
+                <Check size={14} strokeWidth={1.5} className="text-ok" />
+              ) : (
+                <Camera size={14} strokeWidth={1.5} />
+              )
+            }
+            onClick={() => {
+              setShooting(true);
+              const image = onScreenshot(finding.id);
+              // The clipboard gets the promise at once, so the click still counts as the gesture.
+              navigator.clipboard
+                .write([new ClipboardItem({ 'image/png': image })])
+                .then(markShotCopied, async () => {
+                  // No clipboard (or the capture failed): save the file instead, or say why not.
+                  const name = `${screenshotName(report?.url ?? '', finding.element.label)}.png`;
+                  const blob = await image;
+                  downloadBlob(name, blob);
+                  toast(i18n.t('detail.screenshotSaved'));
+                })
+                .catch((error: unknown) => {
+                  toast(
+                    error instanceof CaptureNotAllowed
+                      ? i18n.t('detail.screenshotNeedsClick')
+                      : i18n.t('detail.screenshotFailed', [
+                          error instanceof Error ? error.message : String(error),
+                        ]),
+                  );
+                })
+                .finally(() => {
+                  setShooting(false);
+                });
+            }}
+          >
+            {shotCopied ? i18n.t('actions.copied') : i18n.t('actions.copyScreenshot')}
+          </Button>
+          {ignored ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<Eye size={14} strokeWidth={1.5} />}
+              onClick={onUnignore}
+            >
+              {i18n.t('actions.unignore')}
+            </Button>
+          ) : (
+            onIgnore && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<EyeOff size={14} strokeWidth={1.5} />}
+                onClick={onIgnore}
+              >
+                {i18n.t('actions.ignore')}
+              </Button>
+            )
+          )}
+        </div>
       </section>
 
       {/* The next step comes first; the evidence follows. */}
-      {advice.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-medium">{i18n.t('detail.whatToDo')}</h2>
-          <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-card bg-raised shadow-raised">
-            {advice.map((item) => (
-              <li key={item.key} className="flex flex-col gap-1.5 p-2.5">
-                <span>{adviceText(item.key)}</span>
-                {item.css && (
-                  <span className="flex items-start justify-between gap-2">
-                    <code
-                      className="min-w-0 rounded-[4px] bg-surface px-1.5 py-1 font-mono text-small break-all whitespace-pre-wrap"
-                      translate="no"
-                    >
-                      {item.css}
-                    </code>
-                    <CopyButton text={item.css} label={i18n.t('actions.copyCss')} />
-                  </span>
-                )}
-                <span className="font-mono text-small break-all text-fg-muted" translate="no">
-                  {i18n.t('detail.on', [item.element])}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-small text-fg-muted">{i18n.t('detail.suggestionNote')}</p>
-        </section>
-      )}
+      <Fixes finding={finding} result={fixes} onPreview={onPreview} />
 
       {finding.before && (
         <section className="flex flex-col gap-1">

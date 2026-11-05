@@ -1,12 +1,25 @@
-import type { StressSession, TraversalOptions } from '@/core';
+import type {
+  Finding,
+  Fix,
+  FixTrials,
+  StressSession,
+  StyleEdit,
+  TextEdit,
+  TraversalOptions,
+} from '@/core';
 import {
+  applyDeclarations,
   elementLabel,
   elementSelector,
   findBreakingPoint,
+  fixCss,
+  fixesFor,
   runStressTest,
   sampleText,
   scanDocumentAsync,
   textCut,
+  tryFixes,
+  tryText,
 } from '@/core';
 import type {
   PageInfo,
@@ -22,6 +35,36 @@ import type { OverlayText } from './overlay';
 import { Overlay } from './overlay';
 import { Picker } from './picker';
 import { FindingRegistry, toIssueDtos } from './serialize';
+
+/** Waits for the page to paint, so a capture shows what was just drawn. */
+function nextFrames(view: Window, count: number): Promise<void> {
+  return new Promise((resolve) => {
+    const step = (left: number) => {
+      if (left === 0) resolve();
+      else
+        view.requestAnimationFrame(() => {
+          step(left - 1);
+        });
+    };
+    step(count);
+  });
+}
+
+/** The box around a finding: its container, its element, and its text where it spills. */
+function frameOf(finding: Finding): { x: number; y: number; width: number; height: number } {
+  const range = finding.element.ownerDocument.createRange();
+  range.selectNodeContents(finding.element);
+  const rects = [
+    finding.container.getBoundingClientRect(),
+    finding.element.getBoundingClientRect(),
+    range.getBoundingClientRect(),
+  ].filter((rect) => rect.width > 0 || rect.height > 0);
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
 
 export interface SessionOptions {
   /** Opens closed shadow roots (`chrome.dom.openOrClosedShadowRoot` in content scripts). */
@@ -54,6 +97,12 @@ export class PageSession {
   private picked: Element | null = null;
   private lastProgressAt = 0;
   private disposed = false;
+  /** The fixes last tried, so a preview applies exactly what was measured. */
+  private tried: { findingId: string; fixes: Fix<Element>[]; result: FixTrials } | null = null;
+  /** A fix kept on the page so it can be seen; undone before any other work. */
+  private preview: StyleEdit | null = null;
+  /** Text tried in the picked element, kept on the page until reset. */
+  private trying: TextEdit | null = null;
 
   constructor(
     private readonly doc: Document,
@@ -111,6 +160,8 @@ export class PageSession {
     this.disposed = true;
     this.work?.abort();
     this.picker.stop();
+    this.endPreview();
+    this.endTryText();
     this.endStress();
     this.overlay.destroy();
     this.registry.clear();
@@ -155,7 +206,9 @@ export class PageSession {
         const session = result.session;
         this.stress = session;
         this.stopWatching = session.watch((count) => {
-          this.send({ type: 'pending', count });
+          // Text tried in the Measure card isn't the page changing stress text back;
+          // the count is sent again once that text is put back.
+          if (!this.trying) this.send({ type: 'pending', count });
         });
         this.overlay.showStressPill(() => {
           const reverted = this.endStress();
@@ -175,7 +228,13 @@ export class PageSession {
       this.work?.abort();
       return null;
     },
-    revert: () => this.serial(() => Promise.resolve(this.endStress())),
+    revert: () =>
+      this.serial(() => {
+        this.endPreview();
+        this.endTryText();
+        this.tried = null;
+        return Promise.resolve(this.endStress());
+      }),
     reapply: () =>
       this.serial(async () => {
         if (!this.stress) return { strings: 0 };
@@ -198,20 +257,7 @@ export class PageSession {
     reveal: ({ findingId }) => {
       const finding = this.registry.get(findingId);
       if (!finding) throw new Error('This result is from an earlier scan. Scan again.');
-      const reduced = this.doc.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      finding.element.scrollIntoView({
-        block: 'center',
-        inline: 'nearest',
-        behavior: reduced ? 'auto' : 'smooth',
-      });
-      this.overlay.highlight(
-        {
-          element: finding.element,
-          container: finding.container,
-          label: elementLabel(finding.element),
-        },
-        true,
-      );
+      this.reveal(finding);
       return null;
     },
     details: ({ findingId }) => {
@@ -227,11 +273,112 @@ export class PageSession {
       else this.picker.stop();
       return null;
     },
+    frame: async ({ findingId }) => {
+      const finding = this.registry.get(findingId);
+      const view = this.doc.defaultView;
+      if (!finding?.element.isConnected || !view) return null;
+      finding.element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+      // A steady outline (no pulse), drawn before the capture.
+      this.overlay.highlight({
+        element: finding.element,
+        container: finding.container,
+        label: elementLabel(finding.element),
+      });
+      await nextFrames(view, 2);
+      return {
+        rect: frameOf(finding),
+        viewport: { width: view.innerWidth, height: view.innerHeight },
+      };
+    },
+    tryText: ({ value }) => {
+      this.endTryText();
+      if (value === null) return null;
+      const element = this.picked;
+      if (!element?.isConnected) throw new Error('Pick an element on the page first.');
+      const edit = tryText(element, value, this.traversal);
+      if (!edit) return null;
+      this.trying = edit;
+      // The outline follows the element's new size.
+      this.overlay.highlight({ element, label: elementLabel(element) });
+      return edit.trial;
+    },
+    fixes: ({ findingId }) => {
+      this.endPreview();
+      const finding = this.registry.get(findingId);
+      if (!finding?.element.isConnected) return null;
+      const fixes = fixesFor(finding);
+      const result = tryFixes(finding, fixes, this.traversal);
+      this.tried = { findingId, fixes, result };
+      return {
+        trials: fixes.flatMap((fix) => {
+          const trial = result.trials[fix.key];
+          return trial ? [{ key: fix.key, trial }] : [];
+        }),
+        added: result.added.map((fix) => ({
+          key: fix.key,
+          css: fixCss(fix) ?? '',
+          element: { label: elementLabel(fix.element) },
+        })),
+        combined: result.combined,
+      };
+    },
+    preview: ({ findingId, key }) => {
+      this.endPreview();
+      if (key === null) return null;
+      const finding = this.registry.get(findingId);
+      if (!finding?.element.isConnected)
+        throw new Error('This result is from an earlier scan. Scan again.');
+      if (this.tried?.findingId !== findingId) {
+        const fixes = fixesFor(finding);
+        this.tried = { findingId, fixes, result: tryFixes(finding, fixes, this.traversal) };
+      }
+      const all = [...this.tried.fixes, ...this.tried.result.added].filter(
+        (fix) => fix.declarations.length > 0,
+      );
+      const chosen = key === 'all' ? all : all.filter((fix) => fix.key === key);
+      if (chosen.length === 0) throw new Error('This fix has no CSS to preview.');
+      // Page transitions stay on, so the fix eases in the way the page would show it.
+      this.preview = applyDeclarations(chosen, { transitions: true });
+      this.reveal(finding);
+      return null;
+    },
   };
+
+  /** Scrolls a finding into view and pulses its outline. */
+  private reveal(finding: Finding): void {
+    const reduced = this.doc.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    finding.element.scrollIntoView({
+      block: 'center',
+      inline: 'nearest',
+      behavior: reduced ? 'auto' : 'smooth',
+    });
+    this.overlay.highlight(
+      {
+        element: finding.element,
+        container: finding.container,
+        label: elementLabel(finding.element),
+      },
+      true,
+    );
+  }
+
+  private endTryText(): void {
+    this.trying?.undo();
+    this.trying = null;
+  }
+
+  private endPreview(): void {
+    this.preview?.undo();
+    this.preview = null;
+  }
 
   /** Runs heavy work one at a time with a fresh abort signal for `cancel`. */
   private cancellable<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
     return this.serial(async () => {
+      // Results describe the page as it is, not with a previewed fix or tried text.
+      this.endPreview();
+      this.endTryText();
+      this.tried = null;
       const controller = new AbortController();
       this.work = controller;
       this.lastProgressAt = 0;
@@ -276,6 +423,7 @@ export class PageSession {
   }
 
   private describePicked(element: Element): PickedElement {
+    this.endTryText();
     this.picked = element;
     const rect = element.getBoundingClientRect();
     const result = findBreakingPoint(element, this.traversal);

@@ -1,10 +1,12 @@
 import { i18n } from '#i18n';
 import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { browser } from 'wxt/browser';
 
 import { useOpenShortcut } from '@/features/page/use-open-shortcut';
+import { kindLabel } from '@/features/results/labels';
+import type { IgnoreRules } from '@/features/results/use-ignore';
 import { StressOptionFields } from '@/features/stress/StressOptionFields';
 import type { Settings, Theme } from '@/storage/settings';
 import { Button } from '@/ui/Button';
@@ -25,10 +27,13 @@ function Group({
   description?: string;
   children: ReactNode;
 }) {
+  const id = useId();
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-2" aria-labelledby={id}>
       <div className="px-1">
-        <h2 className="font-semibold">{title}</h2>
+        <h2 id={id} className="font-semibold">
+          {title}
+        </h2>
         {description && <p className="text-small text-fg-muted">{description}</p>}
       </div>
       <div className="flex flex-col gap-3 rounded-card bg-raised p-3 shadow-raised">{children}</div>
@@ -63,13 +68,21 @@ function useGrantedSites(): [string[], (origin: string) => void] {
 
 const hostOf = (pattern: string) => pattern.replace(/^\w+:\/\//, '').replace(/\/\*$/, '');
 
+/** A rule's site as people know it. */
+function siteName(site: string): string {
+  if (site === 'file://') return i18n.t('settings.localFiles');
+  if (site.startsWith('chrome-extension://')) return i18n.t('settings.demoPage');
+  return hostOf(site);
+}
+
 interface SettingsViewProps {
   settings: Settings;
   onSettings: (patch: Partial<Settings>) => void;
   onBack: () => void;
+  ignore: IgnoreRules;
 }
 
-export function SettingsView({ settings, onSettings, onBack }: SettingsViewProps) {
+export function SettingsView({ settings, onSettings, onBack, ignore }: SettingsViewProps) {
   const [sites, removeSite] = useGrantedSites();
   const shortcut = useOpenShortcut();
   const { version } = browser.runtime.getManifest();
@@ -126,6 +139,37 @@ export function SettingsView({ settings, onSettings, onBack }: SettingsViewProps
             onSettings({ includeInputs });
           }}
         />
+      </Group>
+
+      <Group title={i18n.t('settings.ignored')} description={i18n.t('settings.ignoredDescription')}>
+        {ignore.rules.length === 0 ? (
+          <p className="text-fg-muted">{i18n.t('settings.ignoredNone')}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {ignore.rules.map((rule) => (
+              <li
+                key={`${rule.site} ${rule.issueId}`}
+                className="flex items-start justify-between gap-2"
+              >
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-small">
+                    {kindLabel(rule.kind)} · {siteName(rule.site)}
+                  </span>
+                  <span className="font-mono text-small break-all text-fg-muted" translate="no">
+                    {rule.label}
+                  </span>
+                </span>
+                <IconButton
+                  label={i18n.t('settings.unignore', [rule.label])}
+                  icon={<Trash2 {...ICON} />}
+                  onClick={() => {
+                    ignore.unignore(rule.site, rule.issueId);
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </Group>
 
       <Group title={i18n.t('settings.sites')} description={i18n.t('settings.sitesDescription')}>

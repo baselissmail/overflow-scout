@@ -5,8 +5,12 @@ import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 import type { PanelController, PanelState } from '@/features/page/controller';
+import { ExportMenu } from '@/features/report/ExportMenu';
+import { reportContext } from '@/features/report/export';
+import type { ReportContext } from '@/features/report/markdown';
+import { siteOf } from '@/storage/ignore';
 import { intensityLabel, languageLabel, strategyLabel } from '@/features/stress/options';
-import type { IssueDto, ScanResultDto } from '@/messaging/protocol';
+import type { IssueDto, PreviewKey, ScanResultDto } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
 import { Chip, TONE_BG, TONE_TEXT } from '@/ui/Chip';
 import { EmptyState } from '@/ui/EmptyState';
@@ -19,6 +23,8 @@ import { Tooltip } from '@/ui/Tooltip';
 import { useCountUp } from '@/ui/use-count-up';
 
 import { IssueDetail } from './IssueDetail';
+import type { IgnoreRules } from './use-ignore';
+import { ignoredOn } from './use-ignore';
 import { ResultList } from './ResultList';
 import type { ResultFilter, SortOrder } from './filter';
 import { NO_FILTER, applyFilter, countByKind } from './filter';
@@ -44,6 +50,19 @@ export interface ResultsViewProps {
   wide: boolean;
   searchRef: RefObject<HTMLInputElement | null>;
   onRunStress: () => void;
+  ignore: IgnoreRules;
+}
+
+/** Issues ignored on this site in one set of results, and what can be done with them. */
+interface Ignoring {
+  ids: ReadonlySet<string>;
+  /** Ignored issues among these results (hidden unless shown). */
+  count: number;
+  shown: boolean;
+  toggle: () => void;
+  /** Null on pages without a site (e.g. the extension's own demo page has one; about: pages don't). */
+  ignore: ((issue: IssueDto) => void) | null;
+  unignore: (issue: IssueDto) => void;
 }
 
 const TONE_OF_KIND: Readonly<Record<Kind, IssueDto['severity']>> = {
@@ -159,7 +178,19 @@ function SeverityHelp() {
   );
 }
 
-function Footer({ stats, viewport, stress }: { stats: Stats; viewport: string; stress: boolean }) {
+function Footer({
+  stats,
+  viewport,
+  stress,
+  state,
+  ignored,
+}: {
+  stats: Stats;
+  viewport: string;
+  stress: boolean;
+  state: PanelState;
+  ignored: ReadonlySet<string>;
+}) {
   const ms = formatCount(Math.round(stats.durationMs));
   const text = stress
     ? i18n.t('results.footerStress', [formatCount(stats.textNodes), ms])
@@ -167,18 +198,21 @@ function Footer({ stats, viewport, stress }: { stats: Stats; viewport: string; s
   return (
     <footer className="flex items-center justify-between gap-2 border-t border-line pt-1">
       <p className="min-w-0 text-small text-fg-muted tabular-nums">{text}</p>
-      <Popover
-        label={i18n.t('results.coverage')}
-        trigger={
-          <IconButton
-            label={i18n.t('results.coverage')}
-            icon={<Info size={16} strokeWidth={1.5} />}
-          />
-        }
-      >
-        <p className="mb-2 font-medium">{i18n.t('results.coverage')}</p>
-        <Coverage stats={stats} viewport={stress ? null : viewport} />
-      </Popover>
+      <span className="flex shrink-0 items-center">
+        <ExportMenu state={state} ignored={ignored} />
+        <Popover
+          label={i18n.t('results.coverage')}
+          trigger={
+            <IconButton
+              label={i18n.t('results.coverage')}
+              icon={<Info size={16} strokeWidth={1.5} />}
+            />
+          }
+        >
+          <p className="mb-2 font-medium">{i18n.t('results.coverage')}</p>
+          <Coverage stats={stats} viewport={stress ? null : viewport} />
+        </Popover>
+      </span>
     </footer>
   );
 }
@@ -194,6 +228,9 @@ interface BodyProps {
   searchRef: RefObject<HTMLInputElement | null>;
   controller: PanelController;
   empty: ReactNode;
+  /** Where the results come from, for the reports copied from a result's details. */
+  report: ReportContext | null;
+  ignoring: Ignoring;
 }
 
 function ResultsBody({
@@ -206,6 +243,8 @@ function ResultsBody({
   searchRef,
   controller,
   empty,
+  report,
+  ignoring,
 }: BodyProps) {
   const query = useDeferredValue(filter.query);
   const shown = useMemo(() => applyFilter(issues, { ...filter, query }), [issues, filter, query]);
@@ -221,6 +260,12 @@ function ResultsBody({
     [controller],
   );
   const loadDetails = useCallback((id: string) => controller.details(id), [controller]);
+  const loadFixes = useCallback((id: string) => controller.fixes(id), [controller]);
+  const screenshot = useCallback((id: string) => controller.screenshot(id), [controller]);
+  const preview = useCallback(
+    (id: string, key: PreviewKey | null) => controller.preview(id, key),
+    [controller],
+  );
   /** Narrow panels swap list and detail; a view transition keeps the change legible. */
   const swap = useCallback(
     (update: () => void) => {
@@ -263,6 +308,7 @@ function ResultsBody({
       viewportWidth={viewport.width}
       selectedId={selectedId}
       label={i18n.t('results.heading')}
+      ignored={ignoring.ids}
       onSelect={(issue) => {
         setSelectedId(issue.id);
       }}
@@ -289,6 +335,20 @@ function ResultsBody({
         onReveal={(id) => void controller.reveal(id)}
         onHighlight={highlight}
         loadDetails={loadDetails}
+        loadFixes={loadFixes}
+        onPreview={preview}
+        report={report}
+        onScreenshot={screenshot}
+        ignored={ignoring.ids.has(open.id)}
+        onIgnore={
+          ignoring.ignore &&
+          (() => {
+            ignoring.ignore?.(open);
+          })
+        }
+        onUnignore={() => {
+          ignoring.unignore(open);
+        }}
       />
     </div>
   ) : null;
@@ -336,15 +396,31 @@ function ResultsBody({
                   <SeverityHelp />
                 </Popover>
               </span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  controller.clearResults();
-                }}
-              >
-                {i18n.t('actions.clearResults')}
-              </Button>
+              <span className="flex flex-wrap items-center">
+                {ignoring.count > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-pressed={ignoring.shown}
+                    onClick={ignoring.toggle}
+                  >
+                    {ignoring.shown
+                      ? i18n.t('results.hideIgnored')
+                      : i18n.t('results.showIgnored', ignoring.count, [
+                          formatCount(ignoring.count),
+                        ])}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    controller.clearResults();
+                  }}
+                >
+                  {i18n.t('actions.clearResults')}
+                </Button>
+              </span>
             </div>
           </div>
           <div
@@ -443,11 +519,41 @@ function keyOf(result: object): string {
   return String(key);
 }
 
-export function ResultsView({ state, controller, wide, searchRef, onRunStress }: ResultsViewProps) {
+export function ResultsView({
+  state,
+  controller,
+  wide,
+  searchRef,
+  onRunStress,
+  ignore,
+}: ResultsViewProps) {
+  const [showIgnored, setShowIgnored] = useState(false);
+  const site = state.page ? siteOf(state.page.url) : null;
+  const ignoredIds = ignoredOn(ignore.rules, site);
+  const ignoring = (issues: readonly IssueDto[]): Ignoring => ({
+    ids: ignoredIds,
+    count: issues.filter((issue) => ignoredIds.has(issue.id)).length,
+    shown: showIgnored,
+    toggle: () => {
+      setShowIgnored((shown) => !shown);
+    },
+    ignore:
+      site === null
+        ? null
+        : (issue) => {
+            ignore.ignore(site, issue, issue.instances[0]?.element.label ?? '');
+          },
+    unignore: (issue) => {
+      if (site !== null) ignore.unignore(site, issue.id);
+    },
+  });
+  const visible = (issues: readonly IssueDto[]) =>
+    showIgnored ? issues : issues.filter((issue) => !ignoredIds.has(issue.id));
   const [filter, setFilter] = useState<ResultFilter>(NO_FILTER);
   const [tab, setTab] = useState<Tab>('atRisk');
   const atRisk = useCountUp(state.stress?.atRisk.length ?? 0);
   const brokenNow = useCountUp(state.stress?.brokenNow.length ?? 0);
+  const report = reportContext(state);
   const body = (
     issues: readonly IssueDto[],
     resultsKey: string,
@@ -455,7 +561,8 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
     empty: ReactNode,
   ) => (
     <ResultsBody
-      issues={issues}
+      issues={visible(issues)}
+      ignoring={ignoring(issues)}
       resultsKey={resultsKey}
       filter={filter}
       setFilter={setFilter}
@@ -464,6 +571,7 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
       searchRef={searchRef}
       controller={controller}
       empty={empty}
+      report={report}
     />
   );
 
@@ -530,6 +638,8 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
           stats={stress.stats.stressed}
           viewport={`${String(stress.viewport.width)}×${String(stress.viewport.height)}`}
           stress
+          state={state}
+          ignored={ignoredIds}
         />
       </section>
     );
@@ -556,7 +666,13 @@ export function ResultsView({ state, controller, wide, searchRef, onRunStress }:
             }
           />,
         )}
-        <Footer stats={scan.stats} viewport={viewport} stress={false} />
+        <Footer
+          stats={scan.stats}
+          viewport={viewport}
+          stress={false}
+          state={state}
+          ignored={ignoredIds}
+        />
       </section>
     );
   }
