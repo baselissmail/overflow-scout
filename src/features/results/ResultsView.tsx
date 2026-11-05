@@ -6,7 +6,7 @@ import { flushSync } from 'react-dom';
 
 import type { PanelController, PanelState } from '@/features/page/controller';
 import { intensityLabel, languageLabel, strategyLabel } from '@/features/stress/options';
-import type { IssueDto, ScanResultDto } from '@/messaging/protocol';
+import type { IssueDto, PreviewKey, ScanResultDto } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
 import { Chip, TONE_BG, TONE_TEXT } from '@/ui/Chip';
 import { EmptyState } from '@/ui/EmptyState';
@@ -221,6 +221,11 @@ function ResultsBody({
     [controller],
   );
   const loadDetails = useCallback((id: string) => controller.details(id), [controller]);
+  const loadFixes = useCallback((id: string) => controller.fixes(id), [controller]);
+  const preview = useCallback(
+    (id: string, key: PreviewKey | null) => controller.preview(id, key),
+    [controller],
+  );
   /** Narrow panels swap list and detail; a view transition keeps the change legible. */
   const swap = useCallback(
     (update: () => void) => {
@@ -289,6 +294,8 @@ function ResultsBody({
         onReveal={(id) => void controller.reveal(id)}
         onHighlight={highlight}
         loadDetails={loadDetails}
+        loadFixes={loadFixes}
+        onPreview={preview}
       />
     </div>
   ) : null;

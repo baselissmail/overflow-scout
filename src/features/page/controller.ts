@@ -2,6 +2,7 @@ import type {
   IssueDto,
   PageInfo,
   PickedElement,
+  PreviewKey,
   ProgressPhase,
   ResultOf,
   ScanResultDto,
@@ -180,6 +181,30 @@ export class PanelController {
       return await connection.request('details', { findingId });
     } catch {
       return null;
+    }
+  }
+
+  /** Tries each suggested fix on the page and reports what it does; null if that can't run. */
+  async fixes(findingId: string): Promise<ResultOf<'fixes'>> {
+    try {
+      const connection = await this.ensureConnection();
+      return await connection.request('fixes', { findingId });
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Keeps a fix (or all of them) applied on the page so it can be seen; `null`
+   * stops it. Resolves false when the page couldn't apply it.
+   */
+  async preview(findingId: string, key: PreviewKey | null): Promise<boolean> {
+    try {
+      const connection = await this.ensureConnection();
+      await connection.request('preview', { findingId, key });
+      return true;
+    } catch {
+      return false;
     }
   }
 

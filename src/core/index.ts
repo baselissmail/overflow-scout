@@ -13,5 +13,19 @@ export {
 export { PRESET_KINDS, PRESET_POOLS, getPreset, type PresetKind } from './text/presets';
 export { sampleText } from './dom';
 export { textCut, type TextCut } from './measure/cut';
+export {
+  FIX_KEYS,
+  applyDeclarations,
+  fixCss,
+  fixesFor,
+  tryFixes,
+  type Fix,
+  type FixKey,
+  type FixSource,
+  type FixTrials,
+  type StyleEdit,
+  type Trial,
+  type TrialOutcome,
+} from './fix/fixes';
 export * from './types';
 export * from './stress';

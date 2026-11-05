@@ -1,16 +1,17 @@
 import { i18n } from '#i18n';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, LocateFixed } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, LocateFixed } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import type { FindingDto, IssueDto, ResultOf } from '@/messaging/protocol';
+import type { FindingDto, IssueDto, PreviewKey, ResultOf } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
 import { Badge, TONE_TEXT } from '@/ui/Chip';
 import { CutText } from '@/ui/CutText';
 import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
 
-import type { AdviceKey } from './advice';
-import { adviseFor } from './advice';
+import { CopyButton } from './CopyButton';
+import type { FixesProps } from './Fixes';
+import { Fixes } from './Fixes';
 import {
   KindIcon,
   SEVERITY_TONE,
@@ -30,56 +31,11 @@ export interface IssueDetailProps {
   onReveal: (findingId: string) => void;
   onHighlight: (findingId: string | null) => void;
   loadDetails: (findingId: string) => Promise<Details>;
+  loadFixes: FixesProps['loadFixes'];
+  onPreview: (findingId: string, key: PreviewKey | null) => Promise<boolean>;
 }
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
-
-function adviceText(key: AdviceKey): string {
-  switch (key) {
-    case 'whiteSpace':
-      return i18n.t('advice.whiteSpace');
-    case 'overflowWrap':
-      return i18n.t('advice.overflowWrap');
-    case 'lineClamp':
-      return i18n.t('advice.lineClamp');
-    case 'textOverflow':
-      return i18n.t('advice.textOverflow');
-    case 'maxWidth':
-      return i18n.t('advice.maxWidth');
-    case 'minWidth':
-      return i18n.t('advice.minWidth');
-    case 'height':
-      return i18n.t('advice.height');
-    case 'maxHeight':
-      return i18n.t('advice.maxHeight');
-    case 'width':
-      return i18n.t('advice.width');
-    case 'flex':
-      return i18n.t('advice.flex');
-    case 'grid':
-      return i18n.t('advice.grid');
-    case 'pageWidth':
-      return i18n.t('advice.pageWidth');
-    case 'field':
-      return i18n.t('advice.field');
-    case 'overflow':
-      return i18n.t('advice.overflow');
-  }
-}
-
-/** A copy button that confirms inline for 1.2 s (no toast for a local action). */
-function CopyButton({ text, label }: { text: string; label: string }) {
-  const [copied, markCopied] = useCopied();
-  return (
-    <IconButton
-      label={copied ? i18n.t('actions.copied') : label}
-      icon={copied ? <Check {...ICON} className="text-ok" /> : <Copy {...ICON} />}
-      onClick={() => {
-        void navigator.clipboard.writeText(text).then(markCopied);
-      }}
-    />
-  );
-}
 
 /** What the box offers and what the text needs, on the axis that overflows. */
 function measurement(finding: FindingDto, viewport: { width: number }) {
@@ -91,25 +47,6 @@ function measurement(finding: FindingDto, viewport: { width: number }) {
   return { has, needs: has + finding.overflow[axis], axis };
 }
 
-function useCopied(): [boolean, () => void] {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => {
-      setCopied(false);
-    }, 1200);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [copied]);
-  return [
-    copied,
-    () => {
-      setCopied(true);
-    },
-  ];
-}
-
 export function IssueDetail({
   issue,
   viewport,
@@ -117,6 +54,8 @@ export function IssueDetail({
   onReveal,
   onHighlight,
   loadDetails,
+  loadFixes,
+  onPreview,
 }: IssueDetailProps) {
   const [index, setIndex] = useState(0);
   const finding = issue.instances[Math.min(index, issue.instances.length - 1)];
@@ -141,7 +80,6 @@ export function IssueDetail({
   }, [finding, loadDetails, onHighlight]);
 
   if (!finding) return null;
-  const advice = adviseFor(finding);
   const tone = SEVERITY_TONE[issue.severity];
   const { has, needs, axis } = measurement(finding, viewport);
   const short = needs - has;
@@ -250,33 +188,7 @@ export function IssueDetail({
       </section>
 
       {/* The next step comes first; the evidence follows. */}
-      {advice.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-medium">{i18n.t('detail.whatToDo')}</h2>
-          <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-card bg-raised shadow-raised">
-            {advice.map((item) => (
-              <li key={item.key} className="flex flex-col gap-1.5 p-2.5">
-                <span>{adviceText(item.key)}</span>
-                {item.css && (
-                  <span className="flex items-start justify-between gap-2">
-                    <code
-                      className="min-w-0 rounded-[4px] bg-surface px-1.5 py-1 font-mono text-small break-all whitespace-pre-wrap"
-                      translate="no"
-                    >
-                      {item.css}
-                    </code>
-                    <CopyButton text={item.css} label={i18n.t('actions.copyCss')} />
-                  </span>
-                )}
-                <span className="font-mono text-small break-all text-fg-muted" translate="no">
-                  {i18n.t('detail.on', [item.element])}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-small text-fg-muted">{i18n.t('detail.suggestionNote')}</p>
-        </section>
-      )}
+      <Fixes finding={finding} loadFixes={loadFixes} onPreview={onPreview} />
 
       {finding.before && (
         <section className="flex flex-col gap-1">

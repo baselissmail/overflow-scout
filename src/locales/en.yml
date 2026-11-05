@@ -31,6 +31,9 @@ actions:
   jump: Show on page
   copySelector: Copy selector
   copyCss: Copy CSS
+  preview: Preview on page
+  previewAll: Preview them together
+  stopPreview: Stop preview
   copied: Copied
   settings: Settings
   shortcuts: Keyboard shortcuts
@@ -158,7 +161,24 @@ detail:
   growth: Text $1× longer
   whatToDo: What to do
   on: On $1
-  suggestionNote: Based on the likely cause below; not yet tried on the page.
+  suggestionNote: Based on the likely cause below; not tried on the page.
+  trying: Trying each fix on the page…
+  tried: Each fix was tried on the page for a moment, then removed. Nothing was changed.
+fix:
+  fixes: Fixes it.
+  togetherFixes: Together, these fix it.
+  improves: Helps, but $1 still doesn’t fit.
+  togetherImproves: Together these help, but $1 still doesn’t fit.
+  noChange: Doesn’t fix it on its own.
+  togetherNoChange: Even together, these don’t fix it. The cause may be on another element.
+  wider: $1 wider
+  narrower: $1 narrower
+  taller: $1 taller
+  shorter: $1 shorter
+  sizeOne: The box gets $1.
+  sizeTwo: The box gets $1 and $2.
+  sizeSame: The box keeps its size.
+  addedNote: Also needed, found by trying the fixes above
 advice:
   whiteSpace: Let the text wrap onto another line.
   textOverflow: The ellipsis hides the end. If the full text matters, let it wrap, or show it on hover with a title.

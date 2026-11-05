@@ -9,7 +9,7 @@
  */
 import * as z from 'zod/mini';
 
-import { SAMPLE_LANGUAGES, STRESS_INTENSITIES, STRESS_STRATEGIES } from '@/core';
+import { FIX_KEYS, SAMPLE_LANGUAGES, STRESS_INTENSITIES, STRESS_STRATEGIES } from '@/core';
 
 /** Name of the panel ↔ page port. */
 export const PAGE_PORT = 'overflow-scout/page';
@@ -144,6 +144,25 @@ export const pageInfoSchema = z.object({
   viewport: viewportSchema,
 });
 
+export const fixKeySchema = z.enum(FIX_KEYS);
+
+/** A fix tried on the page for one measurement (plan §3.5). */
+const trialSchema = z.object({
+  outcome: z.enum(['fixes', 'improves', 'no-change']),
+  /** CSS pixels that still don't fit, per axis. */
+  remaining: z.object({ x: px, y: px }),
+  /** How the box changes size with the fix. */
+  change: z.object({ width: px, height: px }),
+});
+
+export const fixTrialsSchema = z.object({
+  trials: z.array(z.object({ key: fixKeySchema, trial: trialSchema })),
+  /** Fixes the trials showed are needed too (e.g. the height a wrapped label needs). */
+  added: z.array(z.object({ key: fixKeySchema, css: z.string(), element: elementRefSchema })),
+  /** Every CSS fix at once, when no single one fixes it. */
+  combined: z.nullable(trialSchema),
+});
+
 export const pickedElementSchema = z.object({
   element: elementRefSchema,
   size: viewportSchema,
@@ -184,6 +203,18 @@ export const pageRequestSchema = z.discriminatedUnion('type', [
   /** The selector and cut of one finding, for places that didn't arrive with them. */
   z.object({ id, type: z.literal('details'), findingId: z.string() }),
   z.object({ id, type: z.literal('pick'), active: z.boolean() }),
+  /** Tries each suggested fix for one measurement, then restores the page exactly. */
+  z.object({ id, type: z.literal('fixes'), findingId: z.string() }),
+  /**
+   * Keeps one fix (or all of them) applied so it can be seen on the page, until
+   * the next preview, a scan or stress test, or the session ends. `null` stops it.
+   */
+  z.object({
+    id,
+    type: z.literal('preview'),
+    findingId: z.string(),
+    key: z.nullable(z.union([fixKeySchema, z.literal('all')])),
+  }),
 ]);
 
 /** What each request resolves to. */
@@ -203,6 +234,8 @@ export const pageResultSchemas = {
     }),
   ),
   pick: z.null(),
+  fixes: z.nullable(fixTrialsSchema),
+  preview: z.null(),
 } as const;
 
 export const progressPhaseSchema = z.enum(['scan', 'baseline', 'apply', 'stressed']);
@@ -255,6 +288,9 @@ export type StressResultDto = z.infer<typeof stressResultSchema>;
 export type RevertResultDto = z.infer<typeof revertResultSchema>;
 export type PageInfo = z.infer<typeof pageInfoSchema>;
 export type PickedElement = z.infer<typeof pickedElementSchema>;
+export type FixTrialsDto = z.infer<typeof fixTrialsSchema>;
+export type TrialDto = FixTrialsDto['trials'][number]['trial'];
+export type PreviewKey = NonNullable<RequestParams<'preview'>['key']>;
 export type PageRequest = z.infer<typeof pageRequestSchema>;
 export type ProgressPhase = z.infer<typeof progressPhaseSchema>;
 export type PageRequestType = PageRequest['type'];

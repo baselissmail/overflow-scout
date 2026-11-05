@@ -83,6 +83,38 @@ test.describe('demo page', () => {
     await expect(panel.getByRole('button', { name: /^Scan page/ })).toBeVisible();
   });
 
+  test('tries each fix on the page, and previews one until it is stopped', async ({
+    extensionId,
+    openTab,
+    openPanel,
+  }) => {
+    const { page: demo, tabId } = await openTab(`chrome-extension://${extensionId}/demo.html`);
+    await demo.setViewportSize({ width: 800, height: 900 });
+    const panel = await openPanel(tabId);
+    const title = demo.locator('h2.title').first();
+    const before = await pageText(demo);
+
+    await scan(panel);
+    await rows(panel).filter({ hasText: 'Waterproof hiking jacket' }).click();
+    // The fixed height is the cause; growing the box is verified to fix it.
+    const fix = panel.getByRole('listitem').filter({ hasText: 'min-height' });
+    await expect(fix).toContainText(/Fixes it\. The box gets [\d.]+\s?px taller\./);
+    await expect(panel.getByText('Each fix was tried on the page for a moment')).toBeVisible();
+    // Trying left the page exactly as it was.
+    expect(await pageText(demo)).toBe(before);
+
+    await fix.getByRole('button', { name: 'Preview on page' }).click();
+    await expect.poll(() => title.getAttribute('style')).toContain('height: auto');
+    await fix.getByRole('button', { name: 'Stop preview' }).click();
+    await expect.poll(() => title.getAttribute('style')).toBeNull();
+
+    // Closing the details takes a preview off the page too.
+    await fix.getByRole('button', { name: 'Preview on page' }).click();
+    await expect.poll(() => title.getAttribute('style')).toContain('height: auto');
+    await panel.keyboard.press('Escape');
+    await expect.poll(() => pageText(demo)).toBe(before);
+  });
+
   test('stress-tests the page and reverts it exactly', async ({
     extensionId,
     openTab,

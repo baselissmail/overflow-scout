@@ -1,12 +1,16 @@
-import type { StressSession, TraversalOptions } from '@/core';
+import type { Finding, Fix, FixTrials, StressSession, StyleEdit, TraversalOptions } from '@/core';
 import {
+  applyDeclarations,
   elementLabel,
   elementSelector,
   findBreakingPoint,
+  fixCss,
+  fixesFor,
   runStressTest,
   sampleText,
   scanDocumentAsync,
   textCut,
+  tryFixes,
 } from '@/core';
 import type {
   PageInfo,
@@ -54,6 +58,10 @@ export class PageSession {
   private picked: Element | null = null;
   private lastProgressAt = 0;
   private disposed = false;
+  /** The fixes last tried, so a preview applies exactly what was measured. */
+  private tried: { findingId: string; fixes: Fix<Element>[]; result: FixTrials } | null = null;
+  /** A fix kept on the page so it can be seen; undone before any other work. */
+  private preview: StyleEdit | null = null;
 
   constructor(
     private readonly doc: Document,
@@ -111,6 +119,7 @@ export class PageSession {
     this.disposed = true;
     this.work?.abort();
     this.picker.stop();
+    this.endPreview();
     this.endStress();
     this.overlay.destroy();
     this.registry.clear();
@@ -175,7 +184,12 @@ export class PageSession {
       this.work?.abort();
       return null;
     },
-    revert: () => this.serial(() => Promise.resolve(this.endStress())),
+    revert: () =>
+      this.serial(() => {
+        this.endPreview();
+        this.tried = null;
+        return Promise.resolve(this.endStress());
+      }),
     reapply: () =>
       this.serial(async () => {
         if (!this.stress) return { strings: 0 };
@@ -198,20 +212,7 @@ export class PageSession {
     reveal: ({ findingId }) => {
       const finding = this.registry.get(findingId);
       if (!finding) throw new Error('This result is from an earlier scan. Scan again.');
-      const reduced = this.doc.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      finding.element.scrollIntoView({
-        block: 'center',
-        inline: 'nearest',
-        behavior: reduced ? 'auto' : 'smooth',
-      });
-      this.overlay.highlight(
-        {
-          element: finding.element,
-          container: finding.container,
-          label: elementLabel(finding.element),
-        },
-        true,
-      );
+      this.reveal(finding);
       return null;
     },
     details: ({ findingId }) => {
@@ -227,11 +228,77 @@ export class PageSession {
       else this.picker.stop();
       return null;
     },
+    fixes: ({ findingId }) => {
+      this.endPreview();
+      const finding = this.registry.get(findingId);
+      if (!finding?.element.isConnected) return null;
+      const fixes = fixesFor(finding);
+      const result = tryFixes(finding, fixes, this.traversal);
+      this.tried = { findingId, fixes, result };
+      return {
+        trials: fixes.flatMap((fix) => {
+          const trial = result.trials[fix.key];
+          return trial ? [{ key: fix.key, trial }] : [];
+        }),
+        added: result.added.map((fix) => ({
+          key: fix.key,
+          css: fixCss(fix) ?? '',
+          element: { label: elementLabel(fix.element) },
+        })),
+        combined: result.combined,
+      };
+    },
+    preview: ({ findingId, key }) => {
+      this.endPreview();
+      if (key === null) return null;
+      const finding = this.registry.get(findingId);
+      if (!finding?.element.isConnected)
+        throw new Error('This result is from an earlier scan. Scan again.');
+      if (this.tried?.findingId !== findingId) {
+        const fixes = fixesFor(finding);
+        this.tried = { findingId, fixes, result: tryFixes(finding, fixes, this.traversal) };
+      }
+      const all = [...this.tried.fixes, ...this.tried.result.added].filter(
+        (fix) => fix.declarations.length > 0,
+      );
+      const chosen = key === 'all' ? all : all.filter((fix) => fix.key === key);
+      if (chosen.length === 0) throw new Error('This fix has no CSS to preview.');
+      // Page transitions stay on, so the fix eases in the way the page would show it.
+      this.preview = applyDeclarations(chosen, { transitions: true });
+      this.reveal(finding);
+      return null;
+    },
   };
+
+  /** Scrolls a finding into view and pulses its outline. */
+  private reveal(finding: Finding): void {
+    const reduced = this.doc.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    finding.element.scrollIntoView({
+      block: 'center',
+      inline: 'nearest',
+      behavior: reduced ? 'auto' : 'smooth',
+    });
+    this.overlay.highlight(
+      {
+        element: finding.element,
+        container: finding.container,
+        label: elementLabel(finding.element),
+      },
+      true,
+    );
+  }
+
+  private endPreview(): void {
+    this.preview?.undo();
+    this.preview = null;
+  }
 
   /** Runs heavy work one at a time with a fresh abort signal for `cancel`. */
   private cancellable<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
     return this.serial(async () => {
+      // Results describe the page as it is, not with a previewed fix.
+      this.endPreview();
+      this.tried = null;
       const controller = new AbortController();
       this.work = controller;
       this.lastProgressAt = 0;
