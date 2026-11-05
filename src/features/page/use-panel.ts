@@ -5,6 +5,7 @@ import type { IssueDto } from '@/messaging/protocol';
 import { LAST_GESTURE_KEY, gestureMessageSchema } from '@/messaging/protocol';
 
 import { PageConnection } from './connection';
+import { CaptureHidden } from './controller';
 import type { PanelState } from './controller';
 import { PanelController } from './controller';
 
@@ -42,6 +43,9 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
         setBadge,
         capture: async (tabId) => {
           const tab = await browser.tabs.get(tabId);
+          // A capture shows whatever tab is in front; a panel pinned to another tab mustn't
+          // crop someone else's page.
+          if (!tab.active) throw new CaptureHidden();
           return browser.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
         },
       }),
@@ -78,11 +82,6 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
     const onActivated = (info: { tabId: number; windowId: number }) => {
       if (pinned === null && info.windowId === windowId) controller.setTarget(info.tabId);
     };
-    const onUpdated = (tabId: number, change: { status?: string }) => {
-      if (tabId === controller.getState().tabId && change.status === 'loading') {
-        controller.navigated();
-      }
-    };
     const onRemoved = (tabId: number) => {
       if (tabId === controller.getState().tabId) controller.setTarget(null);
     };
@@ -93,7 +92,6 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
     };
 
     browser.tabs.onActivated.addListener(onActivated);
-    browser.tabs.onUpdated.addListener(onUpdated);
     browser.tabs.onRemoved.addListener(onRemoved);
     browser.runtime.onMessage.addListener(onMessage);
     void start();
@@ -101,7 +99,6 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
     return () => {
       disposed = true;
       browser.tabs.onActivated.removeListener(onActivated);
-      browser.tabs.onUpdated.removeListener(onUpdated);
       browser.tabs.onRemoved.removeListener(onRemoved);
       browser.runtime.onMessage.removeListener(onMessage);
       controller.dispose();

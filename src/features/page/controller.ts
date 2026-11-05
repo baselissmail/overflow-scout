@@ -52,6 +52,11 @@ export class CaptureNotAllowed extends Error {
   override name = 'CaptureNotAllowed';
 }
 
+/** The panel's tab isn't the one in front, so a capture would show another page. */
+export class CaptureHidden extends Error {
+  override name = 'CaptureHidden';
+}
+
 export interface ControllerDeps {
   connect: (tabId: number) => Promise<{ connection: PageConnection; page: PageInfo }>;
   /** Shows the issue count on the toolbar button for a tab; null clears it. */
@@ -113,7 +118,12 @@ export class PanelController {
     this.set({ ...INITIAL, tabId });
   }
 
-  /** The target tab started loading a new document. */
+  /**
+   * The page the results describe is gone: a new document loaded (the port
+   * closed) or a single-page app changed route (the page said so). Ending the
+   * connection makes the page put stress text back and remove its overlay,
+   * whether or not its script is still there.
+   */
   navigated(): void {
     this.disconnect();
     if (this.state.tabId !== null) this.deps.setBadge(this.state.tabId, null);
@@ -402,12 +412,15 @@ export class PanelController {
         case 'pick-cancelled':
           this.set({ picking: false });
           break;
+        case 'navigated':
+          this.navigated();
+          break;
       }
     });
     connection.onClose((expected) => {
       if (connection !== this.connection) return;
       this.connection = null;
-      // Unexpected: the page navigated, reloaded, or was closed.
+      // Unexpected: a new document loaded, or the tab closed or went into the back/forward cache.
       if (!expected) this.navigated();
     });
   }

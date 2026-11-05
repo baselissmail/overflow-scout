@@ -33,6 +33,7 @@ import type {
 
 import type { OverlayText } from './overlay';
 import { Overlay } from './overlay';
+import { watchNavigation } from './navigation';
 import { Picker } from './picker';
 import { FindingRegistry, toIssueDtos } from './serialize';
 
@@ -97,6 +98,7 @@ export class PageSession {
   private picked: Element | null = null;
   private lastProgressAt = 0;
   private disposed = false;
+  private readonly stopNavigation: () => void;
   /** The fixes last tried, so a preview applies exactly what was measured. */
   private tried: { findingId: string; fixes: Fix<Element>[]; result: FixTrials } | null = null;
   /** A fix kept on the page so it can be seen; undone before any other work. */
@@ -120,6 +122,11 @@ export class PageSession {
         this.send({ type: 'pick-cancelled' });
       },
     );
+    this.stopNavigation = doc.defaultView
+      ? watchNavigation(doc.defaultView, () => {
+          this.send({ type: 'navigated' });
+        })
+      : () => undefined;
   }
 
   private get traversal(): TraversalOptions {
@@ -158,6 +165,7 @@ export class PageSession {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.stopNavigation();
     this.work?.abort();
     this.picker.stop();
     this.endPreview();

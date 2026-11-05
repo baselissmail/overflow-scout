@@ -346,6 +346,37 @@ test.describe('other pages', () => {
     await expect(page.locator('overflow-scout-root .box[data-role="target"]')).toHaveCount(1);
   });
 
+  test('treats a single-page app route change as a new page', async ({ openTab, openPanel }) => {
+    const { page, tabId } = await openTab(`${TEST_ORIGIN}/`);
+    const panel = await openPanel(tabId);
+    const before = await pageText(page);
+    await runStress(panel);
+    expect(await pageText(page)).not.toBe(before);
+
+    // The app changes route without loading: the results are stale and the page is put back.
+    await page.evaluate(() => {
+      history.pushState({}, '', '/settings');
+    });
+    await expect(
+      panel.getByRole('status').filter({ hasText: 'Results are from the previous page.' }),
+    ).toBeVisible();
+    await expect.poll(() => pageText(page)).toBe(before);
+    // Moving to an anchor, or keeping a search query in the URL, isn't a new page.
+    await scan(panel);
+    await expect(panel.getByText('Results are from the previous page.')).toBeHidden();
+    await page.evaluate(() => {
+      location.hash = 'details';
+      history.replaceState({}, '', '/settings?q=invoice#details');
+    });
+    await page.waitForTimeout(300);
+    await expect(panel.getByText('Results are from the previous page.')).toBeHidden();
+    // A hash router's route change is.
+    await page.evaluate(() => {
+      location.hash = '#/inbox';
+    });
+    await expect(panel.getByText('Results are from the previous page.')).toBeVisible();
+  });
+
   test('marks results stale after navigation and scans the new page', async ({
     openTab,
     openPanel,
