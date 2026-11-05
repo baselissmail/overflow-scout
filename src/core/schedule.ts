@@ -80,6 +80,8 @@ export async function runInSlices(
   const sliceMs = options.sliceMs ?? DEFAULT_SLICE_MS;
   const yieldToHost = yieldFor(doc, options);
   const timer = new SliceTimer();
+  const { signal } = options;
+  signal?.throwIfAborted();
 
   const started = now();
   let sliceStart = started;
@@ -87,6 +89,7 @@ export async function runInSlices(
     if (now() - sliceStart >= sliceMs) {
       timer.record(now() - sliceStart);
       await yieldToHost();
+      signal?.throwIfAborted();
       onResume?.();
       sliceStart = now();
     }

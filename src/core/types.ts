@@ -100,6 +100,8 @@ export interface SliceOptions {
   now?: () => number;
   /** Yields to the host between slices. Defaults to `scheduler.yield()`. */
   yieldToHost?: () => Promise<void>;
+  /** Cancels sliced work at the next pause; the promise rejects with the signal's reason. */
+  signal?: AbortSignal;
 }
 
 /** Time spent on sliced work. */
@@ -119,4 +121,8 @@ export interface ScanOptions extends TraversalOptions, SliceOptions {
    * page-scroll culprits. Default: the whole document.
    */
   root?: Element;
+  /** Check input placeholders and read-only values. Default true. */
+  includeInputs?: boolean;
+  /** Called at every pause of a sliced scan with the text nodes measured so far. */
+  onProgress?: (textNodes: number) => void;
 }

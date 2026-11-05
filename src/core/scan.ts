@@ -169,7 +169,7 @@ class ScanSession {
       if (node.nodeType === TEXT_NODE) {
         const text = node as Text;
         if (/\S/.test(text.data)) yield { type: 'text', node: text };
-      } else if (isInput(node as Element)) {
+      } else if (this.options.includeInputs !== false && isInput(node as Element)) {
         yield { type: 'input', element: node as HTMLInputElement };
       }
     }
@@ -599,6 +599,7 @@ export async function scanDocumentAsync(
   const session = new ScanSession(doc, options);
   const timing = await runInSlices(doc, session.steps(), options, () => {
     session.resetLayout();
+    options.onProgress?.(session.counts.textNodes);
   });
   return session.result(timing);
 }
