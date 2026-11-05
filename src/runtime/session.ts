@@ -27,6 +27,36 @@ import { Overlay } from './overlay';
 import { Picker } from './picker';
 import { FindingRegistry, toIssueDtos } from './serialize';
 
+/** Waits for the page to paint, so a capture shows what was just drawn. */
+function nextFrames(view: Window, count: number): Promise<void> {
+  return new Promise((resolve) => {
+    const step = (left: number) => {
+      if (left === 0) resolve();
+      else
+        view.requestAnimationFrame(() => {
+          step(left - 1);
+        });
+    };
+    step(count);
+  });
+}
+
+/** The box around a finding: its container, its element, and its text where it spills. */
+function frameOf(finding: Finding): { x: number; y: number; width: number; height: number } {
+  const range = finding.element.ownerDocument.createRange();
+  range.selectNodeContents(finding.element);
+  const rects = [
+    finding.container.getBoundingClientRect(),
+    finding.element.getBoundingClientRect(),
+    range.getBoundingClientRect(),
+  ].filter((rect) => rect.width > 0 || rect.height > 0);
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
 export interface SessionOptions {
   /** Opens closed shadow roots (`chrome.dom.openOrClosedShadowRoot` in content scripts). */
   openShadowRoot?: (element: Element) => ShadowRoot | null;
@@ -227,6 +257,23 @@ export class PageSession {
       if (active) this.picker.start();
       else this.picker.stop();
       return null;
+    },
+    frame: async ({ findingId }) => {
+      const finding = this.registry.get(findingId);
+      const view = this.doc.defaultView;
+      if (!finding?.element.isConnected || !view) return null;
+      finding.element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+      // A steady outline (no pulse), drawn before the capture.
+      this.overlay.highlight({
+        element: finding.element,
+        container: finding.container,
+        label: elementLabel(finding.element),
+      });
+      await nextFrames(view, 2);
+      return {
+        rect: frameOf(finding),
+        viewport: { width: view.innerWidth, height: view.innerHeight },
+      };
     },
     fixes: ({ findingId }) => {
       this.endPreview();

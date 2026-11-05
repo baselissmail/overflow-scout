@@ -36,7 +36,15 @@ function pinnedTab(): number | null {
 /** Wires the panel controller to the browser: target tab, navigation, gestures. */
 export function usePanel(): { state: PanelState; controller: PanelController } {
   const [controller] = useState(
-    () => new PanelController({ connect: (tabId) => PageConnection.open(tabId), setBadge }),
+    () =>
+      new PanelController({
+        connect: (tabId) => PageConnection.open(tabId),
+        setBadge,
+        capture: async (tabId) => {
+          const tab = await browser.tabs.get(tabId);
+          return browser.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+        },
+      }),
   );
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
 

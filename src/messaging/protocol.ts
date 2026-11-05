@@ -203,6 +203,8 @@ export const pageRequestSchema = z.discriminatedUnion('type', [
   /** The selector and cut of one finding, for places that didn't arrive with them. */
   z.object({ id, type: z.literal('details'), findingId: z.string() }),
   z.object({ id, type: z.literal('pick'), active: z.boolean() }),
+  /** Scrolls a finding into view for a screenshot and says where it is in the window. */
+  z.object({ id, type: z.literal('frame'), findingId: z.string() }),
   /** Tries each suggested fix for one measurement, then restores the page exactly. */
   z.object({ id, type: z.literal('fixes'), findingId: z.string() }),
   /**
@@ -235,6 +237,14 @@ export const pageResultSchemas = {
   ),
   pick: z.null(),
   fixes: z.nullable(fixTrialsSchema),
+  frame: z.nullable(
+    z.object({
+      /** The finding's box, its text and its container, in CSS pixels from the window's corner. */
+      rect: z.object({ x: px, y: px, width: px, height: px }),
+      /** The window's size in CSS pixels, scrollbars included, as a capture of it shows. */
+      viewport: viewportSchema,
+    }),
+  ),
   preview: z.null(),
 } as const;
 

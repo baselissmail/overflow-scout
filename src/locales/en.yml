@@ -32,6 +32,7 @@ actions:
   copySelector: Copy selector
   copyCss: Copy CSS
   copyReport: Copy report
+  copyScreenshot: Copy screenshot
   preview: Preview on page
   previewAll: Preview them together
   stopPreview: Stop preview
@@ -164,6 +165,9 @@ detail:
   on: On $1
   suggestionNote: Based on the likely cause below; not tried on the page.
   trying: Trying each fix on the page…
+  screenshotSaved: The clipboard isn’t available, so the screenshot was saved to your downloads.
+  screenshotFailed: 'Couldn’t take a screenshot: $1'
+  screenshotNeedsClick: Chrome allows screenshots only after you click the Overflow Scout button in the toolbar. Click it, then try again.
   tried: Each fix was tried on the page for a moment, then removed. Nothing was changed.
 fix:
   fixes: Fixes it.

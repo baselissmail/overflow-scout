@@ -10,6 +10,8 @@ import type {
   StressResultDto,
 } from '@/messaging/protocol';
 
+import { cropImage } from '@/features/report/screenshot';
+
 import type { ConnectionFailure, PageConnection } from './connection';
 import { ConnectionError, RequestError } from './connection';
 
@@ -43,10 +45,17 @@ export interface PanelState {
   restored: { texts: number; seq: number } | null;
 }
 
+/** Chrome refused to capture the tab: the toolbar button wasn't clicked since it loaded. */
+export class CaptureNotAllowed extends Error {
+  override name = 'CaptureNotAllowed';
+}
+
 export interface ControllerDeps {
   connect: (tabId: number) => Promise<{ connection: PageConnection; page: PageInfo }>;
   /** Shows the issue count on the toolbar button for a tab; null clears it. */
   setBadge: (tabId: number, issues: readonly IssueDto[] | null) => void;
+  /** A PNG data URL of what the tab shows (`tabs.captureVisibleTab`). */
+  capture: (tabId: number) => Promise<string>;
 }
 
 const INITIAL: PanelState = {
@@ -206,6 +215,27 @@ export class PanelController {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * A PNG of a finding on the page, cropped to it with its outline. Rejects
+   * with the reason when the tab can't be captured.
+   */
+  async screenshot(findingId: string): Promise<Blob> {
+    const { tabId } = this.state;
+    if (tabId === null) throw new Error('No tab to work on.');
+    const connection = await this.ensureConnection();
+    const frame = await connection.request('frame', { findingId });
+    if (!frame) throw new Error('This result is from an earlier scan. Scan again.');
+    let image: string;
+    try {
+      image = await this.deps.capture(tabId);
+    } catch (error) {
+      // Chrome allows captures only with activeTab (a click on the toolbar button) or <all_urls>.
+      const message = error instanceof Error ? error.message : String(error);
+      throw /activeTab|all_urls/.test(message) ? new CaptureNotAllowed(message) : error;
+    }
+    return cropImage(image, frame.rect, frame.viewport);
   }
 
   /** Highlights a finding on the page; quiet if the page isn't connected. */

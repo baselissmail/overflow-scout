@@ -1,6 +1,7 @@
 import { i18n } from '#i18n';
 import {
   ArrowLeft,
+  Camera,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -10,6 +11,8 @@ import {
 import { useEffect, useState } from 'react';
 
 import type { ReportContext } from '@/features/report/markdown';
+import { CaptureNotAllowed } from '@/features/page/controller';
+import { downloadBlob, screenshotName } from '@/features/report/export';
 import { issueMarkdown } from '@/features/report/markdown';
 import type { FixTrialsDto, IssueDto, PreviewKey, ResultOf } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
@@ -17,6 +20,7 @@ import { Badge, TONE_TEXT } from '@/ui/Chip';
 import { CutText } from '@/ui/CutText';
 import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
+import { useToast } from '@/ui/Toast';
 
 import { CopyButton, useCopied } from './CopyButton';
 import { Fixes } from './Fixes';
@@ -45,6 +49,8 @@ export interface IssueDetailProps {
   onPreview: (findingId: string, key: PreviewKey | null) => Promise<boolean>;
   /** Where the results come from; null hides Copy report. */
   report: ReportContext | null;
+  /** A PNG of the finding on the page, cropped to it. */
+  onScreenshot: (findingId: string) => Promise<Blob>;
 }
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
@@ -59,8 +65,12 @@ export function IssueDetail({
   loadFixes,
   onPreview,
   report,
+  onScreenshot,
 }: IssueDetailProps) {
   const [copied, markCopied] = useCopied();
+  const [shotCopied, markShotCopied] = useCopied();
+  const [shooting, setShooting] = useState(false);
+  const toast = useToast();
   const [index, setIndex] = useState(0);
   const finding = issue.instances[Math.min(index, issue.instances.length - 1)];
   // Only the first place of an issue arrives with its selector and cut; others load on demand.
@@ -223,6 +233,45 @@ export function IssueDetail({
             {copied ? i18n.t('actions.copied') : i18n.t('actions.copyReport')}
           </Button>
         )}
+        <Button
+          size="sm"
+          disabled={shooting}
+          icon={
+            shotCopied ? (
+              <Check size={14} strokeWidth={1.5} className="text-ok" />
+            ) : (
+              <Camera size={14} strokeWidth={1.5} />
+            )
+          }
+          onClick={() => {
+            setShooting(true);
+            const image = onScreenshot(finding.id);
+            // The clipboard gets the promise at once, so the click still counts as the gesture.
+            navigator.clipboard
+              .write([new ClipboardItem({ 'image/png': image })])
+              .then(markShotCopied, async () => {
+                // No clipboard (or the capture failed): save the file instead, or say why not.
+                const name = `${screenshotName(report?.url ?? '', finding.element.label)}.png`;
+                const blob = await image;
+                downloadBlob(name, blob);
+                toast(i18n.t('detail.screenshotSaved'));
+              })
+              .catch((error: unknown) => {
+                toast(
+                  error instanceof CaptureNotAllowed
+                    ? i18n.t('detail.screenshotNeedsClick')
+                    : i18n.t('detail.screenshotFailed', [
+                        error instanceof Error ? error.message : String(error),
+                      ]),
+                );
+              })
+              .finally(() => {
+                setShooting(false);
+              });
+          }}
+        >
+          {shotCopied ? i18n.t('actions.copied') : i18n.t('actions.copyScreenshot')}
+        </Button>
       </section>
 
       {/* The next step comes first; the evidence follows. */}

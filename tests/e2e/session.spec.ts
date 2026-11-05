@@ -265,6 +265,25 @@ test.describe('other pages', () => {
     expect(await page.locator('.tab').first().textContent()).not.toBe('Overview');
   });
 
+  test('explains how to allow screenshots when Chrome refuses one', async ({
+    openTab,
+    openPanel,
+  }) => {
+    // Site access alone doesn't allow captures; a click on the toolbar button (activeTab) does,
+    // and Playwright can't click it. The cropping itself is tested in tests/panel.
+    const { page, tabId } = await openTab(`${TEST_ORIGIN}/`);
+    const panel = await openPanel(tabId);
+    await scan(panel);
+    await rows(panel).first().click();
+    await page.bringToFront();
+    await panel.getByRole('button', { name: 'Copy screenshot' }).click();
+    await expect(
+      panel.getByText(/allows screenshots only after you click the Overflow Scout button/),
+    ).toBeVisible();
+    // The page was brought into view for the capture, with the result outlined.
+    await expect(page.locator('overflow-scout-root .box[data-role="target"]')).toHaveCount(1);
+  });
+
   test('marks results stale after navigation and scans the new page', async ({
     openTab,
     openPanel,

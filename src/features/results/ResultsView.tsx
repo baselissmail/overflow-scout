@@ -241,6 +241,7 @@ function ResultsBody({
   );
   const loadDetails = useCallback((id: string) => controller.details(id), [controller]);
   const loadFixes = useCallback((id: string) => controller.fixes(id), [controller]);
+  const screenshot = useCallback((id: string) => controller.screenshot(id), [controller]);
   const preview = useCallback(
     (id: string, key: PreviewKey | null) => controller.preview(id, key),
     [controller],
@@ -316,6 +317,7 @@ function ResultsBody({
         loadFixes={loadFixes}
         onPreview={preview}
         report={report}
+        onScreenshot={screenshot}
       />
     </div>
   ) : null;

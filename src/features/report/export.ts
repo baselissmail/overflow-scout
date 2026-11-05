@@ -42,7 +42,18 @@ export function exportResults(state: PanelState, now = new Date()) {
 
 /** Saves text as a file through the browser's download flow (no extra permission). */
 export function downloadText(name: string, text: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type }));
+  downloadBlob(name, new Blob([text], { type }));
+}
+
+/** "overflow-scout-shop.example-h2.title" (without an extension). */
+export function screenshotName(url: string, label: string): string {
+  const element = label.split(' › ').at(-1) ?? 'element';
+  return `${exportFileName(url, new Date(), 'png').replace(/\.png$/, '')}-${element.replace(/[^\w.-]/g, '_')}`;
+}
+
+/** Saves a file through the browser's download flow. */
+export function downloadBlob(name: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = name;

@@ -33,7 +33,11 @@ export default defineConfig({
           name: 'browser',
           // Performance budgets are looser on shared CI runners.
           provide: { ci: Boolean(process.env['CI']) },
-          include: ['tests/engine/**/*.test.ts', 'tests/frameworks/**/*.test.ts'],
+          include: [
+            'tests/engine/**/*.test.ts',
+            'tests/frameworks/**/*.test.ts',
+            'tests/panel/**/*.test.ts',
+          ],
           browser: {
             enabled: true,
             provider: playwright(),

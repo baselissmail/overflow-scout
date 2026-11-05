@@ -88,7 +88,8 @@ function setup(results?: Partial<Record<PageRequestType, unknown>>) {
   const fake = fakeConnection(results);
   const connect = vi.fn(() => Promise.resolve({ connection: fake.connection, page: PAGE }));
   const setBadge = vi.fn();
-  const controller = new PanelController({ connect, setBadge });
+  const capture = vi.fn(() => Promise.resolve('data:image/png;base64,'));
+  const controller = new PanelController({ connect, setBadge, capture });
   controller.setTarget(7);
   return { controller, fake, request: fake.request, connect, setBadge };
 }
@@ -125,6 +126,7 @@ describe('PanelController', () => {
     const controller = new PanelController({
       connect: () => Promise.reject(new ConnectionError({ reason: 'restricted' })),
       setBadge,
+      capture: () => Promise.reject(new Error('restricted')),
     });
     controller.setTarget(3);
     await controller.scan();
