@@ -88,9 +88,9 @@ horizontal scroll, a text cursor).
 ### Space, shape, motion
 
 - 4 px grid. Panel padding 12. Rows 36 px (compact).
-- Radius 6 for controls, 10 for cards. Raised surfaces sit on the ground with
-  a hairline and a 1 px soft shadow; deeper shadows only on floating layers
-  (palette, dialogs, tooltips, toasts). No glass or blur.
+- Radius 8 for controls, 12 for cards. Raised surfaces sit on the ground with
+  a hairline only; shadows only on floating layers (palette, dialogs,
+  tooltips, toasts). No glass or blur.
 - The parts the browser draws are themed too: text selection, the caret,
   thin scrollbars, focus rings, native control accents.
 
@@ -103,11 +103,37 @@ One authored moment; everything else answers an action.
   bar fills in (about 1.5 s, once).
 - **Continuity:** on narrow panels, list ⇄ detail is a View Transition. The
   detail's measure bar draws itself: the box first, then the bleed.
-- **Arrival:** when results land, the first eight rows stagger in (20 ms apart)
-  and the counts count up. Never again while filtering or scrolling.
-- **Feedback:** 120 ms press and hover; a light band runs along the scanning bar.
-- Arrivals ease with `cubic-bezier(0.16, 1, 0.3, 1)`. Under
-  `prefers-reduced-motion` all of it is off and content is visible at once.
+- **Arrival:** when results land, the first six rows fade and rise in (40 ms
+  apart) and the counts count up. Never again while filtering or scrolling.
+- **Feedback:** 150 ms press and hover (a color or surface step, never a
+  scale-up); a light band runs along the scanning bar while it works.
+- One curve for everything, `cubic-bezier(0.22, 1, 0.36, 1)`: 150 ms for
+  feedback, 220 ms for what enters, 280 ms for view changes. Nothing loops
+  except live progress. Under `prefers-reduced-motion` all of it is off and
+  content is visible at once.
+
+### Quiet chrome (2026-11-07)
+
+A first-time user called the panel cumbersome. The pass followed `unslop`
+(`.claude/skills/unslop`): color and detail belong to the one moment, the cut,
+and the chrome around it stays quiet.
+
+- **One primary action per view.** In the toolbar, Scan is filled; Longer text
+  and Measure are quiet until they're on. Below 360 px their labels are only
+  read out, so the toolbar keeps one line.
+- **Severity is a dot and words**, never a colored pill, in rows, chips and
+  headers. The three-color severity bar is gone: one line of counts says it.
+- **Results start high.** One summary line (counts, what the levels mean,
+  Clear results), the kind filters, then search with sort as a toggle.
+- **Details lead with the cut**, then one row of quiet actions: Show on page,
+  Try other text, and copy icons. The background (likely cause, element,
+  selector, the text before) folds under "Why it happens"; Ignore is a quiet
+  action at the end.
+- **Try other text** is one editor wherever it appears (a result's details, the
+  Measure card): the field holds exactly what's on the page and updates it as
+  you type. The length slider, "Translation length", "Worst case", "Twice as
+  long" and the real-world examples all write into it, so anything can be
+  edited further.
 
 ## Layout
 
