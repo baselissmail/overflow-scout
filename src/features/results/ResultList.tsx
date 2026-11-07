@@ -1,7 +1,7 @@
 import { i18n } from '#i18n';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { KeyboardEvent, ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import type { IssueDto } from '@/messaging/protocol';
 import { Badge, TONE_TEXT } from '@/ui/Chip';
@@ -21,21 +21,25 @@ export interface ResultListProps {
   onHighlight: (findingId: string | null) => void;
   /** Issues ignored on this site, shown only when asked for, and marked. */
   ignored: ReadonlySet<string>;
+  /** Issues that appear only with longer text, marked New. */
+  fresh: ReadonlySet<string>;
 }
 
 const rowId = (issue: IssueDto) => `result-${issue.id}`;
 
-/** One issue: its kind, then the text cut where readers lose it, then where it is. */
+/** One issue: what kind it is, then the text, cut where readers lose it. */
 function ResultRow({
   issue,
   selected,
   viewportWidth,
   ignored,
+  fresh,
 }: {
   issue: IssueDto;
   selected: boolean;
   viewportWidth: number;
   ignored: boolean;
+  fresh: boolean;
 }) {
   const [first] = issue.instances;
   if (!first) return null;
@@ -71,44 +75,38 @@ function ResultRow({
   return (
     <div
       className={cx(
-        'flex flex-col gap-1 rounded-control px-2.5 py-2',
+        'flex flex-col gap-1 rounded-control px-3 py-2.5',
         'transition-[background-color] duration-(--duration-press)',
         selected ? 'bg-accent-soft' : 'hover:bg-surface',
       )}
     >
       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <Badge tone={tone}>{kindLabel(issue.kind)}</Badge>
-        {places > 1 && (
-          <span className="text-small text-fg-muted tabular-nums">
-            {i18n.t('results.places', places, [formatCount(places)])}
+        {fresh && (
+          <span className="rounded-[4px] bg-accent-soft px-1.5 text-small font-medium text-fg">
+            {i18n.t('results.new')}
           </span>
         )}
         {ignored && (
           <span className="text-small text-fg-muted">{i18n.t('results.ignoredLabel')}</span>
         )}
+        {places > 1 && (
+          <span className="ms-auto text-small text-fg-muted tabular-nums">
+            {i18n.t('results.places', places, [formatCount(places)])}
+          </span>
+        )}
       </span>
-      {body}
-      <span
-        className="truncate font-mono text-small text-fg-muted"
-        title={first.element.label}
-        translate="no"
-      >
-        {first.element.label}
-      </span>
+      {body ?? (
+        // Nothing to read (an empty box): where it is, then.
+        <span className="font-mono text-small break-all text-fg-muted" translate="no">
+          {first.element.label}
+        </span>
+      )}
     </div>
   );
 }
 
-/** Rows animate in only on arrival: never again while scrolling the virtual list. */
-const ARRIVAL_MS = 500;
-/** A short fade and rise for the first few rows only; the rest are simply there. */
-const STAGGERED_ROWS = 6;
-const STAGGER_MS = 40;
-
-/**
- * Remount it (with a `key`) when a new set of results arrives, so the first
- * rows stagger in once. Filtering and scrolling never replay it.
- */
+/** The problems, one row each; keyboard focus stays on the list (arrow keys, j and k). */
 export function ResultList({
   issues,
   viewportWidth,
@@ -118,6 +116,7 @@ export function ResultList({
   onOpen,
   onHighlight,
   ignored,
+  fresh,
 }: ResultListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   // TanStack Virtual returns fresh functions each render, so the React Compiler
@@ -126,20 +125,10 @@ export function ResultList({
   const virtualizer = useVirtualizer({
     count: issues.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 56,
+    estimateSize: () => 64,
     overscan: 8,
   });
   const selectedIndex = issues.findIndex((issue) => issue.id === selectedId);
-  const [arriving, setArriving] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setArriving(false);
-    }, ARRIVAL_MS);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
 
   useEffect(() => {
     if (selectedIndex >= 0) virtualizer.scrollToIndex(selectedIndex, { align: 'auto' });
@@ -227,23 +216,13 @@ export function ResultList({
                 onOpen(issue);
               }}
             >
-              <div
-                className={cx(arriving && item.index < STAGGERED_ROWS && 'animate-enter')}
-                style={
-                  arriving
-                    ? {
-                        animationDelay: `${String(Math.min(item.index, STAGGERED_ROWS) * STAGGER_MS)}ms`,
-                      }
-                    : undefined
-                }
-              >
-                <ResultRow
-                  issue={issue}
-                  selected={issue.id === selectedId}
-                  viewportWidth={viewportWidth}
-                  ignored={ignored.has(issue.id)}
-                />
-              </div>
+              <ResultRow
+                issue={issue}
+                selected={issue.id === selectedId}
+                viewportWidth={viewportWidth}
+                ignored={ignored.has(issue.id)}
+                fresh={fresh.has(issue.id)}
+              />
             </div>
           );
         })}

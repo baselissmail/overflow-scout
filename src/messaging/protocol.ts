@@ -40,7 +40,7 @@ const mechanismSchema = z.enum([
 
 /** An element on the page, as the panel sees it. */
 export const elementRefSchema = z.object({
-  /** Short path such as `nav › a.nav-link`. */
+  /** Short path such as `nav > a.nav-link`. */
   label: z.string(),
   /** Unique selector, computed only where someone is likely to look. */
   selector: z.optional(z.string()),

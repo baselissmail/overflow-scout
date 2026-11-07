@@ -13,6 +13,9 @@ export interface SegmentedProps<T extends string> {
   value: T;
   options: readonly SegmentedOption<T>[];
   onChange: (value: T) => void;
+  /** Medium for a main control of the panel; small inside forms. */
+  size?: 'md' | 'sm';
+  disabled?: boolean;
   className?: string;
 }
 
@@ -22,6 +25,8 @@ export function Segmented<T extends string>({
   value,
   options,
   onChange,
+  size = 'sm',
+  disabled = false,
   className,
 }: SegmentedProps<T>) {
   return (
@@ -29,11 +34,16 @@ export function Segmented<T extends string>({
       type="single"
       aria-label={label}
       value={value}
+      disabled={disabled}
       onValueChange={(next) => {
         // Radix sends '' when the active item is pressed again; keep a value selected.
         if (next) onChange(next as T);
       }}
-      className={cx('flex min-w-0 gap-0.5 rounded-control bg-surface p-0.5', className)}
+      className={cx(
+        'flex min-w-0 gap-0.5 rounded-control bg-surface',
+        size === 'md' ? 'p-1' : 'p-0.5',
+        className,
+      )}
     >
       {options.map((option) => (
         <ToggleGroup.Item
@@ -42,7 +52,8 @@ export function Segmented<T extends string>({
           disabled={option.disabled}
           className={cx(
             // flex-auto, not flex-1: a zero basis would size the group to its narrowest word.
-            'min-h-6 flex-auto rounded-[5px] px-2 py-0.5 text-small font-medium text-fg-muted',
+            'flex-auto rounded-[5px] px-2 font-medium text-fg-muted',
+            size === 'md' ? 'min-h-8 py-1' : 'min-h-6 py-0.5 text-small',
             'transition-[background-color,color] duration-(--duration-press) ease-(--ease-out)',
             'hover:text-fg disabled:opacity-50',
             'data-[state=on]:bg-raised data-[state=on]:text-fg data-[state=on]:shadow-raised',

@@ -77,36 +77,30 @@ async function main(): Promise<void> {
     await panel.setViewportSize(PANEL);
     await panel.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
     await panel.goto(`chrome-extension://${id}/sidepanel.html?tab=${String(tabId)}`);
-    const rows = panel.getByRole('listbox', { name: 'Results' }).getByRole('option');
+    const rows = panel.getByRole('listbox', { name: 'Problems' }).getByRole('option');
+    const length = (name: string) => panel.getByRole('radio', { name, exact: true });
 
-    // 1. Scan: what's cut off, with the hovered result outlined on the page.
-    await panel.getByRole('button', { name: /^Scan page/ }).click();
+    // 1. Check: what's cut off, with the hovered problem outlined on the page.
+    await panel.getByRole('button', { name: 'Check page' }).click();
     await rows.first().waitFor();
     await rows.first().hover();
-    await compose(
-      context,
-      demo,
-      panel,
-      'Find text that’s cut off, truncated or overflowing',
-      '1-scan.png',
-    );
+    await compose(context, demo, panel, "Find text that's cut off on your page", '1-scan.png');
 
-    // 2. Details: each fix tried on the page.
+    // 2. Details: how to fix it, each fix tried on the page.
     await rows.filter({ hasText: 'Waterproof hiking jacket' }).click();
     await panel.getByText(/^Fixes it\./).waitFor();
     await compose(
       context,
       demo,
       panel,
-      'Every fix is tried on the page, then put back',
+      'Every fix is tested on the page, then put back',
       '2-fixes.png',
     );
 
     // 3. Longer text: what breaks once the page is translated.
-    await panel.keyboard.press('Escape');
-    await panel.getByRole('button', { name: /^(Longer text|Test with longer text)/ }).click();
-    await panel.getByRole('button', { name: 'Revert' }).waitFor();
-    await rows.first().waitFor();
+    await panel.getByRole('button', { name: 'All problems' }).click();
+    await length('Longer').click();
+    await panel.getByText(/(is|are) new with longer text\.$/).waitFor();
     await demo.evaluate(() => {
       window.scrollTo(0, 0);
     });
@@ -114,39 +108,31 @@ async function main(): Promise<void> {
       context,
       demo,
       panel,
-      'See what breaks once your text is translated',
+      'See what breaks when your text gets longer',
       '3-longer-text.png',
     );
 
-    // 4. Measure: how much fits, with real-world text tried live.
-    await panel.getByRole('button', { name: 'Revert' }).click();
-    // A clean panel: no earlier results, and the "Page restored" toast gone.
-    await panel.getByRole('button', { name: 'Clear results' }).click();
+    // 4. Your own text, live in one element.
+    await length('Normal').click();
+    await panel.getByText(/^Found in \d+ texts\.$/).waitFor();
+    // Let the "Text is back to normal" note go before the capture.
     await panel.waitForTimeout(4500);
-    await panel.getByRole('button', { name: /^(Measure an element|Measure$)/ }).click();
+    await panel.getByRole('button', { name: 'Try your own text' }).click();
     const target = await demo.locator('article.card button.buy').first().boundingBox();
     if (!target) throw new Error('The demo button has no box');
     await demo.mouse.click(target.x + target.width / 2, target.y + target.height / 2);
-    const card = panel.getByRole('region', { name: 'Measure' });
-    await card.getByRole('button', { name: 'Name' }).click();
-    await card.getByText(/at \d+ characters|Fits at/).waitFor();
-    await card.getByRole('heading', { name: 'Try other text' }).scrollIntoViewIfNeeded();
-    await compose(
-      context,
-      demo,
-      panel,
-      'Measure how much text fits, with real names and links',
-      '4-measure.png',
-    );
+    const view = panel.getByRole('region', { name: 'Try your own text' });
+    await view.getByRole('button', { name: 'Long name' }).click();
+    await view.getByText(/at \d+ characters/).waitFor();
+    await compose(context, demo, panel, 'Try any text in any element, live', '4-measure.png');
 
     // 5. Dark theme and a report for the bug tracker.
-    await card.getByRole('button', { name: 'Close measurement' }).click();
+    await view.getByRole('button', { name: 'Back', exact: true }).click();
     await panel.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
-    await panel.getByRole('button', { name: /^Scan (page|again)/ }).click();
     await rows.filter({ hasText: 'Waterproof hiking jacket' }).click();
     await panel.getByText(/^Fixes it\./).waitFor();
-    await panel.getByRole('button', { name: 'Export results' }).click();
-    await panel.getByRole('button', { name: 'Copy report (Markdown)' }).waitFor();
+    await panel.getByRole('button', { name: 'Copy report' }).click();
+    await panel.getByRole('button', { name: 'Copied' }).waitFor();
     await compose(
       context,
       demo,

@@ -19,28 +19,16 @@ hierarchy, keyboard-first), Raycast (fast list with a detail view).
 
 ## The signature: show the cut
 
-The product shows the cut instead of describing it. Two devices carry the
-identity, and everything else stays quiet so they can:
+The product shows the cut instead of describing it. One device carries the
+identity, and everything else stays quiet so it can:
 
-- **Cut text.** Wherever a finding has text, the panel shows it as readers see
+- **Cut text.** Wherever a problem has text, the panel shows it as readers see
   it, a **crop mark** where it is cut, and the lost part over a faint **bleed**
-  hatch: `Seasonal collections a▕nd limited editions`. The engine finds the
+  hatch: `Seasonal collections a|nd limited editions`. The engine finds the
   exact split by measuring rendered character rects against the clipping box
-  (`textCut` in `src/core/measure/cut.ts`). It appears in every result row
-  and, large, in the detail's proof card.
-- **The measure bar**, a ruler, not a progress bar:
-
-  ```text
-  width 120 px                  needs 214 px
-  ├───────────────┤╱╱╱╱╱╱╱╱╱╱╱╱┤
-  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔ −94 px  (hatched, in the severity color)
-  ```
-
-  The solid track is the box; the hatched part past its end is the bleed.
-  Ticks every 10 %. The first label names the axis ("width", "height", or
-  "window" for a page that scrolls sideways). The deficit is in the severity
-  color and in words for screen readers. Inspect uses the same bar in
-  characters, and the home demo draws the same three labels.
+  (`textCut` in `src/core/measure/cut.ts`). It appears in every row of the
+  list and, large, in a problem's details, with one line under it: "Needs 64
+  px of height, has 44 px. 20 px short."
 
 The brand mark is the same idea: crop marks around a line that runs out of
 its frame.
@@ -78,8 +66,9 @@ horizontal scroll, a text cursor).
 ### Type
 
 - **Geist** for the interface and **Geist Mono** for code (OFL-1.1, bundled
-  with the extension, never fetched). 13/18 body, 12/16 secondary, 15/20
-  titles at 600; the proof card's cut text is set at title size.
+  with the extension, never fetched). 14/20 body, 12/16 secondary, 16/22
+  titles at 600, and 18/26 for the cut text in a problem's details: the one
+  large thing in the panel.
 - Mono only for code and data: selectors, CSS, and pixel measurements. Not for
   labels or headings.
 - `tabular-nums` for every number that changes or is compared.
@@ -87,7 +76,7 @@ horizontal scroll, a text cursor).
 
 ### Space, shape, motion
 
-- 4 px grid. Panel padding 12. Rows 36 px (compact).
+- 4 px grid. Panel padding 16. Rows about 64 px: a kind line and up to two lines of text.
 - Radius 8 for controls, 12 for cards. Raised surfaces sit on the ground with
   a hairline only; shadows only on floating layers (palette, dialogs,
   tooltips, toasts). No glass or blur.
@@ -96,139 +85,115 @@ horizontal scroll, a text cursor).
 
 ### Motion
 
-One authored moment; everything else answers an action.
+Motion answers an action; nothing moves on its own.
 
-- **The moment:** on Home, a button label lengthens the way a translation does
-  until it outgrows its box; the crop mark lands on the edge and the measure
-  bar fills in (about 1.5 s, once).
-- **Continuity:** on narrow panels, list ⇄ detail is a View Transition. The
-  detail's measure bar draws itself: the box first, then the bleed.
-- **Arrival:** when results land, the first six rows fade and rise in (40 ms
-  apart) and the counts count up. Never again while filtering or scrolling.
+- **Entering a view:** a view one step in (a problem, your own text, Settings)
+  and the picking prompt fade and rise in once, 220 ms.
 - **Feedback:** 150 ms press and hover (a color or surface step, never a
-  scale-up); a light band runs along the scanning bar while it works.
-- One curve for everything, `cubic-bezier(0.22, 1, 0.36, 1)`: 150 ms for
-  feedback, 220 ms for what enters, 280 ms for view changes. Nothing loops
+  scale-up); a light band runs along the progress bar while the page is
+  checked.
+- One curve for everything, `cubic-bezier(0.22, 1, 0.36, 1)`. Nothing loops
   except live progress. Under `prefers-reduced-motion` all of it is off and
   content is visible at once.
 
-### Quiet chrome (2026-11-07)
+## Flow (2026-11-07)
 
-A first-time user called the panel cumbersome. The pass followed `unslop`
-(`.claude/skills/unslop`): color and detail belong to the one moment, the cut,
-and the chrome around it stays quiet.
+The panel had grown a header with three controls, a toolbar, severity counts,
+kind filters, search and sort, a footer, a Home screen and a stress options
+form. A first-time user found it cumbersome, couldn't find the way back, and
+read the test text as gibberish. This pass started over from what people come
+to do (the `frontend-design` skill: subject first, then layout, then one bold
+element):
 
-- **One primary action per view.** In the toolbar, Scan is filled; Longer text
-  and Measure are quiet until they're on. Their labels always show; on narrow
-  panels the row wraps rather than leaving bare icons (see Wayfinding).
-- **Severity is a dot and words**, never a colored pill, in rows, chips and
-  headers. The three-color severity bar is gone: one line of counts says it.
-- **Results start high.** One summary line (counts, what the levels mean,
-  Clear results), the kind filters, then search with sort as a toggle.
-- **Details lead with the cut**, then one row of quiet actions: Show on page,
-  Try other text, and copy icons. The background (likely cause, element,
-  selector, the text before) folds under "Why it happens"; Ignore is a quiet
-  action at the end.
-- **Try other text** is one editor wherever it appears (a result's details, the
-  Measure card): the field holds exactly what's on the page and updates it as
-  you type. The length slider, "Translation length", "Worst case", "Twice as
-  long" and the real-world examples all write into it, so anything can be
-  edited further.
+1. **Is anything cut off on this page?** Check the page, read the list, open a
+   problem, copy the fix.
+2. **What breaks when the text gets longer?** Make the text longer, see what's
+   new, put it back.
+3. **Will this element take my text?** Pick it and type, or fill it in one
+   click.
 
-## Layout
+So the panel is **one main screen and three views one step in**:
 
 ```text
-narrow (< 520 px)                         wide (≥ 520 px)
-┌───────────────────────────────┐         ┌──────────────────┬─────────────────┐
-│ Overflow Scout        ⚙  ?    │         │ list             │ detail          │
-│ shop.example · Always allow   │         │                  │                 │
-│ Scan page  Test with longer … │         │                  │                 │
-│ Hidden 12 Truncated 5 Spill 3 │         │                  │                 │
-│ Broken now | With longer text │         │                  │                 │
-│ / Search…              Sort   │         │                  │                 │
-│ Hidden  nav › a.tab      ×12  │         │                  │                 │
-│ Seasonal collections an…      │         │                  │                 │
-│ …                             │         │                  │                 │
-│ 2,341 text nodes · 184 ms     │         │                  │                 │
-└───────────────────────────────┘         └──────────────────┴─────────────────┘
+main screen                               one step in
++-------------------------------+         +-------------------------------+
+| [] Overflow Scout          *  |         | [] Overflow Scout          *  |
+| [Check page] [Try your own..] |         | <- All problems   Place 1 of 2|
+| Text length                   |         | . Cut off                     |
+| [ Normal | Longer | Much ... ]|         | The box hides the end of ...  |
+| hint: what the length does    |         | +---------------------------+ |
+| 5 problems       [Copy report]|         | | Waterproof hiking jacket  | |
+| Found in 28 texts.            |         | | with detachable|insulated | |
+| +---------------------------+ |         | +---------------------------+ |
+| | . Cut off  New    2 places| |         | How to fix it                 |
+| | Add to cart Add|to        | |         | Try your own text             |
+| +---------------------------+ |         | Show on page  Copy report ... |
+| example.com     Always allow  |         | > Why it happens              |
++-------------------------------+         +-------------------------------+
 ```
 
-- Left aligned throughout. The list is the spine; the detail replaces it when
-  narrow (with Back) and sits beside it when wide.
-- Home leads with what it's for (the headline), then the demo, then one primary
-  action (Scan page); the other two actions are rows below, not a grid of
-  identical cards. Then the demo link and the shortcut. No tours or modals.
-- One primary action at a time. While stress text is on the page, that is
-  Revert; Scan again steps down to secondary.
-- The panel scrolls as a whole only when its controls leave the results less
-  than 24 rem (narrow panels, long translations). The header stays pinned and
-  the list keeps its own scroll, so it never collapses to nothing.
-- Every result set has a visible way back: Clear results, next to the severity
-  counts. Every card that opens has a Close.
-- **⌘K / Ctrl+K** opens the command palette: every action that applies right
-  now, with its shortcut, filtered as you type (Raycast's pattern).
+- **The controls never move.** Check page, Try your own text and Text length
+  are always at the top of the main screen; the list is below. Before the
+  first check, one heading and one sentence above them say what it's for, and
+  a link at the bottom opens the demo page.
+- **Text length is the page's state, not an action.** Normal, Longer and Much
+  longer show how long the page's text is right now. Choosing Longer makes it
+  longer and checks it; choosing Normal puts it back and checks again, so the
+  list always describes the page as it is. The button on the page ("Back to
+  normal") does the same. The hint under the control says what the page is
+  showing and how to get back. Only the translation length is offered: the
+  other strategies (pseudo-locale, language samples, long words, right to
+  left, a picked region) stay in the engine and its tests, not in the panel.
+- **New problems come first.** With longer text, the list shows every problem,
+  the new ones first and marked New, under "9 problems. 5 are new with longer
+  text." No tabs.
+- **Every view one step in starts the same way**: a back link that says where
+  it goes ("All problems", "Back"), in the same place, and Esc does the same.
+  The name at the top leads back to the main screen too. There is no Home
+  screen to find.
+- **A problem's details are in working order**: what's wrong (the kind and one
+  sentence), the text as readers see it (the signature), How to fix it (each
+  fix tested on the page), Try your own text (open, not behind a button), then
+  quiet actions in words, and Why it happens folded away.
+- **Try your own text** is one editor wherever it appears: a field that holds
+  exactly what's on the page, and one row of fills (Longer, Much longer, Long
+  name, Long link, Paragraph). Pressing a fill again shows its next example.
+- **Less on screen.** Gone: the kind filters, severity counts and their help,
+  sort, Clear results, the footer statistics, the export menu (files are in
+  the command palette), the Commands button (Cmd/Ctrl+K and Settings still
+  lead there), the length slider, and the animated Home demo. Search appears
+  only above 12 problems.
+- **Single column at every width.** The detail replaces the list; there is no
+  side-by-side mode to learn.
 - The panel has to pass its own stress test: at 320 px with pseudo-locale text,
-  nothing in its chrome may clip or spill. Buttons wrap their labels, rows grow,
-  and content that is truncated on purpose (long page text, selectors) carries
-  its full text in a `title` and in the detail view.
-
-### Wayfinding (2026-11-07)
-
-The same user saw pseudo-locale text as gibberish, couldn't find the way back to
-the start screen, and found clicks confusing. The pass checked the panel against
-Nielsen's heuristics and the cognitive-load checklist in Impeccable's
-`critique.md`:
-
-- **Home is always one click away** (user control and freedom). The house
-  button in the header, and the name beside the mark, lead Home from any view.
-  Home never throws results away: its first row is "Back to results" with the
-  count. Going Home closes the Measure card and the options form; longer text
-  stays on the page, with its bar, until reverted.
-- **A button does what it says** (match with the real world). "Longer text" and
-  "Test with longer text" run the test with the saved options; pressing the
-  toolbar button again reverts. The options (strategy, intensity, direction,
-  scope) moved behind "Change options" in the stress bar, the command palette,
-  and Settings: four choices no longer stand between the first click and the
-  result.
-- **Waiting for a click on the page says so, with a way out** (visibility of
-  status). Measure shows "Click any text on the page to measure it" and Cancel.
-- **Labels over bare icons** (recognition rather than recall): the toolbar keeps
-  its words at every width.
+  nothing in its chrome may clip or spill. Buttons wrap their labels and rows
+  grow.
 
 ## Writing
 
-- Name things by what users do and see: "Scan page", "Test with longer text",
-  "Measure an element", "Revert". Not tool jargon: "stress test" reads as load
-  testing to QA, and "Inspect" as DevTools. The code keeps `stress` and
-  `inspect` as ids. Once results show, the toolbar uses the short forms
-  "Longer text" and "Measure" so the three actions fit on one row at 400 px
-  (narrower, the row wraps);
-  Home and the command palette keep the full names, and the palette also finds
-  them by their old names. Problems
-  are named by what goes wrong ("Cut off", "Overflows", "Wider than window",
-  "Field cut off"), each with a one-line definition on hover and in the detail.
-- Severity levels are defined by the kinds they cover, in a popover by the
-  counts: critical (cut off with no sign, or the page scrolls sideways),
-  warning (ellipsis, line clamp, or runs out of its box), notice (fields).
-- Stress results say how they were made: strategy (or language), intensity,
-  and growth. Intensity applies to every strategy, language samples included.
-- Stress text that looks odd says so: the stress bar explains, per strategy,
-  that the repeated words, accents, brackets or long words are added on purpose.
-- Use real words wherever people read them. The default longer text repeats a
-  text's own words ("4d ago 4d ago 4d"), so it stays readable in the page's own
-  language; accented pseudo-locale ("Šåṽé") is an option for those who know it,
-  never the default. The Home demo is a real translation: "Save changes" →
-  "Änderungen speichern".
+- **Plain English in plain ASCII.** No accented letters, other scripts, curly
+  quotes, dashes, ellipsis characters, multiplication signs or middle dots
+  anywhere the panel writes: its strings (`src/locales/ascii.test.ts`), the
+  examples it fills in (`presets.test.ts`), element paths (`main > nav > a`),
+  and copied reports. The longer text is the page's own words, so it stays in
+  the page's language.
+- Name things by what people do and see: "Check page", "Try your own text",
+  "Text length", "Normal", "Longer", "Back to normal". Not tool jargon ("scan",
+  "stress test", "measure", "revert", "inspect"); the code keeps `stress` and
+  `inspect` as ids, and the command palette finds the old names.
+- Problems are named by what goes wrong: "Cut off", "Cut short", "Spills out",
+  "Wider than the window", "Too long for its field", each with one sentence in
+  the details. Severity is a colored dot next to the words, and the order of
+  the list; it isn't named in the panel.
 - No implementation words in the UI: "texts", not "text nodes" or "strings";
-  "window", not "viewport".
-- Every result ends in a next step: the detail leads with "What to do" (a plain
-  instruction, CSS to try and where), before the evidence. Each fix says what
-  happened when the page tried it ("Fixes it. The box gets 22 px taller."),
-  with an icon and words, never color alone.
+  "window", not "viewport"; "problems", not "issues" or "findings".
+- Every problem ends in a next step: How to fix it comes before the evidence.
+  Each fix says what happened when the page tried it ("Fixes it. The box gets
+  22 px taller."), with an icon and words, never color alone.
 - Reports are written for the person who fixes the bug: what goes wrong, where,
   by how much, why, and what fixed it, in that order. Page text is quoted and
   escaped; CSS and selectors are code.
-- Every empty or error state says what happened and offers the next action.
+- Every empty or error state says what happened and what to do next.
 - Numbers are numerals with the unit: "94 px", "12 places".
 - No exclamation marks, no "All good!". Say what was checked.
 
@@ -258,12 +223,9 @@ Things that cost time once, so they don't again:
   Tailwind's rem spacing stays on the 4 px grid.
 - **Segmented items use `flex-auto`, not `flex-1`.** A zero flex basis makes the
   group as narrow as its longest word, so short labels wrap for no reason.
-- **The wide layout always has two columns.** Opening details in a column that
-  appears on demand narrows the list, and its virtualized rows overlap for a
-  frame until they are measured again.
-- **Esc goes through React handlers on the container,** not a document listener
-  added in an effect, so it works the instant a view appears. Radix layers
-  (tooltips, dialogs) take Esc first, which is the expected order.
+- **Esc is one document listener in the app,** and it does nothing while the
+  command palette or the shortcuts dialog is open: Radix closes those itself.
+  Otherwise it always means "back to the main screen" (or stop picking).
 - **Dialogs focus themselves on open.** Focusing the close button would show its
   tooltip, and the first Esc would only close the tooltip.
 - **Tests type at a human pace.** At Playwright's default speed (keys under 30 ms

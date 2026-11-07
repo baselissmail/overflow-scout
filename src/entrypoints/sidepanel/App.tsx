@@ -2,59 +2,50 @@ import { i18n } from '#i18n';
 import {
   Ban,
   ClipboardCopy,
-  Command as CommandIcon,
-  Crosshair,
-  Eraser,
   ExternalLink,
+  FileDown,
   FileJson,
-  House,
   Keyboard,
-  ListChecks,
   Monitor,
   Moon,
-  RotateCcw,
+  MousePointerClick,
   ScanText,
   Search,
   Settings as SettingsIcon,
-  SlidersHorizontal,
   Sun,
   WholeWord,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 
+import { ControlDeck } from '@/features/check/ControlDeck';
+import type { TextLength } from '@/features/check/length';
+import { TEXT_LENGTHS, lengthLabel, stressOptions } from '@/features/check/length';
 import type { Command } from '@/features/commands/CommandPalette';
 import { CommandPalette } from '@/features/commands/CommandPalette';
-import { Home } from '@/features/home/Home';
-import { InspectCard } from '@/features/inspect/InspectCard';
 import { PageNotice } from '@/features/page/PageNotice';
 import { ScanProgress } from '@/features/page/ScanProgress';
 import { SiteAccess } from '@/features/page/SiteAccess';
 import { usePanel } from '@/features/page/use-panel';
 import { downloadText, exportResults } from '@/features/report/export';
-import { ResultsView } from '@/features/results/ResultsView';
-import { ignoredOn, useIgnoreRules } from '@/features/results/use-ignore';
+import {
+  ProblemList,
+  ProblemView,
+  shownResults,
+  useIgnoring,
+} from '@/features/results/ResultsView';
+import { useIgnoreRules } from '@/features/results/use-ignore';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { applyTheme, useSettings } from '@/features/settings/use-settings';
 import { ShortcutsDialog } from '@/features/shortcuts/ShortcutsDialog';
-import { StressBar } from '@/features/stress/StressBar';
-import type { StressScope } from '@/features/stress/StressControls';
-import { StressControls } from '@/features/stress/StressControls';
-import type { TextValueDto } from '@/messaging/protocol';
-import { siteOf } from '@/storage/ignore';
+import { PickedView } from '@/features/try/PickedView';
+import type { PickedElement, TextValueDto } from '@/messaging/protocol';
 import { BrandMark } from '@/ui/BrandMark';
-import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
-import { Kbd } from '@/ui/Kbd';
-import { cx } from '@/ui/cx';
 import { useToast } from '@/ui/Toast';
-import { useMediaQuery } from '@/ui/use-media-query';
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
-const SMALL_ICON = { size: 14, strokeWidth: 1.5 } as const;
-
-/** ⌘ on macOS, Ctrl elsewhere. */
-const modKey = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl ';
 
 /** True when a key press is meant for a text field, not a shortcut. */
 function isTyping(target: EventTarget | null): boolean {
@@ -62,47 +53,64 @@ function isTyping(target: EventTarget | null): boolean {
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+/** A key per pick, so trying text starts over for each element. */
+const pickKeys = new WeakMap<PickedElement, number>();
+let nextPickKey = 0;
+function pickKey(picked: PickedElement): number {
+  let key = pickKeys.get(picked);
+  if (key === undefined) {
+    nextPickKey += 1;
+    key = nextPickKey;
+    pickKeys.set(picked, key);
+  }
+  return key;
+}
+
+/**
+ * One main screen (check the page, try your own text, set the text length,
+ * and the problems found), and three views one step in from it: a problem,
+ * your own text in a picked element, and Settings. Each step in has a Back
+ * link in the same place, and Esc does the same.
+ */
 export function App() {
   const { state, controller } = usePanel();
   const [settings, updateSettings] = useSettings();
   const ignore = useIgnoreRules();
+  const ignoring = useIgnoring(ignore, state);
   const tryText = useCallback(
     (value: TextValueDto | null) => controller.tryText(value),
     [controller],
   );
   const textOf = useCallback(() => controller.textOf(), [controller]);
-  const ignoredIds = ignoredOn(ignore.rules, state.page ? siteOf(state.page.url) : null);
   useEffect(() => {
-    // The toolbar badge counts what the panel shows: ignored issues are left out.
-    controller.setIgnored(ignoredIds);
-  }, [controller, ignoredIds]);
-  const [view, setView] = useState<'main' | 'settings'>('main');
-  // Asked for Home while there are results; any new action leaves it again.
-  const [home, setHome] = useState(false);
-  const [stressOpen, setStressOpen] = useState(false);
-  const [scope, setScope] = useState<StressScope>('page');
+    // The toolbar badge counts what the panel shows: ignored problems are left out.
+    controller.setIgnored(ignoring.ids);
+  }, [controller, ignoring.ids]);
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  // The length asked for, shown while the page gets there.
+  const [requested, setRequested] = useState<TextLength>('normal');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
-  const wide = useMediaQuery('(min-width: 520px)');
   const searchRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   const busy = state.busy !== null || state.connection === 'connecting';
-  // A picked element is the only region a stress test can be scoped to.
-  const effectiveScope: StressScope = state.picked ? scope : 'page';
   const noTab = state.tabId === null;
-  const hasResults = state.showing !== null;
-  // Home is the start screen, and where the Home button leads: never while work is under way.
-  const atHome = !busy && !stressOpen && !state.picking && !state.picked && (home || !hasResults);
-  const shownIssues =
-    state.showing === 'scan'
-      ? state.scan?.issues
-      : state.showing === 'stress' && state.stress
-        ? [...state.stress.brokenNow, ...state.stress.atRisk]
-        : undefined;
-  const resultCount = shownIssues
-    ? shownIssues.filter((issue) => !ignoredIds.has(issue.id)).length
-    : null;
+  const shown = shownResults(state);
+  const hasResults = shown !== null;
+  const openIssue = shown?.issues.find((issue) => issue.id === openId) ?? null;
+  const intensity = state.stressOptions?.intensity;
+  const actual: TextLength = !state.stressActive
+    ? 'normal'
+    : intensity === 'realistic'
+      ? 'realistic'
+      : 'worst';
+  const changing = state.busy === 'stress' || state.busy === 'revert';
+  const length = changing ? requested : actual;
 
   useEffect(() => {
     applyTheme(settings.theme);
@@ -114,6 +122,43 @@ export function App() {
     if (restored) toast(i18n.t('toast.restored', restored.texts, [String(restored.texts)]));
   }, [restored, toast]);
 
+  /** Back to the main screen from wherever the panel is. */
+  const toMain = useCallback(() => {
+    setSettingsOpen(false);
+    setOpenId(null);
+    controller.highlight(null);
+    if (state.picking) void controller.pick(false);
+    if (state.picked) controller.closeInspect();
+  }, [controller, state.picking, state.picked]);
+
+  const check = (to: TextLength = actual) => {
+    setOpenId(null);
+    setSelectedId(null);
+    setRequested(to);
+    if (to === 'normal') {
+      // The controller checks the page again once its text is back.
+      if (state.stressActive) void controller.revert();
+      else void controller.scan(settings.includeInputs);
+    } else {
+      void controller.stress(stressOptions(to), 'page', settings.includeInputs);
+    }
+  };
+  const setLength = (to: TextLength) => {
+    if (to === actual) return;
+    // Back to normal with nothing checked yet: put the text back, nothing more to show.
+    if (to === 'normal' && !hasResults) {
+      setRequested(to);
+      void controller.revert();
+      return;
+    }
+    check(to);
+  };
+  const pick = () => {
+    setOpenId(null);
+    void controller.pick(true);
+  };
+  const demo = () => void browser.tabs.create({ url: browser.runtime.getURL('/demo.html') });
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -122,15 +167,19 @@ export function App() {
         return;
       }
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (commandsOpen || shortcutsOpen) return;
       const typing = isTyping(event.target);
-      if (event.key === 'Escape' && state.picking) {
-        void controller.pick(false);
+      if (event.key === 'Escape') {
+        if (state.picking || state.picked || openId !== null || settingsOpen) {
+          event.preventDefault();
+          toMain();
+        }
       } else if (!typing && event.key === '?') {
         event.preventDefault();
         setShortcutsOpen(true);
-      } else if (!typing && event.key === '/') {
+      } else if (!typing && event.key === '/' && searchRef.current) {
         event.preventDefault();
-        searchRef.current?.focus();
+        searchRef.current.focus();
       } else if (!typing && (event.key === 'j' || event.key === 'k')) {
         const list = document.querySelector<HTMLElement>('[role="listbox"]');
         if (list && document.activeElement !== list) {
@@ -143,45 +192,7 @@ export function App() {
     return () => {
       document.removeEventListener('keydown', onKey);
     };
-  }, [controller, state.picking]);
-
-  const scan = () => {
-    setHome(false);
-    void controller.scan(settings.includeInputs);
-  };
-  const stress = () => {
-    // The results need the room; the revert bar shows that stress is on.
-    setHome(false);
-    setStressOpen(false);
-    void controller.stress(
-      {
-        strategy: settings.strategy,
-        intensity: settings.intensity,
-        language: settings.language,
-        rtl: settings.rtl,
-      },
-      effectiveScope,
-      settings.includeInputs,
-    );
-  };
-  const pick = () => void controller.pick(!state.picking);
-  /** One click, the saved defaults; a second click puts the page back. */
-  const toggleStress = () => {
-    if (state.stressActive) void controller.revert();
-    else stress();
-  };
-  /** The start screen. Results stay (Home leads back to them); stress text stays until reverted. */
-  const goHome = () => {
-    setView('main');
-    setHome(true);
-    setStressOpen(false);
-    if (state.picking) void controller.pick(false);
-    if (state.picked) controller.closeInspect();
-  };
-  const toResults = () => {
-    setHome(false);
-  };
-  const demo = () => void browser.tabs.create({ url: browser.runtime.getURL('/demo.html') });
+  }, [commandsOpen, shortcutsOpen, state.picking, state.picked, openId, settingsOpen, toMain]);
 
   // Rebuilt every render (it's small), so it always reflects the current state.
   const commands: Command[] = (() => {
@@ -189,6 +200,7 @@ export function App() {
     const results = i18n.t('commands.groupResults');
     const viewGroup = i18n.t('commands.groupView');
     const help = i18n.t('commands.groupHelp');
+    const exported = () => exportResults(state, ignoring.ids);
     const list: (Command | false)[] = [
       !busy &&
         !noTab && {
@@ -196,46 +208,44 @@ export function App() {
           group: actions,
           label: hasResults ? i18n.t('actions.scanAgain') : i18n.t('actions.scan'),
           icon: <ScanText {...ICON} />,
-          run: scan,
+          run: () => {
+            toMain();
+            check();
+          },
         },
+      ...TEXT_LENGTHS.filter((value) => value !== actual).map(
+        (value): Command | false =>
+          !busy &&
+          !noTab && {
+            id: `length-${value}`,
+            group: actions,
+            label:
+              value === 'normal'
+                ? i18n.t('commands.lengthNormal')
+                : value === 'realistic'
+                  ? i18n.t('commands.lengthRealistic')
+                  : i18n.t('commands.lengthWorst'),
+            icon: <WholeWord {...ICON} />,
+            // The names people may know it by.
+            keywords: `${lengthLabel(value)} stress test translation expand revert undo`,
+            run: () => {
+              toMain();
+              setLength(value);
+            },
+          },
+      ),
       !busy &&
         !noTab && {
-          id: 'stress',
+          id: 'try',
           group: actions,
-          label: i18n.t('commands.runStress'),
-          icon: <WholeWord {...ICON} />,
-          // The names people may know it by.
-          keywords: 'stress test translation pseudo locale expand',
-          run: stress,
+          label: i18n.t('actions.tryText'),
+          icon: <MousePointerClick {...ICON} />,
+          keywords: 'pick element measure inspect fit',
+          run: () => {
+            toMain();
+            pick();
+          },
         },
-      !noTab && {
-        id: 'stress-options',
-        group: actions,
-        label: i18n.t('commands.stressOptions'),
-        icon: <SlidersHorizontal {...ICON} />,
-        keywords: 'stress test strategy intensity settings',
-        run: () => {
-          setHome(false);
-          setStressOpen(true);
-        },
-      },
-      !busy &&
-        !noTab && {
-          id: 'inspect',
-          group: actions,
-          label: state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspect'),
-          icon: <Crosshair {...ICON} />,
-          keywords: 'inspect pick element fit breaking point',
-          run: pick,
-        },
-      state.stressActive && {
-        id: 'revert',
-        group: actions,
-        label: i18n.t('actions.revert'),
-        icon: <RotateCcw {...ICON} />,
-        keywords: 'undo restore',
-        run: () => void controller.revert(),
-      },
       busy && {
         id: 'cancel',
         group: actions,
@@ -251,8 +261,13 @@ export function App() {
         label: i18n.t('commands.search'),
         icon: <Search {...ICON} />,
         keys: ['/'],
-        // Looked up when run: commands are built during render, where refs aren't read.
-        run: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+        run: () => {
+          toMain();
+          // Looked up when run: the field shows only for long lists.
+          requestAnimationFrame(() =>
+            document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+          );
+        },
       },
       hasResults && {
         id: 'copy-report',
@@ -261,11 +276,22 @@ export function App() {
         icon: <ClipboardCopy {...ICON} />,
         keywords: 'export markdown github jira bug',
         run: () => {
-          const exported = exportResults(state, ignoredIds);
-          if (!exported) return;
-          void navigator.clipboard.writeText(exported.markdown).then(() => {
+          const report = exported();
+          if (!report) return;
+          void navigator.clipboard.writeText(report.markdown).then(() => {
             toast(i18n.t('report.copied'));
           });
+        },
+      },
+      hasResults && {
+        id: 'save-markdown',
+        group: results,
+        label: i18n.t('commands.saveMarkdown'),
+        icon: <FileDown {...ICON} />,
+        keywords: 'export download file',
+        run: () => {
+          const report = exported();
+          if (report) downloadText(report.markdownName, report.markdown, 'text/markdown');
         },
       },
       hasResults && {
@@ -275,43 +301,18 @@ export function App() {
         icon: <FileJson {...ICON} />,
         keywords: 'export download data',
         run: () => {
-          const exported = exportResults(state, ignoredIds);
-          if (exported) downloadText(exported.jsonName, exported.json, 'application/json');
+          const report = exported();
+          if (report) downloadText(report.jsonName, report.json, 'application/json');
         },
       },
-      hasResults &&
-        !busy && {
-          id: 'clear-results',
-          group: results,
-          label: i18n.t('actions.clearResults'),
-          icon: <Eraser {...ICON} />,
-          run: () => {
-            controller.clearResults();
-          },
-        },
-      !atHome && {
-        id: 'home',
-        group: viewGroup,
-        label: i18n.t('commands.home'),
-        icon: <House {...ICON} />,
-        keywords: 'start main back',
-        run: goHome,
-      },
-      hasResults &&
-        atHome && {
-          id: 'results',
-          group: viewGroup,
-          label: i18n.t('home.results'),
-          icon: <ListChecks {...ICON} />,
-          run: toResults,
-        },
       {
         id: 'settings',
         group: viewGroup,
         label: i18n.t('actions.settings'),
         icon: <SettingsIcon {...ICON} />,
         run: () => {
-          setView('settings');
+          toMain();
+          setSettingsOpen(true);
         },
       },
       ...(
@@ -335,7 +336,7 @@ export function App() {
       {
         id: 'shortcuts',
         group: help,
-        label: i18n.t('actions.shortcuts'),
+        label: i18n.t('commands.shortcuts'),
         icon: <Keyboard {...ICON} />,
         keys: ['?'],
         run: () => {
@@ -345,7 +346,7 @@ export function App() {
       {
         id: 'demo',
         group: help,
-        label: i18n.t('actions.demo'),
+        label: i18n.t('commands.demo'),
         icon: <ExternalLink {...ICON} />,
         run: demo,
       },
@@ -360,32 +361,143 @@ export function App() {
     return list.filter((command): command is Command => command !== false);
   })();
 
-  if (view === 'settings') {
-    return (
-      <div className="h-dvh overflow-y-auto">
-        <SettingsView
-          settings={settings}
-          onSettings={updateSettings}
-          ignore={ignore}
-          onBack={() => {
-            setView('main');
+  // Which view: the main screen, or one step in from it.
+  let body: ReactNode;
+  if (settingsOpen) {
+    body = (
+      <SettingsView
+        settings={settings}
+        onSettings={updateSettings}
+        ignore={ignore}
+        onBack={toMain}
+        onShortcuts={() => {
+          setShortcutsOpen(true);
+        }}
+        onDemo={demo}
+      />
+    );
+  } else if (state.picked) {
+    body = (
+      <PickedView
+        key={pickKey(state.picked)}
+        picked={state.picked}
+        onBack={toMain}
+        onPickAnother={pick}
+        onTryText={tryText}
+        onTextOf={textOf}
+      />
+    );
+  } else if (openIssue && shown) {
+    body = (
+      <ProblemView
+        state={state}
+        controller={controller}
+        issue={openIssue}
+        shown={shown}
+        ignoring={ignoring}
+        onBack={() => {
+          setOpenId(null);
+          controller.highlight(null);
+        }}
+      />
+    );
+  } else {
+    body = (
+      <div className="flex min-h-0 flex-1 flex-col gap-5">
+        {!hasResults && !busy && (
+          <div className="flex flex-col gap-1">
+            <h2 className="text-title font-semibold">{i18n.t('start.title')}</h2>
+            <p className="text-pretty text-fg-muted">{i18n.t('start.body')}</p>
+          </div>
+        )}
+        <PageNotice
+          state={state}
+          controller={controller}
+          onDemo={demo}
+          onScan={() => {
+            check();
+          }}
+          onAccessGranted={(host) => {
+            toast(i18n.t('page.accessGranted', [host]));
           }}
         />
+        <ControlDeck
+          length={length}
+          hasResults={hasResults}
+          busy={busy}
+          disabled={noTab}
+          picking={state.picking}
+          pending={state.pending}
+          onCheck={() => {
+            check();
+          }}
+          onLength={setLength}
+          onPick={pick}
+          onCancelPick={() => void controller.pick(false)}
+          onReapply={() => void controller.reapply()}
+        />
+        {busy ? (
+          <ScanProgress
+            state={state}
+            onCancel={() => {
+              controller.cancel();
+            }}
+          />
+        ) : (
+          shown && (
+            <ProblemList
+              state={state}
+              shown={shown}
+              ignoring={ignoring}
+              query={query}
+              onQuery={setQuery}
+              searchRef={searchRef}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onOpen={(issue) => {
+                setSelectedId(issue.id);
+                setOpenId(issue.id);
+                const first = issue.instances[0];
+                if (first) void controller.reveal(first.id);
+              }}
+              controller={controller}
+            />
+          )
+        )}
+        {/* A page Chrome won't allow already offers the demo, in its notice. */}
+        {!hasResults && !busy && state.connection !== 'unavailable' && (
+          <p className="mt-auto text-small text-fg-muted">
+            {i18n.t('start.demo')}{' '}
+            <button
+              type="button"
+              onClick={demo}
+              className="font-medium text-accent underline decoration-accent/40 underline-offset-[3px] hover:decoration-accent"
+            >
+              {i18n.t('actions.openDemo')}
+            </button>
+          </p>
+        )}
+        {state.page && (
+          <SiteAccess
+            url={state.page.url}
+            onGranted={(host) => {
+              toast(i18n.t('page.accessGranted', [host]));
+            }}
+          />
+        )}
       </div>
     );
   }
 
   return (
-    // One scroll for the whole panel, used only when the controls leave the results
-    // too little room (narrow panels, long translations); the list keeps its own.
+    // One scroll for the panel; a long list scrolls inside itself so the controls stay put.
     <div className="flex h-dvh flex-col overflow-y-auto">
-      <header className="sticky top-0 z-10 flex shrink-0 items-center gap-1 bg-canvas px-3 pt-3 pb-2">
-        {/* The name leads Home, as on most sites; the house button says so in plain sight. */}
+      <header className="sticky top-0 z-10 flex shrink-0 items-center gap-2 bg-canvas px-4 pt-3 pb-2">
         <h1 className="min-w-0 flex-1 text-title font-semibold">
+          {/* The name leads back to the main screen, as on most sites. */}
           <button
             type="button"
-            onClick={goHome}
-            aria-current={atHome ? 'page' : undefined}
+            onClick={toMain}
             className="-ms-1.5 inline-flex max-w-full items-center gap-2 rounded-control px-1.5 py-0.5 text-start transition-[background-color] duration-(--duration-press) ease-(--ease-out) hover:bg-surface"
           >
             <span className="shrink-0 text-accent">
@@ -396,180 +508,18 @@ export function App() {
           </button>
         </h1>
         <IconButton
-          label={i18n.t('actions.home')}
-          icon={<House {...ICON} />}
-          aria-current={atHome ? 'page' : undefined}
-          className="aria-[current=page]:bg-surface aria-[current=page]:text-fg"
-          onClick={goHome}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            setCommandsOpen(true);
-          }}
-          aria-keyshortcuts={modKey === '⌘' ? 'Meta+K' : 'Control+K'}
-          className="ms-1 inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-control border border-line bg-raised px-2 text-small text-fg-muted transition-[border-color,color] duration-(--duration-press) hover:border-line-strong hover:text-fg"
-        >
-          <CommandIcon
-            size={14}
-            strokeWidth={1.5}
-            aria-hidden="true"
-            className="hidden min-[360px]:block"
-          />
-          {/* On narrow panels the label is only read out, so the title keeps one line. */}
-          <span className="sr-only min-[360px]:not-sr-only">{i18n.t('commands.open')}</span>
-          <span aria-hidden="true">
-            <Kbd>{modKey}K</Kbd>
-          </span>
-        </button>
-        <IconButton
           label={i18n.t('actions.settings')}
           icon={<SettingsIcon {...ICON} />}
+          aria-current={settingsOpen ? 'page' : undefined}
+          className="aria-[current=page]:bg-surface aria-[current=page]:text-fg"
           onClick={() => {
-            setView('settings');
+            toMain();
+            setSettingsOpen(true);
           }}
         />
       </header>
 
-      <div className="flex shrink-0 flex-col gap-3 px-3 pb-3">
-        {state.page && (
-          <SiteAccess
-            url={state.page.url}
-            onGranted={(host) => {
-              toast(i18n.t('page.accessGranted', [host]));
-            }}
-          />
-        )}
-        <PageNotice
-          state={state}
-          controller={controller}
-          onDemo={demo}
-          onScan={scan}
-          onAccessGranted={(host) => {
-            toast(i18n.t('page.accessGranted', [host]));
-          }}
-        />
-
-        {!atHome && (hasResults || stressOpen || state.picking || state.picked) && (
-          // One primary action; the two modes are quiet until they're on.
-          <div className="flex flex-wrap items-center gap-1">
-            <Button
-              // While stress text is on, Revert (in the stress bar) is the main action.
-              variant={state.stressActive ? 'secondary' : 'primary'}
-              size="sm"
-              icon={<ScanText {...SMALL_ICON} />}
-              disabled={busy || noTab}
-              onClick={scan}
-              className="me-1"
-            >
-              {hasResults ? i18n.t('actions.scanAgain') : i18n.t('actions.scan')}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<WholeWord {...SMALL_ICON} />}
-              // On while longer text is on the page; pressing it again puts the text back.
-              aria-pressed={state.stressActive}
-              disabled={busy || noTab}
-              className="text-fg-muted hover:text-fg aria-pressed:bg-accent-soft aria-pressed:text-fg"
-              onClick={toggleStress}
-            >
-              {/* Words, not a bare icon: on narrow panels the row wraps instead. */}
-              {i18n.t('actions.stressShort')}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Crosshair {...SMALL_ICON} />}
-              aria-pressed={state.picking}
-              disabled={busy || noTab}
-              className="text-fg-muted hover:text-fg aria-pressed:bg-accent-soft aria-pressed:text-fg"
-              onClick={pick}
-            >
-              {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspectShort')}
-            </Button>
-          </div>
-        )}
-
-        {busy && (
-          <ScanProgress
-            state={state}
-            onCancel={() => {
-              controller.cancel();
-            }}
-          />
-        )}
-
-        {stressOpen && (
-          <StressControls
-            settings={settings}
-            onSettings={updateSettings}
-            scope={effectiveScope}
-            onScope={setScope}
-            canScopeToPicked={state.picked !== null}
-            busy={busy}
-            onApply={stress}
-          />
-        )}
-
-        {state.stressActive && state.stress && (
-          <StressBar
-            strategy={state.stressOptions?.strategy ?? settings.strategy}
-            pending={state.pending}
-            busy={busy}
-            optionsOpen={stressOpen}
-            onRevert={() => void controller.revert()}
-            onReapply={() => void controller.reapply()}
-            onOptions={() => {
-              setHome(false);
-              setStressOpen((open) => !open);
-            }}
-          />
-        )}
-
-        <InspectCard
-          picking={state.picking}
-          picked={state.picked}
-          onClose={() => {
-            controller.closeInspect();
-          }}
-          onCancelPick={() => void controller.pick(false)}
-          onTryText={tryText}
-          onTextOf={textOf}
-        />
-      </div>
-
-      <div
-        className={cx(
-          'flex flex-1 flex-col px-3 pb-3',
-          hasResults && !atHome ? 'min-h-96' : 'min-h-0',
-        )}
-      >
-        {atHome ? (
-          <div className="min-h-0 overflow-y-auto">
-            <Home
-              disabled={noTab}
-              resultCount={hasResults ? resultCount : null}
-              onResults={toResults}
-              onScan={scan}
-              onStress={stress}
-              onInspect={pick}
-              onDemo={demo}
-            />
-          </div>
-        ) : (
-          hasResults && (
-            <ResultsView
-              state={state}
-              controller={controller}
-              ignore={ignore}
-              wide={wide}
-              searchRef={searchRef}
-              onRunStress={stress}
-            />
-          )
-        )}
-      </div>
+      <main className="flex min-h-96 flex-1 flex-col px-4 pt-2 pb-4">{body}</main>
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <CommandPalette open={commandsOpen} onOpenChange={setCommandsOpen} commands={commands} />

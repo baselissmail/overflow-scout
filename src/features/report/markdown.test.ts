@@ -25,8 +25,8 @@ function finding(overrides: Partial<FindingDto> = {}): FindingDto {
     axes: ['y'],
     overflow: { x: 0, y: 20 },
     text: 'Waterproof *hiking* jacket',
-    element: { label: 'article.card › h2.title', selector: '.card > h2' },
-    container: { label: 'article.card › h2.title' },
+    element: { label: 'article.card > h2.title', selector: '.card > h2' },
+    container: { label: 'article.card > h2.title' },
     diagnosis: {
       confidence: 'high',
       causes: [
@@ -99,18 +99,18 @@ describe('issueMarkdown', () => {
       context,
     );
     const lines = markdown.split('\n');
-    expect(lines[0]).toBe('### kind.hidden: `article.card › h2.title` (results.places(2))');
+    expect(lines[0]).toBe('### kind.hidden: `article.card > h2.title` (results.places(2))');
     expect(markdown).toContain(
-      '- **report.page:** https://shop.example/products · report.window(800×900) · Chrome 156',
+      '- **report.page:** https://shop.example/products, report.window(800x900), Chrome 156',
     );
     // Page text is escaped; it can't turn into emphasis or links.
-    expect(markdown).toContain('“Waterproof \\*hiking\\* jacket”');
-    expect(markdown).toContain('report.cutLost(“Waterproof hiking”, “jacket”)');
+    expect(markdown).toContain('"Waterproof \\*hiking\\* jacket"');
+    expect(markdown).toContain('report.cutLost("Waterproof hiking", "jacket")');
     expect(markdown).toContain('- **detail.selector:** `.card > h2`');
     expect(markdown).toContain('  - `height: 44px` report.on `h2.title`: height stays 44px');
     expect(markdown).toContain('- **report.fixesTried:**');
     expect(markdown).toContain(
-      '  - `height: auto; min-height: 44px;` report.on `h2.title`: fix.fixes fix.sizeOne(fix.taller(22\u00a0px))',
+      '  - `height: auto; min-height: 44px;` report.on `h2.title`: fix.fixes fix.sizeOne(fix.taller(22 px))',
     );
   });
 
@@ -139,10 +139,10 @@ describe('resultsMarkdown', () => {
       },
     );
     expect(markdown.match(/report\.page/g)).toHaveLength(1);
-    expect(markdown).toContain('report.test(strategy.translation, intensity.realistic, 1.4)');
+    expect(markdown).toContain('report.test(length.realistic, 1.4)');
     expect(markdown).toContain('### results.atRisk (1)');
     expect(markdown).toContain('#### kind.hidden');
-    expect(markdown).toContain('- **detail.before:** “Jacket”');
+    expect(markdown).toContain('- **detail.before:** "Jacket"');
     expect(markdown).toContain('### results.brokenNow (0)\n\nresults.noneNow');
   });
 });

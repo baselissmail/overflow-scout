@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { IssueDto } from '@/messaging/protocol';
 
-import { NO_FILTER, applyFilter, countByKind } from './filter';
+import { NO_FILTER, applyFilter } from './filter';
 
 function issue(
   id: string,
@@ -37,14 +37,10 @@ function issue(
 const ISSUES = [
   issue('a', 'hidden', 2, 'Save changes', 'button.save'),
   issue('b', 'hidden', 0, 'Delete account'),
-  issue('c', 'truncated', 1, 'Quarterly report', 'nav › a.tab'),
+  issue('c', 'truncated', 1, 'Quarterly report', 'nav > a.tab'),
 ];
 
 describe('results filter', () => {
-  it('counts issues per kind', () => {
-    expect(Object.fromEntries(countByKind(ISSUES))).toEqual({ hidden: 2, truncated: 1 });
-  });
-
   it('keeps the severity order by default and sorts by page order on request', () => {
     expect(applyFilter(ISSUES, NO_FILTER).map((item) => item.id)).toEqual(['a', 'b', 'c']);
     expect(applyFilter(ISSUES, { ...NO_FILTER, sort: 'page' }).map((item) => item.id)).toEqual([

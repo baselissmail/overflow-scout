@@ -25,35 +25,34 @@ async function openOnDemo(
 }
 
 async function scan(panel: Page): Promise<void> {
-  await panel.getByRole('button', { name: /^Scan page/ }).click();
+  await panel.getByRole('button', { name: 'Check page' }).click();
   await expect(
-    panel.getByRole('listbox', { name: 'Results' }).getByRole('option').first(),
+    panel.getByRole('listbox', { name: 'Problems' }).getByRole('option').first(),
   ).toBeVisible();
 }
 
-/** The states every check walks through, in order. */
 /** The states every check walks through, in order; `demo` is the page the panel works on. */
 const STATES: readonly { name: string; enter: (panel: Page, demo: Page) => Promise<void> }[] = [
-  { name: 'home', enter: () => Promise.resolve() },
+  { name: 'start', enter: () => Promise.resolve() },
   { name: 'results', enter: scan },
   {
     name: 'detail',
     enter: async (panel) => {
       // A result with text, so the detail shows where it is cut.
       await panel
-        .getByRole('listbox', { name: 'Results' })
+        .getByRole('listbox', { name: 'Problems' })
         .getByRole('option')
         .filter({ hasText: 'Waterproof hiking jacket' })
         .click();
-      await expect(panel.getByRole('img', { name: /^Needs / })).toBeVisible();
+      await expect(panel.getByText(/^Needs /)).toBeVisible();
     },
   },
   {
     name: 'stress',
     enter: async (panel) => {
       await panel.keyboard.press('Escape');
-      await panel.getByRole('button', { name: /^(Test with longer text|Longer text)/ }).click();
-      await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
+      await panel.getByRole('radio', { name: 'Longer', exact: true }).click();
+      await expect(panel.getByText(/(is|are) new with longer text\.$/)).toBeVisible();
     },
   },
   {
@@ -66,7 +65,7 @@ const STATES: readonly { name: string; enter: (panel: Page, demo: Page) => Promi
   {
     name: 'shortcuts',
     enter: async (panel) => {
-      await panel.getByRole('button', { name: 'Back to results' }).click();
+      await panel.getByRole('button', { name: 'Back', exact: true }).click();
       await panel.keyboard.press('?');
       await expect(panel.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible();
     },
@@ -80,17 +79,17 @@ const STATES: readonly { name: string; enter: (panel: Page, demo: Page) => Promi
     },
   },
   {
-    name: 'measure',
+    name: 'try',
     enter: async (panel, demo) => {
       await panel.keyboard.press('Escape');
-      await panel.getByRole('button', { name: /^(Measure an element|Measure)$/ }).click();
+      await panel.getByRole('button', { name: 'Try your own text' }).click();
       // The page is a background tab here, so it's clicked by position (no frames to wait for).
       const box = await demo.locator('article.card button.buy').first().boundingBox();
       if (!box) throw new Error('The demo button has no box');
       await demo.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-      const card = panel.getByRole('region', { name: 'Measure' });
-      await card.getByRole('button', { name: 'Name' }).click();
-      await expect(card.getByText(/at \d+ characters|Fits at/)).toBeVisible();
+      const view = panel.getByRole('region', { name: 'Try your own text' });
+      await view.getByRole('button', { name: 'Long name' }).click();
+      await expect(view.getByText(/at \d+ characters/)).toBeVisible();
     },
   },
 ];
@@ -141,13 +140,13 @@ test('works with the keyboard alone', async ({ openTab, openPanel, extensionId }
         '',
     );
 
-  // The Home actions come after the header buttons; Tab until "Scan page".
-  for (let step = 0; step < 6 && !(await focused()).startsWith('Scan page'); step += 1) {
+  // The main button comes right after the header's two; Tab until "Check page".
+  for (let step = 0; step < 6 && !(await focused()).startsWith('Check page'); step += 1) {
     await press('Tab');
   }
-  expect(await focused()).toMatch(/^Scan page/);
+  expect(await focused()).toMatch(/^Check page/);
   await press('Enter');
-  const list = panel.getByRole('listbox', { name: 'Results' });
+  const list = panel.getByRole('listbox', { name: 'Problems' });
   await expect(list.getByRole('option').first()).toBeVisible();
 
   // j/k move the selection and outline the element on the page.
@@ -160,20 +159,12 @@ test('works with the keyboard alone', async ({ openTab, openPanel, extensionId }
   await press('k');
   await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
 
-  // Enter opens the details; Esc goes back.
+  // Enter opens the details; Esc goes back to the list.
   await press('Enter');
-  await expect(panel.getByRole('img', { name: /^Needs / })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'All problems' })).toBeVisible();
   await press('Escape');
-  await expect(panel.getByRole('img', { name: /^Needs / })).toBeHidden();
-
-  // / searches.
-  await press('/');
-  await expect(panel.getByRole('searchbox')).toBeFocused();
-  // Font metrics decide whether this element also spills, so check what matched, not how many.
-  await panel.keyboard.type('p.promo');
-  await expect(list.getByRole('option').filter({ hasNotText: 'p.promo' })).toHaveCount(0);
-  await expect(list.getByRole('option').first()).toContainText('p.promo');
-  await press('Shift+Tab');
+  await expect(panel.getByRole('button', { name: 'All problems' })).toBeHidden();
+  await expect(list).toBeVisible();
 
   // ? shows the shortcuts; Esc closes them.
   await press('?');
@@ -188,20 +179,25 @@ test('runs actions from the command palette', async ({ openTab, openPanel, exten
   const palette = panel.getByRole('dialog', { name: 'Commands' });
   await expect(palette).toBeVisible();
 
-  await panel.keyboard.type('stress');
-  await expect(palette.getByRole('option', { name: /^Test with longer text now/ })).toHaveAttribute(
+  await panel.keyboard.type('longer');
+  await expect(palette.getByRole('option', { name: /^Text length: Longer/ })).toHaveAttribute(
     'aria-selected',
     'true',
   );
   await panel.keyboard.press('Enter');
   await expect(palette).toBeHidden();
-  await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
+  const longer = panel.getByRole('radio', { name: 'Longer', exact: true });
+  await expect(longer).toHaveAttribute('aria-checked', 'true');
+  await expect(panel.getByText(/(is|are) new with longer text\.$/)).toBeVisible();
 
-  // Only commands that apply right now: Revert appears once stress is on.
+  // Only commands that apply right now: back to normal, once the text is longer.
   await panel.keyboard.press('ControlOrMeta+k');
   await panel.keyboard.type('revert');
   await panel.keyboard.press('Enter');
-  await expect(panel.getByRole('button', { name: 'Revert' })).toBeHidden();
+  await expect(panel.getByRole('radio', { name: 'Normal' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
 });
 
 /**

@@ -103,6 +103,8 @@ export class PanelController {
   /** The issues the badge counts, so it can be redone when ignore rules change. */
   private badged: readonly IssueDto[] | null = null;
   private ignored: ReadonlySet<string> = new Set();
+  /** Whether the latest check included fields, so a check after a revert matches it. */
+  private includeInputs = true;
 
   constructor(private readonly deps: ControllerDeps) {}
 
@@ -149,6 +151,7 @@ export class PanelController {
   }
 
   async scan(includeInputs = true): Promise<void> {
+    this.includeInputs = includeInputs;
     await this.run('scan', async (connection) => {
       const scan = await connection.request('scan', { includeInputs });
       this.set({ scan, showing: 'scan', stale: false, picked: null });
@@ -161,6 +164,7 @@ export class PanelController {
     scope: 'page' | 'picked' = 'page',
     includeInputs = true,
   ): Promise<void> {
+    this.includeInputs = includeInputs;
     await this.run('stress', async (connection) => {
       const stress = await connection.request('stress', { options, scope, includeInputs });
       this.set({
@@ -181,6 +185,18 @@ export class PanelController {
       const result = await connection.request('revert', {});
       this.set({ stressActive: false, pending: 0, restored: this.nextRestored(result.restored) });
     });
+    await this.checkAfterRevert();
+  }
+
+  /**
+   * The list always describes the page as it is: once the text is back to
+   * normal, results taken with longer text are replaced by a fresh check.
+   */
+  private async checkAfterRevert(): Promise<void> {
+    const { showing, stressActive, connection } = this.state;
+    if (showing === 'stress' && !stressActive && connection === 'ready') {
+      await this.scan(this.includeInputs);
+    }
   }
 
   async reapply(): Promise<void> {
@@ -308,7 +324,7 @@ export class PanelController {
     }
   }
 
-  /** Back to the start screen. Stress text, if any, stays until reverted. */
+  /** Back to the start screen. Longer text, if any, stays until it's put back. */
   clearResults(): void {
     this.set({ scan: null, stress: null, showing: null, stale: false, picked: null });
   }
@@ -427,11 +443,13 @@ export class PanelController {
           this.set({ pending: event.count });
           break;
         case 'reverted':
+          // The button on the page put the text back.
           this.set({
             stressActive: false,
             pending: 0,
             restored: this.nextRestored(event.result.restored),
           });
+          void this.checkAfterRevert();
           break;
         case 'picked':
           this.set({ picking: false, picked: event.picked });

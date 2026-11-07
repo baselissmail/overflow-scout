@@ -17,50 +17,52 @@ For day-to-day work, `pnpm dev` opens Chrome with the extension loaded and reloa
 
 ### First run and the demo
 
-- [ ] Click the toolbar button. The side panel opens on Home: "Save changes" turns into the German "Änderungen speichern" and runs past its button, then **Scan page**, **Test with longer text** and **Measure an element**.
-- [ ] Click **Try the demo page**, then **Scan page**. Five results appear, with critical ones first.
-- [ ] Hover a result: it's outlined on the page. Click it: the page scrolls to it and the details open.
-- [ ] In the details of "Waterproof hiking jacket…", the height fix says **Fixes it. The box gets … taller.**
+- [ ] Click the toolbar button. The side panel opens with **Find text that gets cut off**, then **Check page**, **Try your own text** and **Text length** (Normal, Longer, Much longer). Every word in the panel is plain English.
+- [ ] Click **Open the demo page**, then **Check page**. "5 problems" appears, with the most serious first.
+- [ ] Hover a problem: it's outlined on the page. Click it: the page scrolls to it and its details open, with **All problems** at the top to go back.
+- [ ] In the details of "Waterproof hiking jacket...", **How to fix it** says **Fixes it. The box gets ... taller.**
   - [ ] **Preview on page** applies it to the page.
   - [ ] **Stop preview** puts it back.
 - [ ] **Copy report**, then paste it into a GitHub issue (**Preview** tab) and into a Jira ticket. The heading, lists and code show correctly.
 - [ ] **Copy screenshot**, then paste it. It's the element with some room around it, outlined.
-- [ ] **Ignore on this site**: the result disappears and **Show 1 ignored** appears. Settings lists it under **Ignored results**. Remove it there.
-- [ ] **Export results** (footer) → **Save as JSON**: a file downloads.
-- [ ] Click **Home** (the house at the top, or the name). Home shows **Back to results** with the number of issues; it brings the list back.
+- [ ] Under **Try your own text** in the same details, type something short (it fits) and click **Much longer** (it's cut off, by how much). **All problems** puts the page's own text back.
+- [ ] **Ignore on this site**, then **All problems**: the problem is gone and **Show 1 ignored** appears. Settings lists it under **Ignored problems**. Remove it there.
+- [ ] **Copy report** above the list, then paste it: every problem, in plain text.
+- [ ] <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd> → **Save problems as JSON**: a file downloads.
+- [ ] From any view one step in (a problem, your own text, Settings), **Back** and <kbd>Esc</kbd> both return to the main screen, and so does the name at the top.
 
 ### Longer text
 
-- [ ] **Longer text** runs straight away. Each text on the page repeats some of its own words (readable, no accents), and the panel lists **New with longer text** and **Already broken**.
-- [ ] The bar above explains the added text and names the options used. **Change** opens the options; pick **Language samples** → German and **Apply and scan**: the page shows real German.
-- [ ] **Revert** puts every text back exactly; a reload shows nothing changed. **Longer text** again, then click it once more: it reverts too.
-- [ ] Run it again and use the **Revert** pill on the page instead. Same result.
+- [ ] **Text length → Longer** runs straight away. Each text on the page repeats some of its own words (readable English, nothing else added), the hint under the control says so, and the list marks the problems that are **New** with longer text, first.
+- [ ] **Much longer** does the same, longer.
+- [ ] **Normal** puts every text back exactly, and the list is checked again; a reload shows nothing changed.
+- [ ] Choose **Longer** again and use **Back to normal** on the page instead. Same result, and the control shows **Normal**.
 - [ ] Run it again and close the side panel. The page goes back to normal by itself.
 
-### Measure
+### Try your own text
 
-- [ ] **Measure** → the panel says to click any text on the page, with **Cancel**. Click a button on the page. The card shows how many characters fit and whether a translation fits.
-- [ ] Drag the **Length** slider: the button's text changes live, and the card says what breaks.
-- [ ] Try **Name**, **Email** and your own text.
-- [ ] **Close measurement** puts the button's text back.
-- [ ] Right-click any page → **Measure this element with Overflow Scout** opens the panel ready to pick.
+- [ ] **Try your own text** → the panel says to click any text on the page, with **Cancel**. Click a button on the page. It shows how many characters fit and whether a translation fits.
+- [ ] Type your own text: the button's text changes as you type, and the panel says whether it fits or what breaks.
+- [ ] Try **Longer**, **Much longer**, **Long name**, **Long link** and **Paragraph**. Pressing one again shows another example.
+- [ ] **Back** puts the button's text back. **Pick other text** picks another element.
+- [ ] Right-click any page → **Try your own text here with Overflow Scout** opens the panel ready to pick.
 
 ### Real sites
 
-- [ ] Open a site you work on, or a large one such as a news site. Click the toolbar button, then **Scan page**. Results are plausible: nothing that is visibly fine.
-- [ ] Choose **Always allow on this site**, reload, and scan again without clicking the toolbar button first. Settings → **Site access** lists the site; remove it.
-- [ ] In a single-page app (for example GitHub), scan, then follow a link inside the app. The panel says **Results are from the previous page.**
+- [ ] Open a site you work on, or a large one such as a news site. Click the toolbar button, then **Check page**. The problems are plausible: nothing that is visibly fine. With more than 12, a search field appears.
+- [ ] Choose **Always allow on this site** (at the bottom), reload, and check again without clicking the toolbar button first. Settings → **Site access** lists the site; remove it.
+- [ ] In a single-page app (for example GitHub), check, then follow a link inside the app. The panel says **These results are from the previous page.**
 - [ ] Open `chrome://extensions` or the Chrome Web Store and open the panel. It says Chrome doesn't allow extensions there.
 - [ ] **Copy screenshot** on a real site right after clicking the toolbar button works. Reload the page without clicking the button again, and Copy screenshot explains that it needs the click.
 
 ### Everything else
 
 - [ ] <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> opens the panel.
-- [ ] In the panel, <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd> opens the commands, and <kbd>?</kbd> opens the shortcuts.
-- [ ] The results list works by keyboard: <kbd>j</kbd>/<kbd>k</kbd>, <kbd>Enter</kbd>, <kbd>Esc</kbd>, <kbd>/</kbd>.
+- [ ] In the panel, <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd> opens the commands, and <kbd>?</kbd> opens the shortcuts (also in Settings).
+- [ ] The list works by keyboard: <kbd>j</kbd>/<kbd>k</kbd>, <kbd>Enter</kbd>, <kbd>Esc</kbd>.
 - [ ] Settings → Theme → Dark, then Light, then System.
 - [ ] Make the panel as narrow as Chrome allows. Nothing overlaps or is cut off.
-- [ ] Remove the extension. Reopen a page you scanned: nothing is left on it.
+- [ ] Remove the extension. Reopen a page you checked: nothing is left on it.
 
 ### The store update (after publishing)
 

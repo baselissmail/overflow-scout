@@ -63,7 +63,7 @@ export function downloadText(name: string, text: string, type: string): void {
 
 /** "overflow-scout-shop.example-h2.title" (without an extension). */
 export function screenshotName(url: string, label: string): string {
-  const element = label.split(' › ').at(-1) ?? 'element';
+  const element = label.split(' > ').at(-1) ?? 'element';
   return `${exportFileName(url, new Date(), 'png').replace(/\.png$/, '')}-${element.replace(/[^\w.-]/g, '_')}`;
 }
 

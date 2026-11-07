@@ -256,7 +256,7 @@ describe('runStressTest', () => {
       expect(finding?.diagnosis.confidence).toBe('high');
       expect(finding?.diagnosis.causes[0]).toMatchObject({ property: 'width', value: '64px' });
       expect(finding?.diagnosis.causes[0]?.note).toMatch(
-        /^Width stayed 64px while the text grew 3\.5×/,
+        /^Width stayed 64px while the text grew 3\.5x/,
       );
     });
   });

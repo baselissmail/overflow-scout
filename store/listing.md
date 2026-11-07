@@ -6,9 +6,9 @@ Copy for the [developer dashboard](https://chrome.google.com/webstore/devconsole
 
 **Name:** Overflow Scout (comes from the package)
 
-**Summary** (from the package, 114 of 132 characters):
+**Summary** (from the package, 115 of 132 characters):
 
-> Find text that’s cut off or overflowing, test with translation-length text, and get CSS fixes checked on the page.
+> Find text that's cut off or overflowing, see what breaks when it gets longer, and get CSS fixes tested on the page.
 
 **Description** (paste as is; the store keeps the line breaks):
 
@@ -18,12 +18,12 @@ Overflow Scout finds text on a web page that is cut off, truncated or overflowin
 It opens in Chrome's side panel, next to the page, and changes nothing until you ask.
 
 WHAT IT DOES
-• Scan page: lists every text that is clipped with no cue, ends in an ellipsis, runs out of its box, or makes the page scroll sideways, and how much doesn't fit.
-• Test with longer text: makes every text as long as a translation would be (or uses pseudo-locale, long words, or real German, Finnish, Russian, Arabic, Japanese or Thai text), shows what breaks, and puts the page back exactly with one click.
-• What to do: each result comes with CSS fixes, and each fix is tried on the page for a moment, so you know whether it works and how the box changes.
-• Measure an element: pick any element, see how many characters fit, and try real names, products, links, emails or your own text, live.
+• Check page: lists every text that is cut off with no sign, cut short with "...", spills out of its box, or makes the page scroll sideways, and how much doesn't fit.
+• Text length: Longer and Much longer make every text as long as a translation would be, by repeating some of its own words, and show what breaks. Normal puts the page back exactly.
+• How to fix it: each problem comes with CSS fixes, and each fix is tried on the page for a moment, so you know whether it works and how the box changes.
+• Try your own text: pick any element, see how many characters fit, and put any text in it, live: your own, a longer version, a long name, a long link or a paragraph.
 • Reports: copy a Markdown report for GitHub or Jira, copy a cropped screenshot, or save everything as JSON.
-• Ignore results you accept, per site. Keyboard shortcuts and a command palette (Ctrl+K or ⌘K). Light and dark themes.
+• Ignore problems you accept, per site. Keyboard shortcuts and a command palette (Ctrl+K or Cmd+K). Light and dark themes.
 
 PRIVATE BY DESIGN
 Everything runs in your browser. Overflow Scout collects no data, has no analytics, and makes no network requests. It works on a page only after you click its toolbar button (or allow a site yourself), and only on that tab.
@@ -59,7 +59,7 @@ A complete rebuild: a side panel instead of a popup, a much more precise scanner
 | `scripting`                                              | Injects the scanner into that tab when the user starts working on it. Nothing runs on pages otherwise.                                                                                                             |
 | `sidePanel`                                              | The extension's whole interface is a side panel next to the page.                                                                                                                                                  |
 | `storage`                                                | Saves settings and per-site ignore rules on the device (`chrome.storage.local`), and hands the latest toolbar click to the panel (`chrome.storage.session`).                                                       |
-| `contextMenus`                                           | Adds "Measure this element with Overflow Scout" to the page's right-click menu.                                                                                                                                    |
+| `contextMenus`                                           | Adds "Try your own text here with Overflow Scout" to the page's right-click menu.                                                                                                                                  |
 | Host permissions (optional, `http://*/*`, `https://*/*`) | Never requested at install. Requested for one site at a time, only when the user chooses "Always allow on this site", so the panel can work there without a click each time. The user can remove them in Settings. |
 
 **Remote code:** No, I am not using remote code. All code is in the package.

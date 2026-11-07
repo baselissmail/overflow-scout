@@ -1,33 +1,30 @@
+# Plain English in plain ASCII: no accented letters, no typographic symbols.
+# src/locales/ascii.test.ts checks it. See docs/design/DIRECTION.md for the voice.
+
 # Manifest strings. Chrome limits the description to 132 characters.
 extName: Overflow Scout
-extDescription: Find text that’s cut off or overflowing, test with translation-length text, and get CSS fixes checked on the page.
+extDescription: Find text that's cut off or overflowing, see what breaks when it gets longer, and get CSS fixes tested on the page.
 actionTitle: Open Overflow Scout
-contextMenuInspect: Measure this element with Overflow Scout
+contextMenuInspect: Try your own text here with Overflow Scout
 
-# Drawn on the page while longer test text is applied
+# Drawn on the page while longer text is on it
 overlay:
-  stressActive: Longer test text on
-  revert: Revert
+  stressActive: Longer text is on
+  revert: Back to normal
 
-# Side panel. Sentence case, plain verbs; see docs/design/DIRECTION.md.
-tagline: Find text that gets cut off, before your users do.
+# Side panel
 actions:
-  scan: Scan page
-  scanAgain: Scan again
-  stress: Test with longer text
-  inspect: Measure an element
-  stopInspecting: Stop measuring
-  # Toolbar labels once results are showing; Home and the palette use the full names.
-  stressShort: Longer text
-  inspectShort: Measure
-  demo: Try the demo page
+  scan: Check page
+  scanAgain: Check again
+  tryText: Try your own text
+  stopPicking: Cancel
   openDemo: Open the demo page
-  revert: Revert
-  reapply: Re-apply
+  reapply: Make it longer again
   alwaysAllow: Always allow on this site
   retry: Try again
   cancel: Cancel
-  back: Back to results
+  back: Back
+  allProblems: All problems
   jump: Show on page
   copySelector: Copy selector
   copyCss: Copy CSS
@@ -40,32 +37,30 @@ actions:
   stopPreview: Stop preview
   copied: Copied
   settings: Settings
-  shortcuts: Keyboard shortcuts
   close: Close
-  runStress: Test with longer text
-  clearResults: Clear results
   previous: Previous place
   next: Next place
-  home: Home
-home:
-  scan: Checks this page for text that’s cut off, truncated or overflowing. The page itself doesn’t change.
-  stress: Makes every text on the page as long as a translation, and lists what breaks. Revert puts it all back.
-  inspect: Click any text on the page to see how much more fits, and try your own words in it.
-  shortcut: Open this panel with $1.
-  demoLabel: The button label “$1” becomes “$2” in German, and no longer fits its button.
-  demoCaption: “$1” is “$2” in German, and no longer fits. Overflow Scout finds text like this, and shows how much is cut.
-  results: Back to results
-  resultsBody:
-    0: Nothing was cut off on this page.
-    1: 1 issue on this page.
-    n: $1 issues on this page.
+start:
+  title: Find text that gets cut off
+  body: Check this page for text that doesn't fit its box. Then make the text longer to see what breaks once it's translated.
+  demo: No page to try it on?
+length:
+  label: Text length
+  normal: Normal
+  realistic: Longer
+  worst: Much longer
+  hintNormal: Choose Longer to see what breaks when text gets as long as a translation.
+  hintRealistic: Each text repeats some of its own words, to be as long as a typical translation. Choose Normal to put the text back.
+  hintWorst: Each text repeats some of its own words, to be as long as the longest translations. Choose Normal to put the text back.
+picking:
+  hint: Now click any text on the page to try your own text in it.
 busy:
-  connecting: Connecting to the page…
-  scanning: Scanning…
-  baseline: Measuring the page…
-  apply: Lengthening text…
-  stressed: Measuring with longer text…
-  reverting: Reverting…
+  connecting: Connecting to the page...
+  scanning: Checking the page...
+  baseline: Measuring the page...
+  apply: Making the text longer...
+  stressed: Checking with longer text...
+  reverting: Putting the text back...
   textNodes:
     1: 1 text checked
     n: $1 texts checked
@@ -73,81 +68,59 @@ page:
   restricted: Chrome doesn't allow extensions on this page.
   noAccess: Click the Overflow Scout button in the toolbar to work on this page.
   noAccessShortcut: Click the Overflow Scout button in the toolbar, or press $1, to work on this page.
-  fileAccess: To scan local files, turn on “Allow access to file URLs” for Overflow Scout on the Extensions page.
-  error: 'Couldn’t reach the page: $1'
-  stale: Results are from the previous page.
+  fileAccess: To check local files, turn on "Allow access to file URLs" for Overflow Scout on the Extensions page.
+  error: "Couldn't reach the page: $1"
+  stale: These results are from the previous page. Check again to see this one.
   alwaysAllowed: Always allowed on this site
   accessGranted: Overflow Scout can now work on $1 without a click.
   reset:
     1: 1 text was changed back by the page.
     n: $1 texts were changed back by the page.
 results:
-  heading: Results
-  brokenNow: Already broken
-  atRisk: New with longer text
-  stressSummary: '$1 · $2 · $3× longer: $4 new, $5 already broken'
-  restored: The page is back to normal. These results are from the longer-text test.
-  none: No overflow in $1 texts, in a $2 window.
-  noneNow: Nothing was broken before the text was lengthened.
-  noneAtRisk: Nothing else breaks with longer text.
-  noMatches: No results match these filters.
-  severitySummary: $1 critical, $2 warnings, $3 notices
-  severityHelp:
-    title: What the levels mean
-    critical: Text is cut off with no sign of it, or the whole page scrolls sideways.
-    warning: Text ends in an ellipsis, stops after a few lines, or runs out of its box.
-    notice: A field’s placeholder or value doesn’t fit.
-  severityCount:
-    critical:
-      1: 1 critical
-      n: $1 critical
-    warning:
-      1: 1 warning
-      n: $1 warnings
-    notice:
-      1: 1 notice
-      n: $1 notices
-  filterLabel: Filter
-  clearFilters: Clear filters
+  label: Problems
+  count:
+    0: No problems
+    1: 1 problem
+    n: $1 problems
+  newCount:
+    0: None of them are new with longer text.
+    1: 1 is new with longer text.
+    n: $1 are new with longer text.
+  checked:
+    1: Found in 1 text.
+    n: Found in $1 texts.
+  new: New
+  noneTitle: Nothing is cut off
+  noneBody: All $1 texts on this page fit. Choose Longer to see if they still fit once translated.
+  noneLongerTitle: Nothing breaks with longer text
+  noneLongerBody: All $1 texts still fit at this length.
+  noMatches: No problems match your search.
+  search: Search problems
+  searchPlaceholder: Search
   ignoredLabel: Ignored
   showIgnored:
     1: Show 1 ignored
     n: Show $1 ignored
   hideIgnored: Hide ignored
-  selectHint: Choose a result to see how much text doesn’t fit, and why.
-  footer: $1 texts checked · $2 ms · window $3
-  footerStress: $1 texts checked · $2 ms
   places:
     1: 1 place
     n: $1 places
-  filters: Filter by kind
-  search: Search results
-  searchPlaceholder: Search results…
-  sort: Sort results
-  sortSeverity: Severity
-  sortPage: Page order
-  sortToPage: Sorted by severity. Sort in page order
-  sortToSeverity: Sorted in page order. Sort by severity
-  coverage: What was checked
-  coverageTextNodes: Texts checked
-  coverageInputs: Fields checked
-  coverageInvisible: Texts not shown on the page (skipped)
-  coverageForeign: Text in SVG and MathML (skipped)
-  coverageShadowRoots: Shadow roots
-  coverageFrames: Frames not scanned
-  coverageTime: Time
-  coverageViewport: Window size
+  # Report section titles
+  atRisk: New with longer text
+  brokenNow: Already broken
+  noneAtRisk: Nothing else breaks with longer text.
+  noneNow: Nothing was broken before the text got longer.
 kind:
   hidden: Cut off
-  pageScroll: Wider than window
-  truncated: Truncated
-  spilling: Overflows
-  input: Field cut off
+  pageScroll: Wider than the window
+  truncated: Cut short
+  spilling: Spills out
+  input: Too long for its field
 kindDescription:
-  hidden: The box clips its text with no ellipsis, so readers lose part of it without knowing.
+  hidden: The box hides the end of the text, and nothing shows that it's missing.
   pageScroll: This element is wider than the browser window, so the whole page scrolls sideways.
-  truncated: The text ends in an ellipsis (…) or stops after a few lines. Often intended, but the end is lost.
-  spilling: The text runs out of its box and can overlap what’s next to it.
+  truncated: The text ends in "..." or stops after a few lines, so readers miss the end. Sometimes this is on purpose.
+  spilling: The text runs out of its box and can cover what's next to it.
   input: A placeholder or read-only value is longer than its field.
 severity:
   critical: Critical
@@ -157,16 +130,10 @@ detail:
   visible: Visible
   lost: Cut off
   spills: Spills out
-  proof: What readers see
   place: Place $1 of $2
-  hasWidth: width $1
-  hasHeight: height $1
-  hasWindow: window $1
-  needs: needs $1
-  short: −$1
-  measure: Needs $1, has $2, $3 short.
+  measure: Needs $1, has $2. $3 short.
+  measureY: Needs $1 of height, has $2. $3 short.
   pageWider: Reaches $1 past the $2 window.
-  measureY: Needs $1 of height, has $2, $3 short.
   text: Text
   before: Before
   cause: Likely cause
@@ -176,23 +143,23 @@ detail:
   noCause: No single CSS property explains this.
   element: Element
   selector: CSS selector
-  growth: Text $1× longer
-  whatToDo: What to do
+  growth: Text $1x longer
+  fix: How to fix it
   on: On $1
-  suggestionNote: Based on the likely cause below; not tried on the page.
-  trying: Trying each fix on the page…
-  screenshotSaved: The clipboard isn’t available, so the screenshot was saved to your downloads.
-  screenshotFailed: 'Couldn’t take a screenshot: $1'
-  screenshotHidden: Switch to this tab first. A screenshot shows the tab that’s in front.
+  suggestionNote: These weren't tried on the page. They're based on the likely cause.
+  trying: Trying each fix on the page...
+  tried: Each fix was tried on the page for a moment, then removed.
+  screenshotSaved: The clipboard isn't available, so the screenshot was saved to your downloads.
+  screenshotFailed: "Couldn't take a screenshot: $1"
+  screenshotHidden: Switch to this tab first. A screenshot shows the tab that's in front.
   screenshotNeedsClick: Chrome allows screenshots only after you click the Overflow Scout button in the toolbar. Click it, then try again.
-  tried: Each fix was tried on the page for a moment, then removed. Nothing was changed.
 fix:
   fixes: Fixes it.
   togetherFixes: Together, these fix it.
-  improves: Helps, but $1 still doesn’t fit.
-  togetherImproves: Together these help, but $1 still doesn’t fit.
-  noChange: Doesn’t fix it on its own.
-  togetherNoChange: Even together, these don’t fix it. The cause may be on another element.
+  improves: Helps, but $1 still doesn't fit.
+  togetherImproves: Together these help, but $1 still doesn't fit.
+  noChange: Doesn't fix it on its own.
+  togetherNoChange: Even together, these don't fix it. The cause may be on another element.
   wider: $1 wider
   narrower: $1 narrower
   taller: $1 taller
@@ -203,7 +170,7 @@ fix:
   addedNote: Also needed, found by trying the fixes above
 advice:
   whiteSpace: Let the text wrap onto another line.
-  textOverflow: The ellipsis hides the end. If the full text matters, let it wrap, or show it on hover with a title.
+  textOverflow: The "..." hides the end. If the full text matters, let it wrap, or show it on hover with a title.
   lineClamp: Show more lines, or let readers expand the text.
   maxWidth: Let the box grow past this maximum width.
   width: Let the box size itself to its text.
@@ -211,88 +178,38 @@ advice:
   grid: Give this grid column more room, or let it size to its content.
   height: Let the box grow with its text, using a minimum height instead of a fixed one.
   maxHeight: Raise or remove the maximum height.
-  overflow: Hiding overflow cuts text silently. Fix the size instead, or add an ellipsis so readers can tell.
-  overflowWrap: Let long words, URLs and email addresses break.
+  overflow: Hiding overflow cuts text silently. Fix the size instead, or add "..." so readers can tell.
+  overflowWrap: Let long words, links and email addresses break.
   minWidth: Remove the minimum width, or keep it within the window.
   pageWidth: Keep the element within the window.
   field: Widen the field, or shorten the text.
-stress:
-  heading: Test with longer text
-  strategy: Strategy
-  intensity: Intensity
-  language: Language
-  rtl: Right-to-left layout
-  rtlDescription: Sets the page direction to right-to-left while longer test text is on.
-  scope: Scope
-  scopePage: Whole page
-  scopePicked: Picked element
-  apply: Apply and scan
-  active: Longer test text is on the page
-  activeTranslation: Each text repeats some of its own words on purpose, to make it as long as a translation. Revert puts every text back exactly.
-  activePseudo: The accented letters and [brackets] are added on purpose. A missing ] shows where a text was cut. Revert puts every text back exactly.
-  activeLongWords: The long words, links and email addresses are added on purpose, to test text that can’t wrap. Revert puts every text back exactly.
-  activeLanguage: The text is replaced with real text in another language, to test other scripts. Revert puts every text back exactly.
-  scopePickedHint: To test one element, pick it with Measure an element first.
-  change: Change options
-strategy:
-  translation: Translation length
-  pseudo: Accented pseudo-locale
-  longWords: Long words
-  language: Language samples
-strategyDescription:
-  translation: Repeats some of each text’s own words, up to the length a translation needs. The text stays readable.
-  pseudo: Swaps each letter for an accented look-alike (Save → Šåṽé) and brackets each text. A missing ] means the end was cut off.
-  longWords: Adds a long word, URL or email address that can’t wrap.
-  language: Replaces text with real text in another language and script.
-intensity:
-  realistic: Realistic
-  worst: Worst case
-  extreme: Extreme
-intensityDescription:
-  realistic: The length most translations reach. Best for deciding what to fix.
-  worst: The long end of the range, which only some languages reach.
-  extreme: Twice the worst case, to see how robust a layout is.
-language:
-  de: German
-  fi: Finnish
-  ru: Russian
-  ar: Arabic
-  ja: Japanese
-  th: Thai
-inspect:
-  heading: Measure
-  close: Close measurement
-  hint: Click any text on the page to measure it.
-  noText: This element has no text to grow.
-  fitsUpTo: Fits up to $1 characters.
-  fitsAll: Still fits at $1 characters.
-  needs: Now $1 characters; a translation needs about $2–$3.
-  has: fits $1
-  needsChars: needs $1
-  measure: Fits up to $1 characters; a translation needs about $2.
-  tryHeading: Try other text
-  tryHint: Edit the text, and the page shows it as you type. It goes back when you close this.
-  length: Length
+try:
+  heading: Try your own text
+  hint: Type or paste anything. The page shows it as you type, and gets its own text back when you leave.
+  label: Text on the page
+  fill: Fill with
+  longer: Longer
+  muchLonger: Much longer
+  name: Long name
+  link: Long link
+  paragraph: Paragraph
   chars:
     1: 1 character
     n: $1 characters
-  tryFits: Fits at $1.
-  tryBreaks: $1 at $2, $3 short.
-  presets: Real-world text
-  preset:
-    longName: Name
-    product: Product
-    url: Link
-    email: Email
-    longText: Long text
-  custom: Your own text
-  try: Try
+  fits: Fits at $1.
+  breaks: $1 at $2. $3 short.
   reset: Put the text back
+inspect:
+  pickAnother: Pick other text
+  noText: This element has no text to try.
+  fitsUpTo: Fits up to $1 characters. It has $2 now.
+  fitsAll: Still fits at $1 characters.
+  needs: A translation needs about $1 to $2.
   verdict:
-    fits: Room for translation
-    atRisk: May break in translation
-    willBreak: Will break in translation
-    broken: Already broken
+    fits: Room for a translation
+    atRisk: May not fit a translation
+    willBreak: Won't fit a translation
+    broken: Already cut off
 settings:
   heading: Settings
   appearance: Appearance
@@ -300,73 +217,70 @@ settings:
   themeSystem: System
   themeLight: Light
   themeDark: Dark
-  defaults: Longer text defaults
-  scanning: Scanning
+  scanning: Checking
   includeInputs: Check fields
-  includeInputsDescription: Placeholders and read-only values that don’t fit.
-  ignored: Ignored results
-  ignoredDescription: Results you chose to ignore, per site. They stay out of the list, the badge and reports.
-  ignoredNone: None yet. Use “Ignore on this site” in a result’s details.
+  includeInputsDescription: Placeholders and read-only values that don't fit.
+  ignored: Ignored problems
+  ignoredDescription: Problems you chose to ignore, per site. They stay out of the list, the badge and reports.
+  ignoredNone: None yet. Use "Ignore on this site" in a problem's details.
   unignore: Stop ignoring $1
   localFiles: Local files
   demoPage: Demo page
   sites: Site access
   sitesDescription: Sites where Overflow Scout works without a click.
-  sitesNone: None yet. Use “Always allow on this site” while scanning a page.
-  remove: Remove
+  sitesNone: None yet. Use "Always allow on this site" while checking a page.
   removeSite: Remove access to $1
-  shortcut: Keyboard shortcut
+  shortcut: Keyboard shortcuts
   shortcutCurrent: Opens the panel with $1.
-  shortcutNone: No shortcut is set.
+  shortcutNone: No shortcut is set to open the panel.
   changeShortcut: Change shortcut
+  showShortcuts: Show all shortcuts
   about: About
   version: Version $1
+  demo: Open the demo page
   privacy: Everything runs in your browser. Overflow Scout collects no data and makes no network requests.
   credit: Made by Basel Issmail. Open source under the MIT license.
 shortcuts:
   heading: Keyboard shortcuts
-  next: Next result
-  previous: Previous result
-  open: Open the selected result
-  close: Close details or stop the picker
-  search: Search results
+  next: Next problem
+  previous: Previous problem
+  open: Open the selected problem
+  close: Go back, or stop picking
+  search: Search problems
+  commands: Run any command
   help: Show keyboard shortcuts
   panel: Open this panel
 commands:
   title: Commands
-  open: Commands
-  placeholder: Type a command…
+  placeholder: Type a command...
   none: No commands match.
   groupActions: Actions
-  groupResults: Results
+  groupResults: Problems
   groupView: View
   groupHelp: Help
-  runStress: Test with longer text now
-  stressOptions: Longer text options
-  home: Go to Home
-  clearResults: Clear results
+  lengthNormal: 'Text length: Normal'
+  lengthRealistic: 'Text length: Longer'
+  lengthWorst: 'Text length: Much longer'
   copyReport: Copy report as Markdown
-  saveJson: Save results as JSON
-  search: Search results
+  saveMarkdown: Save report as Markdown
+  saveJson: Save problems as JSON
+  search: Search problems
   themeSystem: Use the system theme
   themeLight: Use the light theme
   themeDark: Use the dark theme
+  shortcuts: Show keyboard shortcuts
+  demo: Open the demo page
   changeShortcut: Change the keyboard shortcut
 report:
   title: Overflow Scout report
-  export: Export results
-  copyMarkdown: Copy report (Markdown)
-  saveMarkdown: Save as Markdown
-  saveJson: Save as JSON
-  exportNote: For GitHub, Jira or scripts. It covers the results on screen, and nothing leaves your browser unless you paste it.
   copied: Report copied. Paste it into GitHub or Jira.
   page: Page
   window: window $1
   testLabel: Tested with
-  test: $1 · $2 · $3× longer text
+  test: $1 text, about $2x as long
   severity: Severity
   longer: With longer text
-  cut: Where it’s cut
+  cut: Where it's cut
   cutLost: Readers see $1 and lose $2.
   cutSpills: Readers see $1, and $2 runs out of the box.
   size: Size
@@ -375,19 +289,10 @@ report:
   fixesSuggested: Fixes to try
   found: Found
   issues:
-    1: 1 issue
-    n: $1 issues
-try:
-  open: Try other text
-  heading: Try other text
-  hint: Edit the text, and the page shows it as you type. It goes back when you leave.
-  label: Text on the page
-  lengths: Lengths to try
-  translation: Translation length
-  worstCase: Worst case
-  double: Twice as long
+    1: 1 problem
+    n: $1 problems
 toast:
   label: Notifications
   restored:
-    1: Page restored. 1 text put back.
-    n: Page restored. $1 texts put back.
+    1: Text is back to normal. 1 text was put back.
+    n: Text is back to normal. $1 texts were put back.

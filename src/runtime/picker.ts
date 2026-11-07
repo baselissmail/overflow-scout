@@ -61,5 +61,5 @@ export class Picker {
 
 function describeSize(element: Element): string {
   const rect = element.getBoundingClientRect();
-  return `${elementLabel(element)} · ${String(Math.round(rect.width))} × ${String(Math.round(rect.height))}`;
+  return `${elementLabel(element)}  ${String(Math.round(rect.width))} x ${String(Math.round(rect.height))}`;
 }

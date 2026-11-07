@@ -178,7 +178,7 @@ describe('describeElement', () => {
       const { selector, label } = describeElement(second);
       expect(doc.querySelector(selector)).toBe(second);
       expect(selector).not.toContain('css-');
-      expect(label).toBe('nav › a.nav-link');
+      expect(label).toBe('nav > a.nav-link');
     } finally {
       dispose();
     }

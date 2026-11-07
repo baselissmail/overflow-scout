@@ -217,6 +217,31 @@ describe('PanelController', () => {
     expect(controller.getState()).toMatchObject({ stressActive: false, pending: 0 });
   });
 
+  it('checks the page again once the text is back to normal', async () => {
+    const { controller, fake, request } = setup({
+      stress: { brokenNow: [], atRisk: SCAN.issues, stats: {} },
+      revert: { restored: 3, keptPageChanges: 0 },
+      scan: SCAN,
+    });
+    const options = {
+      strategy: 'translation',
+      intensity: 'realistic',
+      language: 'de',
+      rtl: false,
+    } as const;
+    await controller.stress(options, 'page', false);
+    await controller.revert();
+    expect(controller.getState()).toMatchObject({ stressActive: false, showing: 'scan' });
+    expect(request).toHaveBeenLastCalledWith('scan', { includeInputs: false });
+
+    // The same when the button on the page puts the text back.
+    await controller.stress(options);
+    fake.emit({ type: 'reverted', result: { restored: 3, keptPageChanges: 0 } });
+    await vi.waitFor(() => {
+      expect(controller.getState().showing).toBe('scan');
+    });
+  });
+
   it('runs the picker and receives the picked element', async () => {
     const { controller, fake, request } = setup();
     await controller.pick(true);

@@ -1,6 +1,5 @@
 import { i18n } from '#i18n';
 import {
-  ArrowLeft,
   Camera,
   Check,
   ChevronLeft,
@@ -9,7 +8,6 @@ import {
   Eye,
   EyeOff,
   LocateFixed,
-  TextCursorInput,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -27,24 +25,26 @@ import type {
   TextValueDto,
 } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
-import { Badge, TONE_TEXT } from '@/ui/Chip';
+import { TONE_BG, TONE_TEXT } from '@/ui/Chip';
 import { CutText } from '@/ui/CutText';
 import { IconButton } from '@/ui/IconButton';
-import { MeasureBar } from '@/ui/MeasureBar';
+import { StepHeader } from '@/ui/StepHeader';
+import { cx } from '@/ui/cx';
 import { useToast } from '@/ui/Toast';
 
 import { CopyButton, useCopied } from './CopyButton';
 import { Fixes } from './Fixes';
 import { measurement, measurementSentence } from './measure';
-import { SEVERITY_TONE, formatPx, kindDescription, kindLabel, severityLabel } from './labels';
+import { SEVERITY_TONE, kindDescription, kindLabel } from './labels';
 
 type Details = ResultOf<'details'>;
 
 export interface IssueDetailProps {
   issue: IssueDto;
   viewport: { width: number; height: number };
-  /** Shown only when the detail replaces the list (narrow panels). */
-  onBack: (() => void) | null;
+  /** It appears only with longer text. */
+  fresh: boolean;
+  onBack: () => void;
   onReveal: (findingId: string) => void;
   onHighlight: (findingId: string | null) => void;
   loadDetails: (findingId: string) => Promise<Details>;
@@ -68,9 +68,15 @@ export interface IssueDetailProps {
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
 const SMALL = { size: 14, strokeWidth: 1.5 } as const;
 
+/**
+ * One problem, in the order it's worked through: what's wrong, the text as
+ * readers see it, how to fix it (tested on the page), and a field to try any
+ * other text in the same element. The rest (why, where) is folded away.
+ */
 export function IssueDetail({
   issue,
   viewport,
+  fresh,
   onBack,
   onReveal,
   onHighlight,
@@ -112,12 +118,10 @@ export function IssueDetail({
     };
   }, [finding, loadFixes]);
 
-  // "Try other text": open for one place at a time, starting from its whole text.
-  const [tryingFor, setTryingFor] = useState<string | null>(null);
+  // "Try your own text" starts from the element's whole text, per place.
   const [tryText, setTryText] = useState<{ id: string; text: string } | null>(null);
   const findingId = finding?.id;
-  const trying = tryingFor !== null && tryingFor === findingId;
-  // What the element showed when scanned, if its whole text can't be read.
+  // What the element showed when checked, if its whole text can't be read.
   const sample = finding?.text ?? '';
   const tryOnFinding = useCallback(
     (value: TextValueDto | null) =>
@@ -126,7 +130,7 @@ export function IssueDetail({
   );
 
   useEffect(() => {
-    if (!trying) return;
+    if (findingId === undefined) return;
     let current = true;
     void onTextOf(findingId).then((text) => {
       if (current) setTryText({ id: findingId, text: text ?? sample });
@@ -134,7 +138,7 @@ export function IssueDetail({
     return () => {
       current = false;
     };
-  }, [trying, findingId, onTextOf, sample]);
+  }, [findingId, onTextOf, sample]);
 
   useEffect(() => {
     if (!finding) return;
@@ -152,9 +156,6 @@ export function IssueDetail({
 
   if (!finding) return null;
   const tone = SEVERITY_TONE[issue.severity];
-  const measured = measurement(finding, viewport);
-  const { has, needs, axis } = measured;
-  const short = needs - has;
   const places = issue.instances.length;
   const go = (next: number) => {
     const target = issue.instances[next];
@@ -199,20 +200,13 @@ export function IssueDetail({
   };
 
   return (
-    <article className="flex min-w-0 flex-col gap-4" aria-label={kindLabel(issue.kind)}>
-      <header className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1">
-        {onBack && (
-          <IconButton
-            className="-ms-2"
-            label={i18n.t('actions.back')}
-            icon={<ArrowLeft {...ICON} className="rtl:rotate-180" />}
-            onClick={onBack}
-          />
-        )}
-        <Badge tone={tone}>{kindLabel(issue.kind)}</Badge>
-        <span className="text-small text-fg-muted">{severityLabel(issue.severity)}</span>
+    <article
+      className="flex min-w-0 animate-enter flex-col gap-6"
+      aria-label={kindLabel(issue.kind)}
+    >
+      <StepHeader backLabel={i18n.t('actions.allProblems')} onBack={onBack}>
         {places > 1 && (
-          <span className="ms-auto flex items-center">
+          <span className="-me-2 flex items-center">
             <IconButton
               label={i18n.t('actions.previous')}
               icon={<ChevronLeft {...ICON} className="rtl:rotate-180" />}
@@ -234,52 +228,58 @@ export function IssueDetail({
             />
           </span>
         )}
-      </header>
+      </StepHeader>
 
-      <p className="-mt-2 text-small text-pretty text-fg-muted">{kindDescription(issue.kind)}</p>
+      {/* What's wrong, then the text as readers see it: the one large thing in the panel. */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="flex flex-wrap items-center gap-x-2 text-title font-semibold">
+            <span aria-hidden="true" className={cx('size-2.5 rounded-full', TONE_BG[tone])} />
+            {kindLabel(issue.kind)}
+            {fresh && (
+              <span className="rounded-[4px] bg-accent-soft px-1.5 text-small font-medium">
+                {i18n.t('results.new')}
+              </span>
+            )}
+          </h2>
+          <p className="text-pretty text-fg-muted">{kindDescription(issue.kind)}</p>
+        </div>
+        <figure className="flex flex-col gap-3 rounded-card bg-raised p-4 shadow-raised">
+          {cut ? (
+            <p className="text-specimen">
+              <CutText
+                visible={cut.visible}
+                hidden={cut.hidden}
+                visibleLabel={i18n.t('detail.visible')}
+                hiddenLabel={
+                  finding.kind === 'spilling' ? i18n.t('detail.spills') : i18n.t('detail.lost')
+                }
+                toneClass={TONE_TEXT[tone]}
+              />
+            </p>
+          ) : (
+            finding.text !== '' && <p className="text-specimen break-words">{finding.text}</p>
+          )}
+          <figcaption className="text-small text-fg-muted tabular-nums">
+            {measurementSentence(measurement(finding, viewport))}
+          </figcaption>
+        </figure>
+      </div>
 
-      {/* The one rich moment: the text cut where readers lose it, measured underneath. */}
-      <section
-        className="flex flex-col gap-4 rounded-card bg-raised p-4 shadow-raised"
-        aria-label={i18n.t('detail.proof')}
-      >
-        {cut ? (
-          <p className="text-title leading-snug">
-            <CutText
-              visible={cut.visible}
-              hidden={cut.hidden}
-              visibleLabel={i18n.t('detail.visible')}
-              hiddenLabel={
-                finding.kind === 'spilling' ? i18n.t('detail.spills') : i18n.t('detail.lost')
-              }
-              toneClass={TONE_TEXT[tone]}
-            />
-          </p>
-        ) : (
-          finding.text !== '' && (
-            <p className="text-title leading-snug break-words">{finding.text}</p>
-          )
+      <Fixes finding={finding} result={fixes} onPreview={onPreview} />
+
+      <section className="flex flex-col gap-3" aria-label={i18n.t('try.heading')}>
+        <div className="flex flex-col gap-1">
+          <h2 className="text-title font-semibold">{i18n.t('try.heading')}</h2>
+          <p className="text-pretty text-fg-muted">{i18n.t('try.hint')}</p>
+        </div>
+        {tryText?.id === finding.id && (
+          <TextTrial key={finding.id} initialText={tryText.text} onTry={tryOnFinding} />
         )}
-        <MeasureBar
-          key={finding.id}
-          has={has}
-          needs={needs}
-          tone={tone}
-          hasLabel={
-            finding.kind === 'page-scroll'
-              ? i18n.t('detail.hasWindow', [formatPx(has)])
-              : axis === 'x'
-                ? i18n.t('detail.hasWidth', [formatPx(has)])
-                : i18n.t('detail.hasHeight', [formatPx(has)])
-          }
-          needsLabel={i18n.t('detail.needs', [formatPx(needs)])}
-          differenceLabel={i18n.t('detail.short', [formatPx(short)])}
-          description={measurementSentence(measured)}
-        />
       </section>
 
-      {/* Quiet actions in one row; the page and the fixes below carry the color. */}
-      <div className="-mx-2 -mt-2 flex flex-wrap items-center">
+      {/* Quiet actions, named in words; the page shows the element outlined already. */}
+      <div className="-mx-2 flex flex-wrap items-center gap-y-1">
         <Button
           size="sm"
           variant="ghost"
@@ -290,55 +290,39 @@ export function IssueDetail({
         >
           {i18n.t('actions.jump')}
         </Button>
+        {report && (
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={copied ? <Check {...SMALL} className="text-ok" /> : <ClipboardCopy {...SMALL} />}
+            onClick={copyReport}
+          >
+            {copied ? i18n.t('actions.copied') : i18n.t('actions.copyReport')}
+          </Button>
+        )}
         <Button
           size="sm"
           variant="ghost"
-          aria-expanded={trying}
-          className="aria-expanded:bg-accent-soft"
-          icon={<TextCursorInput {...SMALL} />}
-          onClick={() => {
-            setTryingFor(trying ? null : finding.id);
-          }}
+          disabled={shooting}
+          icon={shotCopied ? <Check {...SMALL} className="text-ok" /> : <Camera {...SMALL} />}
+          onClick={copyScreenshot}
         >
-          {i18n.t('try.open')}
+          {shotCopied ? i18n.t('actions.copied') : i18n.t('actions.copyScreenshot')}
         </Button>
-        {/* Copying is for after you've looked: icons at the end, named by their tooltips. */}
-        <span className="ms-auto flex">
-          {report && (
-            <IconButton
-              label={copied ? i18n.t('actions.copied') : i18n.t('actions.copyReport')}
-              icon={copied ? <Check {...ICON} className="text-ok" /> : <ClipboardCopy {...ICON} />}
-              onClick={copyReport}
-            />
-          )}
-          <IconButton
-            label={shotCopied ? i18n.t('actions.copied') : i18n.t('actions.copyScreenshot')}
-            disabled={shooting}
-            icon={shotCopied ? <Check {...ICON} className="text-ok" /> : <Camera {...ICON} />}
-            onClick={copyScreenshot}
-          />
-        </span>
+        {ignored ? (
+          <Button size="sm" variant="ghost" icon={<Eye {...SMALL} />} onClick={onUnignore}>
+            {i18n.t('actions.unignore')}
+          </Button>
+        ) : (
+          onIgnore && (
+            <Button size="sm" variant="ghost" icon={<EyeOff {...SMALL} />} onClick={onIgnore}>
+              {i18n.t('actions.ignore')}
+            </Button>
+          )
+        )}
       </div>
 
-      {trying && (
-        <section
-          className="flex animate-enter flex-col gap-3 rounded-card bg-raised p-4 shadow-raised"
-          aria-label={i18n.t('try.heading')}
-        >
-          <div className="flex flex-col gap-0.5">
-            <h2 className="font-medium">{i18n.t('try.heading')}</h2>
-            <p className="text-small text-fg-muted">{i18n.t('try.hint')}</p>
-          </div>
-          {tryText?.id === finding.id && (
-            <TextTrial initialText={tryText.text} onTry={tryOnFinding} focusOnOpen />
-          )}
-        </section>
-      )}
-
-      {/* The next step comes first; the evidence follows, folded away. */}
-      <Fixes finding={finding} result={fixes} onPreview={onPreview} />
-
-      <details className="group flex flex-col">
+      <details className="group flex flex-col border-t border-line pt-2">
         <summary className="-mx-2 flex min-h-8 cursor-default items-center gap-1.5 rounded-control px-2 font-medium transition-[background-color] duration-(--duration-press) ease-(--ease-out) select-none hover:bg-surface [&::-webkit-details-marker]:hidden">
           <ChevronRight
             {...SMALL}
@@ -346,11 +330,6 @@ export function IssueDetail({
             className="text-fg-muted transition-transform duration-(--duration-press) ease-(--ease-out) group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90"
           />
           {i18n.t('detail.why')}
-          <span className="text-small font-normal text-fg-muted">
-            {finding.diagnosis.confidence === 'high'
-              ? i18n.t('detail.confidenceHigh')
-              : i18n.t('detail.confidenceMedium')}
-          </span>
         </summary>
         <div className="mt-2 flex flex-col gap-4">
           {finding.diagnosis.causes.length > 0 ? (
@@ -398,7 +377,7 @@ export function IssueDetail({
             </dd>
             <dt className="text-small text-fg-muted">{i18n.t('detail.selector')}</dt>
             <dd className="font-mono text-small break-all" translate="no">
-              {selector ?? '…'}
+              {selector ?? '...'}
             </dd>
             <dd>
               {selector && <CopyButton text={selector} label={i18n.t('actions.copySelector')} />}
@@ -406,31 +385,6 @@ export function IssueDetail({
           </dl>
         </div>
       </details>
-
-      {/* Accepting a result is rare: a quiet action at the end. */}
-      {ignored ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="-ms-2 self-start text-fg-muted hover:text-fg"
-          icon={<Eye {...SMALL} />}
-          onClick={onUnignore}
-        >
-          {i18n.t('actions.unignore')}
-        </Button>
-      ) : (
-        onIgnore && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="-ms-2 self-start text-fg-muted hover:text-fg"
-            icon={<EyeOff {...SMALL} />}
-            onClick={onIgnore}
-          >
-            {i18n.t('actions.ignore')}
-          </Button>
-        )
-      )}
     </article>
   );
 }

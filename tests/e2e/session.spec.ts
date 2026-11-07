@@ -7,25 +7,30 @@ import { OTHER_ORIGIN, TEST_ORIGIN, expect, test } from './fixtures';
 
 type Chrome = typeof browser;
 
-const results = (panel: Page) => panel.getByRole('listbox', { name: 'Results' });
+const results = (panel: Page) => panel.getByRole('listbox', { name: 'Problems' });
 const rows = (panel: Page) => results(panel).getByRole('option');
 const pageText = (page: Page) => page.evaluate(() => document.body.innerHTML);
+const length = (panel: Page, name: 'Normal' | 'Longer' | 'Much longer') =>
+  panel.getByRole('radio', { name, exact: true });
 
-/** Scans from Home, or from the action bar once there are results. */
+/** The main button: Check page, or Check again once there are problems. */
 async function scan(panel: Page): Promise<void> {
-  await panel
-    .getByRole('button', { name: /^(Scan page|Scan again)/ })
-    .first()
-    .click();
+  await panel.getByRole('button', { name: /^Check (page|again)$/ }).click();
 }
 
-/** One click runs it with the saved options: from Home, or from the action bar. */
+/** Text length: Longer makes the page's text longer and checks it. */
 async function runStress(panel: Page): Promise<void> {
-  await panel
-    .getByRole('button', { name: /^(Test with longer text|Longer text)/ })
-    .first()
-    .click();
-  await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
+  await length(panel, 'Longer').click();
+  await expect(length(panel, 'Longer')).toHaveAttribute('aria-checked', 'true');
+  // The control is back once the page is checked with the longer text.
+  await expect(length(panel, 'Longer')).toBeEnabled();
+}
+
+/** Text length: Normal puts the page's own text back. */
+async function revert(panel: Page): Promise<void> {
+  await length(panel, 'Normal').click();
+  await expect(length(panel, 'Normal')).toHaveAttribute('aria-checked', 'true');
+  await expect(length(panel, 'Normal')).toBeEnabled();
 }
 
 test.describe('demo page', () => {
@@ -44,30 +49,29 @@ test.describe('demo page', () => {
 
     await scan(panel);
     await expect(rows(panel).first()).toBeVisible();
-    const filters = panel.getByRole('group', { name: 'Filter by kind' });
     for (const kind of [
       'Cut off',
-      'Truncated',
-      'Overflows',
-      'Wider than window',
-      'Field cut off',
+      'Cut short',
+      'Spills out',
+      'Wider than the window',
+      'Too long for its field',
     ]) {
-      await expect(
-        filters.getByRole('button', { name: new RegExp(`^${kind} \\d+`) }),
-      ).toBeVisible();
+      await expect(rows(panel).filter({ hasText: kind }).first()).toBeVisible();
     }
-    await expect(panel.getByText(/texts checked · \d+ ms · window 800×/)).toBeVisible();
+    await expect(panel.getByRole('heading', { name: /^\d+ problems$/ })).toBeVisible();
+    await expect(panel.getByText(/^Found in \d+ texts\.$/)).toBeVisible();
 
     // Hovering a result outlines it on the page; clicking scrolls to it and opens details.
     await rows(panel).first().hover();
     await expect(demo.locator('overflow-scout-root .box[data-role="target"]')).toHaveCount(1);
     await rows(panel).first().click();
     await expect(demo.locator('overflow-scout-root .box[data-flash]')).toHaveCount(1);
-    await expect(panel.getByRole('img', { name: /^Needs .* short\.$/ })).toBeVisible();
+    await expect(panel.getByText(/^(Needs|Reaches) .*\.$/)).toBeVisible();
+    await panel.getByRole('button', { name: 'All problems' }).click();
 
     // Revealing an element below the fold scrolls the page; the pulse must survive the redraws.
     await demo.setViewportSize({ width: 800, height: 300 });
-    await rows(panel).filter({ hasText: 'Ships in 2–3 business days' }).click();
+    await rows(panel).filter({ hasText: 'Ships in 2 to 3 business days' }).click();
     await expect(demo.locator('overflow-scout-root .box[data-flash]')).toHaveCount(1);
     await expect.poll(() => demo.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 
@@ -80,16 +84,14 @@ test.describe('demo page', () => {
     // Everything runs locally (plan §6.4).
     expect(requests.filter((url) => !url.startsWith('chrome-extension://'))).toEqual([]);
 
-    // Home is one click away from anywhere, and leads back to the results it kept.
-    await panel.getByRole('button', { name: 'Home', exact: true }).click();
+    // Every view one step in leads back to the main screen the same ways: Back, or Esc.
     await expect(results(panel)).toBeHidden();
-    await panel.getByRole('button', { name: /^Back to results \d+ issues on this page/ }).click();
+    await panel.getByRole('button', { name: 'All problems' }).click();
     await expect(rows(panel).first()).toBeVisible();
-
-    // Clearing the results goes back to the start screen.
-    await panel.getByRole('button', { name: 'Clear results' }).click();
+    await panel.getByRole('button', { name: 'Settings' }).click();
     await expect(results(panel)).toBeHidden();
-    await expect(panel.getByRole('button', { name: /^Scan page/ })).toBeVisible();
+    await panel.keyboard.press('Escape');
+    await expect(rows(panel).first()).toBeVisible();
   });
 
   test('tries each fix on the page, and previews one until it is stopped', async ({
@@ -137,21 +139,19 @@ test.describe('demo page', () => {
 
     await scan(panel);
     await rows(panel).filter({ hasText: 'Waterproof hiking jacket' }).click();
-    await panel.getByRole('button', { name: 'Try other text' }).click();
-    const editor = panel.getByRole('region', { name: 'Try other text' });
+    // Right there in the details, starting from the element's whole text.
+    const editor = panel.getByRole('region', { name: 'Try your own text' });
     const field = editor.getByLabel('Text on the page');
-    // It starts from the element's whole text, and has focus.
     await expect(field).toHaveValue(original);
-    await expect(field).toBeFocused();
 
-    // A shorter translation fits; a longer one is cut off, by how much.
-    await field.fill('Wasserdichte Jacke');
-    await expect.poll(() => title.textContent()).toBe('Wasserdichte Jacke');
-    await expect(editor).toContainText(/^.*Fits at \d+ characters\./m);
+    // A shorter text fits; a longer one is cut off, by how much.
+    await field.fill('Rain jacket');
+    await expect.poll(() => title.textContent()).toBe('Rain jacket');
+    await expect(editor).toContainText(/Fits at \d+ characters\./);
     await field.fill(
-      'Wasserdichte Wanderjacke mit abnehmbarer, isolierter Kapuze und verschweißten Nähten',
+      'Waterproof hiking jacket with detachable insulated hood, taped seams and two chest pockets',
     );
-    await expect(editor).toContainText(/Cut off at \d+ characters, [\d.]+\s?px short\./);
+    await expect(editor).toContainText(/Cut off at \d+ characters\. [\d.]+\s?px short\./);
 
     // Leaving the result (Esc, from anywhere in it) puts the page's own text back.
     await field.press('Escape');
@@ -186,19 +186,23 @@ test.describe('demo page', () => {
       () => (window as unknown as { copied: string[] }).copied.at(-1) ?? '',
     );
     expect(report).toMatch(
-      /^### Cut off: `section\.grid › article\.card › h2\.title` \(2 places\)\n/,
+      /^### Cut off: `section\.grid > article\.card > h2\.title` \(2 places\)\n/,
     );
     expect(report).toContain(
-      `- **Page:** chrome-extension://${extensionId}/demo.html · window 800×900 · Chrome `,
+      `- **Page:** chrome-extension://${extensionId}/demo.html, window 800x900, Chrome `,
     );
+    // Plain ASCII, like everything the panel writes.
+    expect(report).toMatch(/^[\x20-\x7e\n]+$/);
     expect(report).toMatch(/- \*\*Size:\*\* Needs [\d.]+\s?px of height, has 44\s?px/);
     expect(report).toContain('- **Fixes, tried on the page:**');
     expect(report).toMatch(/`height: auto; min-height: 44px;` on `[^`]+`: Fixes it\./);
 
-    await panel.getByRole('button', { name: 'Export results' }).click();
+    // Files are one command away (Cmd/Ctrl+K), not another button on screen.
+    await panel.keyboard.press('ControlOrMeta+k');
+    await panel.keyboard.type('json');
     const [download] = await Promise.all([
       panel.waitForEvent('download'),
-      panel.getByRole('button', { name: 'Save as JSON' }).click(),
+      panel.keyboard.press('Enter'),
     ]);
     expect(download.suggestedFilename()).toMatch(
       /^overflow-scout-.+-\d{4}-\d{2}-\d{2}-\d{4}\.json$/,
@@ -224,24 +228,27 @@ test.describe('demo page', () => {
     const total = await rows(panel).count();
     await jacket.click();
     await panel.getByRole('button', { name: 'Ignore on this site' }).click();
+    await panel.getByRole('button', { name: 'All problems' }).click();
     await expect(jacket).toHaveCount(0);
     await expect(rows(panel)).toHaveCount(total - 1);
 
-    // It stays ignored across scans: the rule matches the issue's fingerprint.
+    // It stays ignored across checks: the rule matches the issue's fingerprint.
     await scan(panel);
     await expect(rows(panel)).toHaveCount(total - 1);
     await panel.getByRole('button', { name: 'Show 1 ignored' }).click();
     await expect(jacket).toContainText('Ignored');
     await jacket.click();
     await panel.getByRole('button', { name: 'Stop ignoring' }).click();
+    await panel.getByRole('button', { name: 'All problems' }).click();
     await expect(panel.getByRole('button', { name: /ignored/i })).toHaveCount(0);
     await expect(jacket).not.toContainText('Ignored');
 
-    // Ignored results are listed in Settings, by site, to undo later.
+    // Ignored problems are listed in Settings, by site, to undo later.
+    await jacket.click();
     await panel.getByRole('button', { name: 'Ignore on this site' }).click();
     await panel.getByRole('button', { name: 'Settings' }).click();
-    const group = panel.getByRole('region', { name: 'Ignored results' });
-    await expect(group).toContainText('Cut off · Demo page');
+    const group = panel.getByRole('region', { name: 'Ignored problems' });
+    await expect(group).toContainText('Cut off, Demo page');
     await group.getByRole('button', { name: /^Stop ignoring/ }).click();
     await expect(group).toContainText('None yet.');
   });
@@ -256,27 +263,21 @@ test.describe('demo page', () => {
     const before = await pageText(demo);
 
     await runStress(panel);
-    await expect(panel.getByRole('tab', { name: /^New with longer text/ })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
     await expect(rows(panel).first()).toBeVisible();
+    // Problems that appear only with longer text come first, marked New.
+    await expect(rows(panel).first()).toContainText('New');
     expect(await pageText(demo)).not.toBe(before);
-    await expect(demo.locator('overflow-scout-root .pill')).toContainText('Longer test text on');
-    // The results say how they were made, and the odd-looking text is explained.
-    await expect(
-      panel.getByText(
-        /^Translation length · Realistic · [\d.]+× longer: \d+ new, \d+ already broken$/,
-      ),
-    ).toBeVisible();
-    await expect(panel.getByText(/repeats some of its own words on purpose/)).toBeVisible();
-    // The longer text is real words from the page, not accented look-alikes.
-    expect(await pageText(demo)).not.toMatch(/[åĝöðšĥ]/);
+    await expect(demo.locator('overflow-scout-root .pill')).toContainText('Longer text is on');
+    // The odd-looking text is explained, with the way back.
+    await expect(panel.getByText(/repeats some of its own words/)).toBeVisible();
+    // The longer text is the page's own words: plain ASCII on this page, nothing added.
+    expect(await demo.evaluate(() => document.body.innerText)).toMatch(/^[\x20-\x7e\s]+$/);
 
-    await panel.getByRole('button', { name: 'Revert' }).click();
-    await expect(panel.getByRole('button', { name: 'Revert' })).toBeHidden();
-    expect(await pageText(demo)).toBe(before);
+    // Normal puts the text back exactly, and checks the page as it is again.
+    await revert(panel);
+    await expect.poll(() => pageText(demo)).toBe(before);
     await expect(demo.locator('overflow-scout-root .pill')).toHaveCount(0);
+    await expect(panel.getByText(/^Found in \d+ texts\.$/)).toBeVisible();
   });
 
   test('reverts from the button on the page', async ({ extensionId, openTab, openPanel }) => {
@@ -285,55 +286,58 @@ test.describe('demo page', () => {
     const before = await pageText(demo);
 
     await runStress(panel);
-    await demo.locator('overflow-scout-root .pill').getByRole('button', { name: 'Revert' }).click();
-    await expect(panel.getByRole('button', { name: 'Revert' })).toBeHidden();
-    expect(await pageText(demo)).toBe(before);
+    await demo
+      .locator('overflow-scout-root .pill')
+      .getByRole('button', { name: 'Back to normal' })
+      .click();
+    await expect(length(panel, 'Normal')).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(() => pageText(demo)).toBe(before);
   });
 
   test('inspects an element with the picker', async ({ extensionId, openTab, openPanel }) => {
     const { page: demo, tabId } = await openTab(`chrome-extension://${extensionId}/demo.html`);
     const panel = await openPanel(tabId);
 
-    await panel.getByRole('button', { name: /^(Measure an element|Measure)/ }).click();
-    await expect(panel.getByText('Click any text on the page to measure it.')).toBeVisible();
+    await panel.getByRole('button', { name: 'Try your own text' }).click();
+    await expect(
+      panel.getByText('Now click any text on the page to try your own text in it.'),
+    ).toBeVisible();
     const button = demo.getByRole('button', { name: 'Add to cart' }).first();
     const box = await button.boundingBox();
     if (!box) throw new Error('The demo button has no box');
     await demo.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 
-    const card = panel.getByRole('region', { name: 'Measure' });
-    await expect(card).toContainText('Add to cart');
-    await expect(card).toContainText(/Fits up to \d+ characters|Still fits/);
-    await expect(card).toContainText(/a translation needs about 20–22/);
+    const view = panel.getByRole('region', { name: 'Try your own text' });
+    await expect(view).toContainText('Add to cart');
+    await expect(view).toContainText(/Fits up to \d+ characters|Still fits/);
+    await expect(view).toContainText(/A translation needs about 20 to 22\./);
+    const field = view.getByLabel('Text on the page');
+    await expect(field).toBeFocused();
 
-    // Try other text: it shows on the page, and goes back when done. The button's name
-    // changes with its text, so it's found by its place instead.
+    // It shows on the page, and goes back when done. The button's name changes
+    // with its text, so it's found by its place instead.
     const tried = demo.locator('article.card button.buy').first();
-    const slider = card.getByRole('slider', { name: 'Length' });
-    await slider.focus();
-    await panel.keyboard.press('End');
-    await expect(card).toContainText(
-      /(Cut off|Overflows|Truncated) at \d+ characters, [\d.]+\s?px short\./,
+    await view.getByRole('button', { name: 'Much longer' }).click();
+    await expect(view).toContainText(
+      /(Cut off|Spills out|Cut short) at \d+ characters\. [\d.]+\s?px short\./,
     );
     expect((await tried.textContent())?.length).toBeGreaterThan('Add to cart'.length);
-    await panel.keyboard.press('Home');
-    await expect(card).toContainText('Fits at 1 character.');
-
-    await card.getByRole('button', { name: 'Email' }).click();
-    await expect.poll(() => tried.textContent()).toContain('@');
+    await view.getByRole('button', { name: 'Long link' }).click();
+    await expect.poll(() => tried.textContent()).toContain('https://');
     // Your own words, live as you type.
-    await card.getByLabel('Text on the page').fill('Zum Warenkorb hinzufügen');
-    await expect.poll(() => tried.textContent()).toBe('Zum Warenkorb hinzufügen');
-    await card.getByRole('button', { name: 'Translation length' }).click();
-    await expect(card.getByLabel('Text on the page')).not.toHaveValue('Zum Warenkorb hinzufügen');
-    await card.getByRole('button', { name: 'Put the text back' }).click();
+    await field.fill('Add to basket');
+    await expect.poll(() => tried.textContent()).toBe('Add to basket');
+    await expect(view).toContainText(/Fits at 13 characters\./);
+    await view.getByRole('button', { name: 'Longer', exact: true }).click();
+    await expect(field).not.toHaveValue('Add to basket');
+    await view.getByRole('button', { name: 'Put the text back' }).click();
     await expect.poll(() => tried.textContent()).toBe('Add to cart');
 
-    // Closing the card puts tried text back too.
-    await card.getByRole('button', { name: 'Name' }).click();
+    // Going back puts tried text back too.
+    await view.getByRole('button', { name: 'Long name' }).click();
     await expect.poll(() => tried.textContent()).not.toBe('Add to cart');
-    await card.getByRole('button', { name: 'Close measurement' }).click();
-    await expect(card).toBeHidden();
+    await view.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(view).toBeHidden();
     await expect.poll(() => tried.textContent()).toBe('Add to cart');
   });
 });
@@ -367,7 +371,7 @@ test.describe('other pages', () => {
       if (tab instanceof Text) tab.data = 'Overview';
     });
     await expect(panel.getByText('1 text was changed back by the page.')).toBeVisible();
-    await panel.getByRole('button', { name: 'Re-apply' }).click();
+    await panel.getByRole('button', { name: 'Make it longer again' }).click();
     await expect(panel.getByText('1 text was changed back by the page.')).toBeHidden();
     expect(await page.locator('.tab').first().textContent()).not.toBe('Overview');
   });
@@ -403,23 +407,23 @@ test.describe('other pages', () => {
       history.pushState({}, '', '/settings');
     });
     await expect(
-      panel.getByRole('status').filter({ hasText: 'Results are from the previous page.' }),
+      panel.getByRole('status').filter({ hasText: 'These results are from the previous page.' }),
     ).toBeVisible();
     await expect.poll(() => pageText(page)).toBe(before);
     // Moving to an anchor, or keeping a search query in the URL, isn't a new page.
     await scan(panel);
-    await expect(panel.getByText('Results are from the previous page.')).toBeHidden();
+    await expect(panel.getByText('These results are from the previous page.')).toBeHidden();
     await page.evaluate(() => {
       location.hash = 'details';
       history.replaceState({}, '', '/settings?q=invoice#details');
     });
     await page.waitForTimeout(300);
-    await expect(panel.getByText('Results are from the previous page.')).toBeHidden();
+    await expect(panel.getByText('These results are from the previous page.')).toBeHidden();
     // A hash router's route change is.
     await page.evaluate(() => {
       location.hash = '#/inbox';
     });
-    await expect(panel.getByText('Results are from the previous page.')).toBeVisible();
+    await expect(panel.getByText('These results are from the previous page.')).toBeVisible();
   });
 
   test('marks results stale after navigation and scans the new page', async ({
@@ -434,11 +438,11 @@ test.describe('other pages', () => {
     await page.goto(`${TEST_ORIGIN}/next.html`);
     const stale = panel
       .getByRole('status')
-      .filter({ hasText: 'Results are from the previous page.' });
+      .filter({ hasText: 'These results are from the previous page.' });
     await expect(stale).toBeVisible();
 
-    await stale.getByRole('button', { name: 'Scan again' }).click();
-    await expect(panel.getByText('Results are from the previous page.')).toBeHidden();
+    await scan(panel);
+    await expect(panel.getByText('These results are from the previous page.')).toBeHidden();
     await expect.poll(() => rows(panel).count()).toBeGreaterThan(1);
   });
 
@@ -454,7 +458,7 @@ test.describe('other pages', () => {
     await expect(pill).toBeVisible();
     // The overlay's stylesheet applied despite the policy: the pill is a styled, fixed box.
     expect(await pill.evaluate((element) => getComputedStyle(element).position)).toBe('fixed');
-    await panel.getByRole('button', { name: 'Revert' }).click();
+    await revert(panel);
     await expect(pill).toHaveCount(0);
   });
 

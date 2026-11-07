@@ -7,7 +7,7 @@ const rule = (overrides: Partial<IgnoreRule> = {}): IgnoreRule => ({
   site: 'https://shop.example',
   issueId: 'truncated|a.tab|nav.tabs',
   kind: 'truncated',
-  label: 'nav › a.tab',
+  label: 'nav > a.tab',
   at: 1,
   ...overrides,
 });

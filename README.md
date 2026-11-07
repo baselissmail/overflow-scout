@@ -7,15 +7,15 @@ Find text that gets cut off, before your users do.
 Overflow Scout is a Chrome extension for frontend developers, QA and designers. It works in
 Chrome's side panel, next to the page:
 
-- **Scan page** finds every text that is clipped with no cue, ends in an ellipsis, runs out of
-  its box, or makes the page scroll sideways, and says how much doesn't fit.
-- **Test with longer text** makes every text as long as a translation would be, with more of its
-  own words (or real text in other scripts, long words, or accented pseudo-locale), shows what
-  breaks, and puts the page back exactly with one click.
-- **What to do** suggests CSS fixes for each result and tries each one on the page, so you know
-  whether it works and how the box changes.
-- **Measure an element** shows how many characters fit and lets you try real names, products,
-  links, emails or your own text, live.
+- **Check page** finds every text that is cut off with no sign, cut short with "...", spills out
+  of its box, or makes the page scroll sideways, and says how much doesn't fit.
+- **Text length** (Normal, Longer, Much longer) makes every text as long as a translation would
+  be, by repeating some of its own words, and shows what breaks. **Normal** puts the page back
+  exactly.
+- **How to fix it** suggests CSS fixes for each problem and tries each one on the page, so you
+  know whether it works and how the box changes.
+- **Try your own text** puts any text in any element, live: type your own, or fill it with a
+  longer version, a long name, a long link or a paragraph.
 - **Reports**: copy Markdown for GitHub or Jira, a cropped screenshot, or save everything as JSON.
 
 Everything runs in your browser. It collects no data, has no analytics and makes no network
@@ -32,12 +32,13 @@ requests ([privacy policy](site/privacy.html)).
 ## Using it
 
 Click the Overflow Scout button in the toolbar (or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>)
-to open the side panel for the current tab, then choose **Scan page**, **Test with longer text**
-or **Measure an element**. Right-click a page and choose **Measure this element with Overflow
-Scout** to go straight to the picker. Nothing runs on a page until you ask, and closing the panel
-puts the page back exactly as it was. **Try the demo page** in the panel opens a page with
-overflow bugs on purpose. Press <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd> for every command, and
-<kbd>?</kbd> for keyboard shortcuts.
+to open the side panel for the current tab. It has one main screen: **Check page**, **Try your
+own text**, and **Text length**. A problem's details, your own text and Settings each open one
+step in, with **Back** (or <kbd>Esc</kbd>) to return. Right-click a page and choose **Try your own
+text here with Overflow Scout** to go straight to the picker. Nothing runs on a page until you
+ask, and closing the panel puts the page back exactly as it was. **Open the demo page** in the
+panel opens a page with overflow bugs on purpose. Press <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd>
+for every command, and <kbd>?</kbd> for keyboard shortcuts.
 
 The extension works on a site only after you click its button there. To skip the click on a site
 you use often, choose **Always allow on this site**; Settings lists those sites so you can remove

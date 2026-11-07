@@ -9,10 +9,16 @@ describe('normalizeSettings', () => {
   });
 
   it('keeps valid fields and replaces invalid ones', () => {
-    expect(normalizeSettings({ theme: 'dark', strategy: 'shout', rtl: true, extra: 1 })).toEqual({
+    expect(normalizeSettings({ theme: 'dark', includeInputs: 'no', extra: 1 })).toEqual({
       ...DEFAULT_SETTINGS,
       theme: 'dark',
-      rtl: true,
+    });
+  });
+
+  it('drops the longer-text options older versions stored', () => {
+    expect(normalizeSettings({ theme: 'light', strategy: 'pseudo', rtl: true })).toEqual({
+      ...DEFAULT_SETTINGS,
+      theme: 'light',
     });
   });
 });

@@ -106,12 +106,16 @@
   --color-ok-soft: var(--os-ok-soft);
   --color-scrim: var(--os-scrim);
 
-  --text-base: 13px;
-  --text-base--line-height: 18px;
+  /* Sized to read, not to fit more in: one column of text, at most a few things on screen. */
+  --text-base: 14px;
+  --text-base--line-height: 20px;
   --text-small: 12px;
   --text-small--line-height: 16px;
-  --text-title: 15px;
-  --text-title--line-height: 20px;
+  --text-title: 16px;
+  --text-title--line-height: 22px;
+  /* The cut-off text in a problem's details: the one large thing in the panel. */
+  --text-specimen: 18px;
+  --text-specimen--line-height: 26px;
 
   --radius-control: 8px;
   --radius-card: 12px;
@@ -129,8 +133,6 @@
   --ease-arrive: var(--ease-out);
   --animate-enter: os-enter var(--duration-enter) var(--ease-arrive) both;
   --animate-scan: os-scan 1.4s linear infinite;
-  --animate-grow: os-grow 420ms var(--ease-arrive) both;
-  --animate-bleed: os-bleed 320ms var(--ease-arrive) 160ms both;
 }
 
 @keyframes os-enter {
@@ -147,33 +149,6 @@
   }
   to {
     background-position: -100% 0;
-  }
-}
-
-/* The measure bar draws itself: the box first, then the bleed past its edge. */
-@keyframes os-grow {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes os-bleed {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-}
-
-/* List ⇄ detail on narrow panels (View Transitions). */
-::view-transition-old(results-pane) {
-  animation: os-leave 160ms var(--ease-out) both;
-}
-::view-transition-new(results-pane) {
-  animation: os-enter 240ms var(--ease-arrive) both;
-}
-@keyframes os-leave {
-  to {
-    opacity: 0;
-    transform: translateY(-4px);
   }
 }
 
@@ -234,15 +209,6 @@ body {
 }
 
 @layer utilities {
-  /* The measure bar's overflow: a print bleed, hatched in the current color. */
-  .bg-hatch {
-    background-image: repeating-linear-gradient(
-      -45deg,
-      currentColor 0 1.5px,
-      transparent 1.5px 5px
-    );
-  }
-
   /* The cut-off part of text: a faint bleed behind the characters a reader loses. */
   .bg-bleed {
     background-image: repeating-linear-gradient(

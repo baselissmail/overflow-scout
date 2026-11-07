@@ -1,238 +1,263 @@
 import { i18n } from '#i18n';
-import { ArrowDownWideNarrow, CircleHelp, Eraser, Info, ListOrdered, Search } from 'lucide-react';
-import type { Dispatch, ReactNode, RefObject, SetStateAction } from 'react';
+import { Check, ClipboardCopy, Search } from 'lucide-react';
+import type { RefObject } from 'react';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
-import { flushSync } from 'react-dom';
 
 import type { PanelController, PanelState } from '@/features/page/controller';
-import { ExportMenu } from '@/features/report/ExportMenu';
-import { reportContext } from '@/features/report/export';
-import type { ReportContext } from '@/features/report/markdown';
+import { exportResults, reportContext } from '@/features/report/export';
+import type { IssueDto, PreviewKey, TextValueDto } from '@/messaging/protocol';
 import { siteOf } from '@/storage/ignore';
-import { intensityLabel, languageLabel, strategyLabel } from '@/features/stress/options';
-import type { IssueDto, PreviewKey, ScanResultDto, TextValueDto } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
-import { Chip, TONE_BG, TONE_TEXT } from '@/ui/Chip';
 import { EmptyState } from '@/ui/EmptyState';
-import { IconButton } from '@/ui/IconButton';
-import { Popover } from '@/ui/Popover';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/Tabs';
-import { Tooltip } from '@/ui/Tooltip';
-import { useCountUp } from '@/ui/use-count-up';
 
+import { useCopied } from './CopyButton';
 import { IssueDetail } from './IssueDetail';
+import { ResultList } from './ResultList';
+import { NO_FILTER, applyFilter } from './filter';
+import { formatCount } from './labels';
 import type { IgnoreRules } from './use-ignore';
 import { ignoredOn } from './use-ignore';
-import { ResultList } from './ResultList';
-import type { ResultFilter } from './filter';
-import { NO_FILTER, applyFilter, countByKind } from './filter';
-import type { Kind } from './labels';
-import {
-  KINDS,
-  NBSP,
-  SEVERITY_TONE,
-  formatCount,
-  kindDescription,
-  kindLabel,
-  severityLabel,
-} from './labels';
 
-type Stats = ScanResultDto['stats'];
-type Tab = 'atRisk' | 'brokenNow';
+/** Above this many problems, a search field helps; below it, it's one more thing to read. */
+const SEARCH_FROM = 12;
 
-export interface ResultsViewProps {
-  state: PanelState;
-  controller: PanelController;
-  /** List and detail side by side (panel at least 520 px wide). */
-  wide: boolean;
-  searchRef: RefObject<HTMLInputElement | null>;
-  onRunStress: () => void;
-  ignore: IgnoreRules;
+/** The problems on screen: from the latest check, at the length the page's text was. */
+export interface Shown {
+  /** New-with-longer-text problems first, then the ones that were there already. */
+  issues: readonly IssueDto[];
+  /** Problems that appear only with longer text. */
+  fresh: ReadonlySet<string>;
+  textNodes: number;
+  viewport: { width: number; height: number };
+  /** Taken with longer text on the page. */
+  longer: boolean;
 }
 
-/** Issues ignored on this site in one set of results, and what can be done with them. */
-interface Ignoring {
+const NONE: ReadonlySet<string> = new Set();
+
+export function shownResults(state: PanelState): Shown | null {
+  if (state.showing === 'stress' && state.stress) {
+    const { atRisk, brokenNow, stats, viewport } = state.stress;
+    return {
+      issues: [...atRisk, ...brokenNow],
+      fresh: new Set(atRisk.map((issue) => issue.id)),
+      textNodes: stats.stressed.textNodes,
+      viewport,
+      longer: true,
+    };
+  }
+  if (state.showing === 'scan' && state.scan) {
+    const { issues, stats, viewport } = state.scan;
+    return { issues, fresh: NONE, textNodes: stats.textNodes, viewport, longer: false };
+  }
+  return null;
+}
+
+/** Problems ignored on this site, and what can be done with them. */
+export interface Ignoring {
   ids: ReadonlySet<string>;
-  /** Ignored issues among these results (hidden unless shown). */
-  count: number;
   shown: boolean;
   toggle: () => void;
-  /** Null on pages without a site (e.g. the extension's own demo page has one; about: pages don't). */
+  /** Null on pages without a site (about: pages, for one). */
   ignore: ((issue: IssueDto) => void) | null;
   unignore: (issue: IssueDto) => void;
 }
 
-const TONE_OF_KIND: Readonly<Record<Kind, IssueDto['severity']>> = {
-  hidden: 'critical',
-  'page-scroll': 'critical',
-  truncated: 'warning',
-  spilling: 'warning',
-  input: 'notice',
-};
-
-/** A filter chip whose count lands with a short count-up. */
-function KindChip({
-  kind,
-  count,
-  pressed,
-  onToggle,
-}: {
-  kind: Kind;
-  count: number;
-  pressed: boolean;
-  onToggle: (kind: Kind) => void;
-}) {
-  const shown = useCountUp(count);
-  return (
-    <Tooltip content={kindDescription(kind)}>
-      <Chip
-        tone={SEVERITY_TONE[TONE_OF_KIND[kind]]}
-        label={kindLabel(kind)}
-        count={shown}
-        pressed={pressed}
-        onClick={() => {
-          onToggle(kind);
-        }}
-      />
-    </Tooltip>
-  );
+export function useIgnoring(ignore: IgnoreRules, state: PanelState): Ignoring {
+  const [shown, setShown] = useState(false);
+  const site = state.page ? siteOf(state.page.url) : null;
+  return {
+    ids: ignoredOn(ignore.rules, site),
+    shown,
+    toggle: () => {
+      setShown((value) => !value);
+    },
+    ignore:
+      site === null
+        ? null
+        : (issue) => {
+            ignore.ignore(site, issue, issue.instances[0]?.element.label ?? '');
+          },
+    unignore: (issue) => {
+      if (site !== null) ignore.unignore(site, issue.id);
+    },
+  };
 }
 
-const SEVERITIES = ['critical', 'warning', 'notice'] as const;
-
-function severitySummary(issues: readonly IssueDto[]): string {
-  const count = (severity: IssueDto['severity']) =>
-    issues.filter((issue) => issue.severity === severity).length;
-  return i18n.t('results.severitySummary', [
-    String(count('critical')),
-    String(count('warning')),
-    String(count('notice')),
-  ]);
-}
-
-function Coverage({ stats, viewport }: { stats: Stats; viewport: string | null }) {
-  const rows: [string, string][] = [
-    [i18n.t('results.coverageTextNodes'), formatCount(stats.textNodes)],
-    [i18n.t('results.coverageInputs'), formatCount(stats.inputs)],
-    [i18n.t('results.coverageInvisible'), formatCount(stats.skippedInvisible)],
-    [i18n.t('results.coverageForeign'), formatCount(stats.skippedForeign)],
-    [i18n.t('results.coverageShadowRoots'), formatCount(stats.shadowRoots)],
-    [i18n.t('results.coverageFrames'), formatCount(stats.framesSkipped)],
-    [i18n.t('results.coverageTime'), `${formatCount(Math.round(stats.durationMs))}${NBSP}ms`],
-    ...(viewport ? ([[i18n.t('results.coverageViewport'), viewport]] as [string, string][]) : []),
-  ];
-  return (
-    <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
-      {rows.map(([term, value]) => (
-        <div key={term} className="contents">
-          <dt className="text-fg-muted">{term}</dt>
-          <dd className="text-end tabular-nums">{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-/** Each level, defined by the kinds it covers, so a report can be triaged the same way. */
-function SeverityHelp() {
-  return (
-    <>
-      <p className="mb-2 font-medium">{i18n.t('results.severityHelp.title')}</p>
-      <dl className="flex flex-col gap-2">
-        {SEVERITIES.map((severity) => (
-          <div key={severity} className="flex flex-col">
-            <dt className={`text-small font-medium ${TONE_TEXT[SEVERITY_TONE[severity]]}`}>
-              {severityLabel(severity)}
-            </dt>
-            <dd className="text-small text-fg-muted">
-              {severity === 'critical'
-                ? i18n.t('results.severityHelp.critical')
-                : severity === 'warning'
-                  ? i18n.t('results.severityHelp.warning')
-                  : i18n.t('results.severityHelp.notice')}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </>
-  );
-}
-
-function Footer({
-  stats,
-  viewport,
-  stress,
-  state,
-  ignored,
-}: {
-  stats: Stats;
-  viewport: string;
-  stress: boolean;
+interface ProblemListProps {
   state: PanelState;
-  ignored: ReadonlySet<string>;
-}) {
-  const ms = formatCount(Math.round(stats.durationMs));
-  const text = stress
-    ? i18n.t('results.footerStress', [formatCount(stats.textNodes), ms])
-    : i18n.t('results.footer', [formatCount(stats.textNodes), ms, viewport]);
+  shown: Shown;
+  ignoring: Ignoring;
+  query: string;
+  onQuery: (query: string) => void;
+  searchRef: RefObject<HTMLInputElement | null>;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onOpen: (issue: IssueDto) => void;
+  controller: PanelController;
+}
+
+/** How many problems, what's new with longer text, and the list itself. */
+export function ProblemList({
+  state,
+  shown,
+  ignoring,
+  query,
+  onQuery,
+  searchRef,
+  selectedId,
+  onSelect,
+  onOpen,
+  controller,
+}: ProblemListProps) {
+  const [copied, markCopied] = useCopied();
+  const ignoredHere = shown.issues.filter((issue) => ignoring.ids.has(issue.id)).length;
+  const visible = useMemo(
+    () =>
+      ignoring.shown ? shown.issues : shown.issues.filter((issue) => !ignoring.ids.has(issue.id)),
+    [ignoring.shown, ignoring.ids, shown.issues],
+  );
+  const searchable = visible.length > SEARCH_FROM;
+  const deferred = useDeferredValue(query);
+  // Search keeps the order: new ones first, then the rest, most serious first.
+  const listed = useMemo(
+    () =>
+      searchable && deferred !== ''
+        ? applyFilter(visible, { ...NO_FILTER, query: deferred })
+        : visible,
+    [searchable, deferred, visible],
+  );
+  const count = visible.length;
+  const fresh = visible.filter((issue) => shown.fresh.has(issue.id)).length;
+
+  const copyReport = () => {
+    const exported = exportResults(state, ignoring.ids);
+    if (exported) void navigator.clipboard.writeText(exported.markdown).then(markCopied);
+  };
+
+  if (count === 0 && ignoredHere === 0) {
+    return shown.longer ? (
+      <EmptyState
+        title={i18n.t('results.noneLongerTitle')}
+        body={i18n.t('results.noneLongerBody', [formatCount(shown.textNodes)])}
+      />
+    ) : (
+      <EmptyState
+        title={i18n.t('results.noneTitle')}
+        body={i18n.t('results.noneBody', [formatCount(shown.textNodes)])}
+      />
+    );
+  }
+
   return (
-    <footer className="flex items-center justify-between gap-2 border-t border-line pt-1">
-      <p className="min-w-0 text-small text-fg-muted tabular-nums">{text}</p>
-      <span className="flex shrink-0 items-center">
-        <ExportMenu state={state} ignored={ignored} />
-        <Popover
-          label={i18n.t('results.coverage')}
-          trigger={
-            <IconButton
-              label={i18n.t('results.coverage')}
-              icon={<Info size={16} strokeWidth={1.5} />}
-            />
+    <section className="flex min-h-0 flex-1 flex-col gap-3" aria-label={i18n.t('results.label')}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col" aria-live="polite">
+          <h2 className="text-title font-semibold tabular-nums">
+            {i18n.t('results.count', count, [formatCount(count)])}
+          </h2>
+          <p className="text-small text-fg-muted tabular-nums">
+            {shown.longer
+              ? i18n.t('results.newCount', fresh, [formatCount(fresh)])
+              : i18n.t('results.checked', shown.textNodes, [formatCount(shown.textNodes)])}
+          </p>
+        </div>
+        <Button
+          size="sm"
+          className="shrink-0"
+          icon={
+            copied ? (
+              <Check size={14} strokeWidth={1.5} className="text-ok" />
+            ) : (
+              <ClipboardCopy size={14} strokeWidth={1.5} />
+            )
           }
+          onClick={copyReport}
         >
-          <p className="mb-2 font-medium">{i18n.t('results.coverage')}</p>
-          <Coverage stats={stats} viewport={stress ? null : viewport} />
-        </Popover>
-      </span>
-    </footer>
+          {copied ? i18n.t('actions.copied') : i18n.t('actions.copyReport')}
+        </Button>
+      </div>
+
+      {searchable && (
+        <label className="relative">
+          <span className="sr-only">{i18n.t('results.search')}</span>
+          <Search
+            size={14}
+            strokeWidth={1.5}
+            aria-hidden="true"
+            className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-fg-muted"
+          />
+          <input
+            ref={searchRef}
+            type="search"
+            name="search"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={i18n.t('results.searchPlaceholder')}
+            value={query}
+            onChange={(event) => {
+              onQuery(event.target.value);
+            }}
+            className="min-h-8 w-full rounded-control border border-line-strong bg-raised ps-8 pe-2 transition-[border-color] duration-(--duration-press) ease-(--ease-out) placeholder:text-fg-muted focus:border-accent"
+          />
+        </label>
+      )}
+
+      {listed.length === 0 ? (
+        count > 0 && <EmptyState title={i18n.t('results.noMatches')} />
+      ) : (
+        <ResultList
+          issues={listed}
+          viewportWidth={shown.viewport.width}
+          selectedId={selectedId}
+          label={i18n.t('results.label')}
+          ignored={ignoring.ids}
+          fresh={shown.fresh}
+          onSelect={(issue) => {
+            onSelect(issue.id);
+          }}
+          onOpen={onOpen}
+          onHighlight={(findingId) => {
+            controller.highlight(findingId);
+          }}
+        />
+      )}
+
+      {ignoredHere > 0 && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="-ms-2 self-start text-fg-muted hover:text-fg"
+          aria-pressed={ignoring.shown}
+          onClick={ignoring.toggle}
+        >
+          {ignoring.shown
+            ? i18n.t('results.hideIgnored')
+            : i18n.t('results.showIgnored', ignoredHere, [formatCount(ignoredHere)])}
+        </Button>
+      )}
+    </section>
   );
 }
 
-interface BodyProps {
-  issues: readonly IssueDto[];
-  /** Changes with each new set of results, so the list replays its arrival once. */
-  resultsKey: string;
-  filter: ResultFilter;
-  setFilter: Dispatch<SetStateAction<ResultFilter>>;
-  viewport: { width: number; height: number };
-  wide: boolean;
-  searchRef: RefObject<HTMLInputElement | null>;
+interface ProblemViewProps {
+  state: PanelState;
   controller: PanelController;
-  empty: ReactNode;
-  /** Where the results come from, for the reports copied from a result's details. */
-  report: ReportContext | null;
+  issue: IssueDto;
+  shown: Shown;
   ignoring: Ignoring;
+  onBack: () => void;
 }
 
-function ResultsBody({
-  issues,
-  resultsKey,
-  filter,
-  setFilter,
-  viewport,
-  wide,
-  searchRef,
+/** One problem's details, wired to the page. */
+export function ProblemView({
+  state,
   controller,
-  empty,
-  report,
+  issue,
+  shown,
   ignoring,
-}: BodyProps) {
-  const query = useDeferredValue(filter.query);
-  const shown = useMemo(() => applyFilter(issues, { ...filter, query }), [issues, filter, query]);
-  const counts = useMemo(() => countByKind(issues), [issues]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const open = shown.find((issue) => issue.id === openId) ?? null;
-
+  onBack,
+}: ProblemViewProps) {
   const highlight = useCallback(
     (findingId: string | null) => {
       controller.highlight(findingId);
@@ -251,433 +276,32 @@ function ResultsBody({
     (id: string, key: PreviewKey | null) => controller.preview(id, key),
     [controller],
   );
-  /** Narrow panels swap list and detail; a view transition keeps the change legible. */
-  const swap = useCallback(
-    (update: () => void) => {
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (wide || reduced || !('startViewTransition' in document)) {
-        update();
-        return;
-      }
-      document.startViewTransition(() => {
-        // The DOM must change inside the transition callback, so React renders synchronously.
-        // eslint-disable-next-line @eslint-react/dom-no-flush-sync
-        flushSync(update);
-      });
-    },
-    [wide],
-  );
-  const close = useCallback(() => {
-    swap(() => {
-      setOpenId(null);
-    });
-    controller.highlight(null);
-  }, [controller, swap]);
-
-  if (issues.length === 0) return <>{empty}</>;
-  const filtering = filter.kinds.size > 0 || filter.query !== '';
-
-  const toggleKind = (kind: Kind) => {
-    setFilter((current) => {
-      const kinds = new Set(current.kinds);
-      if (kinds.has(kind)) kinds.delete(kind);
-      else kinds.add(kind);
-      return { ...current, kinds };
-    });
-  };
-
-  const list = (
-    <ResultList
-      key={resultsKey}
-      issues={shown}
-      viewportWidth={viewport.width}
-      selectedId={selectedId}
-      label={i18n.t('results.heading')}
-      ignored={ignoring.ids}
-      onSelect={(issue) => {
-        setSelectedId(issue.id);
-      }}
-      onOpen={(issue) => {
-        swap(() => {
-          setOpenId(issue.id);
-        });
-        const first = issue.instances[0];
-        if (first) void controller.reveal(first.id);
-      }}
-      onHighlight={(findingId) => {
-        // While details are open, the outline stays on the opened element.
-        if (!open) highlight(findingId);
-      }}
-    />
-  );
-  const detail = open ? (
-    <div className="min-h-0 overflow-y-auto overscroll-contain">
-      <IssueDetail
-        key={open.id}
-        issue={open}
-        viewport={viewport}
-        onBack={wide ? null : close}
-        onReveal={(id) => void controller.reveal(id)}
-        onHighlight={highlight}
-        loadDetails={loadDetails}
-        loadFixes={loadFixes}
-        onPreview={preview}
-        report={report}
-        onScreenshot={screenshot}
-        onTryText={tryText}
-        onTextOf={textOf}
-        ignored={ignoring.ids.has(open.id)}
-        onIgnore={
-          ignoring.ignore &&
-          (() => {
-            ignoring.ignore?.(open);
-          })
-        }
-        onUnignore={() => {
-          ignoring.unignore(open);
-        }}
-      />
-    </div>
-  ) : null;
-
   return (
-    // Esc closes the details from anywhere inside the results (list or detail).
-    // A React handler is active as soon as it renders, unlike an effect. It only
-    // handles keys bubbling from the focusable list and buttons inside.
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-    <div
-      className="flex min-h-0 flex-1 flex-col gap-2"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && open && !event.defaultPrevented) {
-          event.preventDefault();
-          close();
-        }
+    <IssueDetail
+      key={issue.id}
+      issue={issue}
+      viewport={shown.viewport}
+      fresh={shown.fresh.has(issue.id)}
+      onBack={onBack}
+      onReveal={(id) => void controller.reveal(id)}
+      onHighlight={highlight}
+      loadDetails={loadDetails}
+      loadFixes={loadFixes}
+      onPreview={preview}
+      report={reportContext(state)}
+      onScreenshot={screenshot}
+      onTryText={tryText}
+      onTextOf={textOf}
+      ignored={ignoring.ids.has(issue.id)}
+      onIgnore={
+        ignoring.ignore &&
+        (() => {
+          ignoring.ignore?.(issue);
+        })
+      }
+      onUnignore={() => {
+        ignoring.unignore(issue);
       }}
-    >
-      {/* List controls step aside while a narrow detail is open; they don't affect it. */}
-      {(wide || !open) && (
-        <>
-          {/* One line of what was found, the filters, then search: the list starts high. */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-small tabular-nums">
-              <span className="sr-only">{severitySummary(issues)}</span>
-              {SEVERITIES.map((severity) => {
-                const count = issues.filter((issue) => issue.severity === severity).length;
-                if (count === 0) return null;
-                return (
-                  <span
-                    key={severity}
-                    aria-hidden="true"
-                    className="inline-flex items-center gap-1.5 text-fg-muted"
-                  >
-                    <span className={`size-2 rounded-full ${TONE_BG[SEVERITY_TONE[severity]]}`} />
-                    {i18n.t(`results.severityCount.${severity}`, count, [formatCount(count)])}
-                  </span>
-                );
-              })}
-            </span>
-            <span className="flex shrink-0 flex-wrap items-center justify-end">
-              <Popover
-                label={i18n.t('results.severityHelp.title')}
-                trigger={
-                  <IconButton
-                    className="size-7"
-                    label={i18n.t('results.severityHelp.title')}
-                    icon={<CircleHelp size={14} strokeWidth={1.5} />}
-                  />
-                }
-              >
-                <SeverityHelp />
-              </Popover>
-              {ignoring.count > 0 && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-pressed={ignoring.shown}
-                  onClick={ignoring.toggle}
-                >
-                  {ignoring.shown
-                    ? i18n.t('results.hideIgnored')
-                    : i18n.t('results.showIgnored', ignoring.count, [formatCount(ignoring.count)])}
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-fg-muted hover:text-fg"
-                icon={<Eraser size={14} strokeWidth={1.5} />}
-                onClick={() => {
-                  controller.clearResults();
-                }}
-              >
-                <span className="max-[359px]:sr-only">{i18n.t('actions.clearResults')}</span>
-              </Button>
-            </span>
-          </div>
-          <div
-            role="group"
-            aria-label={i18n.t('results.filters')}
-            className="flex flex-wrap items-center gap-1.5"
-          >
-            {KINDS.filter((kind) => counts.has(kind)).map((kind) => (
-              <KindChip
-                key={kind}
-                kind={kind}
-                count={counts.get(kind) ?? 0}
-                pressed={filter.kinds.has(kind)}
-                onToggle={toggleKind}
-              />
-            ))}
-            {filtering && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-fg-muted hover:text-fg"
-                onClick={() => {
-                  setFilter((current) => ({ ...current, kinds: new Set(), query: '' }));
-                }}
-              >
-                {i18n.t('results.clearFilters')}
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <label className="relative min-w-0 flex-1">
-              <span className="sr-only">{i18n.t('results.search')}</span>
-              <Search
-                size={14}
-                strokeWidth={1.5}
-                aria-hidden="true"
-                className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
-              />
-              <input
-                ref={searchRef}
-                type="search"
-                name="search"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={i18n.t('results.searchPlaceholder')}
-                value={filter.query}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setFilter((current) => ({ ...current, query: value }));
-                }}
-                className="min-h-8 w-full rounded-control border border-line-strong bg-raised ps-8 pe-2 transition-[border-color] duration-(--duration-press) ease-(--ease-out) placeholder:text-fg-muted focus:border-accent"
-              />
-            </label>
-            {/* Sort is a toggle: severity first (the default) or the order on the page. */}
-            <IconButton
-              label={
-                filter.sort === 'severity'
-                  ? i18n.t('results.sortToPage')
-                  : i18n.t('results.sortToSeverity')
-              }
-              aria-pressed={filter.sort === 'page'}
-              icon={
-                filter.sort === 'severity' ? (
-                  <ArrowDownWideNarrow size={16} strokeWidth={1.5} />
-                ) : (
-                  <ListOrdered size={16} strokeWidth={1.5} />
-                )
-              }
-              onClick={() => {
-                setFilter((current) => ({
-                  ...current,
-                  sort: current.sort === 'severity' ? 'page' : 'severity',
-                }));
-              }}
-            />
-          </div>
-        </>
-      )}
-      {shown.length === 0 ? (
-        <EmptyState title={i18n.t('results.noMatches')} />
-      ) : wide ? (
-        // Both columns are always there, so the list keeps its width (and its
-        // rows their measured heights) when details open.
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
-          <div className="flex min-h-0 flex-col">{list}</div>
-          {detail ?? <p className="p-2 text-fg-muted">{i18n.t('results.selectHint')}</p>}
-        </div>
-      ) : (
-        <div className="flex min-h-0 flex-1 flex-col [view-transition-name:results-pane]">
-          {detail ?? list}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** A stable key per result object: a new scan or stress test gets a new one. */
-const resultKeys = new WeakMap<object, number>();
-let nextResultKey = 0;
-function keyOf(result: object): string {
-  let key = resultKeys.get(result);
-  if (key === undefined) {
-    nextResultKey += 1;
-    key = nextResultKey;
-    resultKeys.set(result, key);
-  }
-  return String(key);
-}
-
-export function ResultsView({
-  state,
-  controller,
-  wide,
-  searchRef,
-  onRunStress,
-  ignore,
-}: ResultsViewProps) {
-  const [showIgnored, setShowIgnored] = useState(false);
-  const site = state.page ? siteOf(state.page.url) : null;
-  const ignoredIds = ignoredOn(ignore.rules, site);
-  const ignoring = (issues: readonly IssueDto[]): Ignoring => ({
-    ids: ignoredIds,
-    count: issues.filter((issue) => ignoredIds.has(issue.id)).length,
-    shown: showIgnored,
-    toggle: () => {
-      setShowIgnored((shown) => !shown);
-    },
-    ignore:
-      site === null
-        ? null
-        : (issue) => {
-            ignore.ignore(site, issue, issue.instances[0]?.element.label ?? '');
-          },
-    unignore: (issue) => {
-      if (site !== null) ignore.unignore(site, issue.id);
-    },
-  });
-  const visible = (issues: readonly IssueDto[]) =>
-    showIgnored ? issues : issues.filter((issue) => !ignoredIds.has(issue.id));
-  const [filter, setFilter] = useState<ResultFilter>(NO_FILTER);
-  const [tab, setTab] = useState<Tab>('atRisk');
-  const atRisk = useCountUp(state.stress?.atRisk.length ?? 0);
-  const brokenNow = useCountUp(state.stress?.brokenNow.length ?? 0);
-  const report = reportContext(state);
-  const body = (
-    issues: readonly IssueDto[],
-    resultsKey: string,
-    viewport: BodyProps['viewport'],
-    empty: ReactNode,
-  ) => (
-    <ResultsBody
-      issues={visible(issues)}
-      ignoring={ignoring(issues)}
-      resultsKey={resultsKey}
-      filter={filter}
-      setFilter={setFilter}
-      viewport={viewport}
-      wide={wide}
-      searchRef={searchRef}
-      controller={controller}
-      empty={empty}
-      report={report}
     />
   );
-
-  if (state.showing === 'stress' && state.stress) {
-    const { stress } = state;
-    return (
-      <section
-        className="flex min-h-0 flex-1 flex-col gap-2"
-        aria-label={i18n.t('results.heading')}
-      >
-        <Tabs
-          value={tab}
-          onValueChange={(value) => {
-            setTab(value as Tab);
-          }}
-          className="flex min-h-0 flex-1 flex-col gap-2"
-        >
-          {!state.stressActive && (
-            <p className="rounded-card bg-raised px-3 py-2 shadow-raised" role="status">
-              {i18n.t('results.restored')}
-            </p>
-          )}
-          <p className="text-small text-fg-muted tabular-nums">
-            {i18n.t('results.stressSummary', [
-              state.stressOptions
-                ? state.stressOptions.strategy === 'language'
-                  ? languageLabel(state.stressOptions.language)
-                  : strategyLabel(state.stressOptions.strategy)
-                : '',
-              state.stressOptions ? intensityLabel(state.stressOptions.intensity) : '',
-              String(stress.stats.stress.growth),
-              formatCount(stress.atRisk.length),
-              formatCount(stress.brokenNow.length),
-            ])}
-          </p>
-          <TabsList label={i18n.t('results.heading')}>
-            <TabsTrigger value="atRisk">
-              {i18n.t('results.atRisk')}
-              <span className="tabular-nums">{formatCount(atRisk)}</span>
-            </TabsTrigger>
-            <TabsTrigger value="brokenNow">
-              {i18n.t('results.brokenNow')}
-              <span className="tabular-nums">{formatCount(brokenNow)}</span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="atRisk" className="flex min-h-0 flex-1 flex-col">
-            {body(
-              stress.atRisk,
-              `${keyOf(stress)}-at-risk`,
-              stress.viewport,
-              <EmptyState title={i18n.t('results.noneAtRisk')} />,
-            )}
-          </TabsContent>
-          <TabsContent value="brokenNow" className="flex min-h-0 flex-1 flex-col">
-            {body(
-              stress.brokenNow,
-              `${keyOf(stress)}-broken-now`,
-              stress.viewport,
-              <EmptyState title={i18n.t('results.noneNow')} />,
-            )}
-          </TabsContent>
-        </Tabs>
-        <Footer
-          stats={stress.stats.stressed}
-          viewport={`${String(stress.viewport.width)}×${String(stress.viewport.height)}`}
-          stress
-          state={state}
-          ignored={ignoredIds}
-        />
-      </section>
-    );
-  }
-
-  if (state.showing === 'scan' && state.scan) {
-    const { scan } = state;
-    const viewport = `${String(scan.viewport.width)}×${String(scan.viewport.height)}`;
-    return (
-      <section
-        className="flex min-h-0 flex-1 flex-col gap-2"
-        aria-label={i18n.t('results.heading')}
-      >
-        {body(
-          scan.issues,
-          keyOf(scan),
-          scan.viewport,
-          <EmptyState
-            title={i18n.t('results.none', [formatCount(scan.stats.textNodes), viewport])}
-            action={
-              <Button size="sm" onClick={onRunStress}>
-                {i18n.t('actions.runStress')}
-              </Button>
-            }
-          />,
-        )}
-        <Footer
-          stats={scan.stats}
-          viewport={viewport}
-          stress={false}
-          state={state}
-          ignored={ignoredIds}
-        />
-      </section>
-    );
-  }
-
-  return null;
 }
