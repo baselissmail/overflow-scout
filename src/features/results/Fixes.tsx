@@ -61,7 +61,8 @@ function PreviewButton({
   return (
     <Button
       size="sm"
-      className="self-start"
+      variant="ghost"
+      className="-ms-2 self-start text-fg-muted hover:text-fg aria-pressed:bg-accent-soft aria-pressed:text-fg"
       aria-pressed={active}
       icon={active ? <EyeOff {...ICON} /> : <Eye {...ICON} />}
       onClick={onToggle}
@@ -122,7 +123,7 @@ export function Fixes({ finding, result, onPreview }: FixesProps) {
       <h2 className="font-medium">{i18n.t('detail.whatToDo')}</h2>
       <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-card bg-raised shadow-raised">
         {items.map((item) => (
-          <li key={item.key} className="flex flex-col gap-1.5 p-2.5">
+          <li key={item.key} className="flex flex-col gap-1.5 px-3 py-3">
             {item.added && (
               <span className="text-small text-fg-muted">{i18n.t('fix.addedNote')}</span>
             )}
@@ -153,7 +154,7 @@ export function Fixes({ finding, result, onPreview }: FixesProps) {
           </li>
         ))}
         {result?.combined && (
-          <li className="flex flex-col gap-1.5 p-2.5">
+          <li className="flex flex-col gap-1.5 px-3 py-3">
             <Verdict trial={result.combined} together />
             <PreviewButton
               all

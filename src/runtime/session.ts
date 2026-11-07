@@ -37,6 +37,9 @@ import { watchNavigation } from './navigation';
 import { Picker } from './picker';
 import { FindingRegistry, toIssueDtos } from './serialize';
 
+/** The most text sent to the panel to edit; tryText accepts the same. */
+const TEXT_LIMIT = 5000;
+
 /** Waits for the page to paint, so a capture shows what was just drawn. */
 function nextFrames(view: Window, count: number): Promise<void> {
   return new Promise((resolve) => {
@@ -298,17 +301,34 @@ export class PageSession {
         viewport: { width: view.innerWidth, height: view.innerHeight },
       };
     },
-    tryText: ({ value }) => {
+    tryText: ({ findingId, value }) => {
       this.endTryText();
       if (value === null) return null;
-      const element = this.picked;
-      if (!element?.isConnected) throw new Error('Pick an element on the page first.');
+      const finding = findingId === undefined ? undefined : this.registry.get(findingId);
+      const element = findingId === undefined ? this.picked : (finding?.element ?? null);
+      if (!element?.isConnected) {
+        throw new Error(
+          findingId === undefined
+            ? 'Pick an element on the page first.'
+            : 'This result is from an earlier scan. Scan again.',
+        );
+      }
       const edit = tryText(element, value, this.traversal);
       if (!edit) return null;
       this.trying = edit;
       // The outline follows the element's new size.
-      this.overlay.highlight({ element, label: elementLabel(element) });
+      this.overlay.highlight({
+        element,
+        ...(finding && { container: finding.container }),
+        label: elementLabel(element),
+      });
       return edit.trial;
+    },
+    textOf: ({ findingId }) => {
+      const element =
+        findingId === undefined ? this.picked : (this.registry.get(findingId)?.element ?? null);
+      if (!element?.isConnected) return null;
+      return element.textContent.replace(/\s+/g, ' ').trim().slice(0, TEXT_LIMIT);
     },
     fixes: ({ findingId }) => {
       this.endPreview();

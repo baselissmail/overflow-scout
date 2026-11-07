@@ -8,7 +8,7 @@ import { Badge, TONE_TEXT } from '@/ui/Chip';
 import { CutText } from '@/ui/CutText';
 import { cx } from '@/ui/cx';
 
-import { KindIcon, SEVERITY_TONE, formatCount, formatPx, kindLabel } from './labels';
+import { SEVERITY_TONE, formatCount, formatPx, kindLabel } from './labels';
 
 export interface ResultListProps {
   issues: readonly IssueDto[];
@@ -77,9 +77,7 @@ function ResultRow({
       )}
     >
       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        <Badge tone={tone} icon={<KindIcon kind={issue.kind} />}>
-          {kindLabel(issue.kind)}
-        </Badge>
+        <Badge tone={tone}>{kindLabel(issue.kind)}</Badge>
         {places > 1 && (
           <span className="text-small text-fg-muted tabular-nums">
             {i18n.t('results.places', places, [formatCount(places)])}
@@ -103,7 +101,9 @@ function ResultRow({
 
 /** Rows animate in only on arrival: never again while scrolling the virtual list. */
 const ARRIVAL_MS = 500;
-const STAGGERED_ROWS = 8;
+/** A short fade and rise for the first few rows only; the rest are simply there. */
+const STAGGERED_ROWS = 6;
+const STAGGER_MS = 40;
 
 /**
  * Remount it (with a `key`) when a new set of results arrives, so the first
@@ -231,7 +231,9 @@ export function ResultList({
                 className={cx(arriving && item.index < STAGGERED_ROWS && 'animate-enter')}
                 style={
                   arriving
-                    ? { animationDelay: `${String(Math.min(item.index, STAGGERED_ROWS) * 20)}ms` }
+                    ? {
+                        animationDelay: `${String(Math.min(item.index, STAGGERED_ROWS) * STAGGER_MS)}ms`,
+                      }
                     : undefined
                 }
               >

@@ -30,7 +30,7 @@ export function Slider({ label, valueText, value, min, max, onChange }: SliderPr
       <Primitive.Thumb
         aria-label={label}
         aria-valuetext={valueText}
-        className="block size-4 rounded-full border-2 border-accent bg-raised shadow-raised transition-transform duration-(--duration-press) hover:scale-110"
+        className="block size-4 rounded-full border-2 border-accent bg-raised transition-[box-shadow] duration-(--duration-press) ease-(--ease-out) hover:shadow-[0_0_0_4px_var(--color-accent-soft)]"
       />
     </Primitive.Root>
   );

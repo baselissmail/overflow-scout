@@ -25,6 +25,8 @@ interface InspectCardProps {
   onClose: () => void;
   /** Must keep its identity: a new function would put the tried text back. */
   onTryText: TryTextProps['onTry'];
+  /** The picked element's whole text, to start editing from. Keep its identity stable. */
+  onTextOf: TryTextProps['loadText'];
 }
 
 /** A key per pick, so trying text starts over for each element. */
@@ -40,11 +42,11 @@ function keyOf(picked: PickedElement): number {
   return key;
 }
 
-export function InspectCard({ picking, picked, onClose, onTryText }: InspectCardProps) {
+export function InspectCard({ picking, picked, onClose, onTryText, onTextOf }: InspectCardProps) {
   if (picking) {
     return (
       <p
-        className="animate-enter rounded-card border border-accent bg-accent-soft p-3"
+        className="animate-enter rounded-card bg-accent-soft p-3 shadow-[0_0_0_1px_var(--color-accent)]"
         role="status"
       >
         {i18n.t('inspect.hint')}
@@ -75,9 +77,9 @@ export function InspectCard({ picking, picked, onClose, onTryText }: InspectCard
       </div>
       {point ? (
         <>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <Badge tone={VERDICT[point.verdict].tone}>{VERDICT[point.verdict].label()}</Badge>
-            <span className="tabular-nums">
+            <span className="text-small text-fg-muted tabular-nums">
               {point.fitsUpTo === null
                 ? i18n.t('inspect.fitsAll', [String(point.maxTested)])
                 : i18n.t('inspect.fitsUpTo', [String(point.fitsUpTo)])}
@@ -106,7 +108,12 @@ export function InspectCard({ picking, picked, onClose, onTryText }: InspectCard
               String(point.needs.worst),
             ])}
           </p>
-          <TryText key={keyOf(picked)} point={point} onTry={onTryText} />
+          <TryText
+            key={keyOf(picked)}
+            onTry={onTryText}
+            loadText={onTextOf}
+            fallback={picked.text}
+          />
         </>
       ) : (
         <p className="text-fg-muted">{i18n.t('inspect.noText')}</p>

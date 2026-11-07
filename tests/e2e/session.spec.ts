@@ -117,6 +117,40 @@ test.describe('demo page', () => {
     await expect.poll(() => pageText(demo)).toBe(before);
   });
 
+  test('tries other text in a result, on the page, and puts it back', async ({
+    extensionId,
+    openTab,
+    openPanel,
+  }) => {
+    const { page: demo, tabId } = await openTab(`chrome-extension://${extensionId}/demo.html`);
+    await demo.setViewportSize({ width: 800, height: 900 });
+    const panel = await openPanel(tabId);
+    const title = demo.locator('h2.title').first();
+    const original = (await title.textContent())?.trim() ?? '';
+
+    await scan(panel);
+    await rows(panel).filter({ hasText: 'Waterproof hiking jacket' }).click();
+    await panel.getByRole('button', { name: 'Try other text' }).click();
+    const editor = panel.getByRole('region', { name: 'Try other text' });
+    const field = editor.getByLabel('Text on the page');
+    // It starts from the element's whole text, and has focus.
+    await expect(field).toHaveValue(original);
+    await expect(field).toBeFocused();
+
+    // A shorter translation fits; a longer one is cut off, by how much.
+    await field.fill('Wasserdichte Jacke');
+    await expect.poll(() => title.textContent()).toBe('Wasserdichte Jacke');
+    await expect(editor).toContainText(/^.*Fits at \d+ characters\./m);
+    await field.fill(
+      'Wasserdichte Wanderjacke mit abnehmbarer, isolierter Kapuze und verschweißten Nähten',
+    );
+    await expect(editor).toContainText(/Cut off at \d+ characters, [\d.]+\s?px short\./);
+
+    // Leaving the result (Esc, from anywhere in it) puts the page's own text back.
+    await field.press('Escape');
+    await expect.poll(async () => (await title.textContent())?.trim()).toBe(original);
+  });
+
   test('copies an issue report and exports every result', async ({
     extensionId,
     openTab,
@@ -278,9 +312,11 @@ test.describe('demo page', () => {
 
     await card.getByRole('button', { name: 'Email' }).click();
     await expect.poll(() => tried.textContent()).toContain('@');
-    await card.getByLabel('Your own text').fill('Zum Warenkorb hinzufügen');
-    await card.getByRole('button', { name: 'Try', exact: true }).click();
+    // Your own words, live as you type.
+    await card.getByLabel('Text on the page').fill('Zum Warenkorb hinzufügen');
     await expect.poll(() => tried.textContent()).toBe('Zum Warenkorb hinzufügen');
+    await card.getByRole('button', { name: 'Translation length' }).click();
+    await expect(card.getByLabel('Text on the page')).not.toHaveValue('Zum Warenkorb hinzufügen');
     await card.getByRole('button', { name: 'Put the text back' }).click();
     await expect.poll(() => tried.textContent()).toBe('Add to cart');
 

@@ -1,5 +1,5 @@
 import { i18n } from '#i18n';
-import { CircleHelp, Info, Search } from 'lucide-react';
+import { ArrowDownWideNarrow, CircleHelp, Eraser, Info, ListOrdered, Search } from 'lucide-react';
 import type { Dispatch, ReactNode, RefObject, SetStateAction } from 'react';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -10,14 +10,12 @@ import { reportContext } from '@/features/report/export';
 import type { ReportContext } from '@/features/report/markdown';
 import { siteOf } from '@/storage/ignore';
 import { intensityLabel, languageLabel, strategyLabel } from '@/features/stress/options';
-import type { IssueDto, PreviewKey, ScanResultDto } from '@/messaging/protocol';
+import type { IssueDto, PreviewKey, ScanResultDto, TextValueDto } from '@/messaging/protocol';
 import { Button } from '@/ui/Button';
 import { Chip, TONE_BG, TONE_TEXT } from '@/ui/Chip';
 import { EmptyState } from '@/ui/EmptyState';
 import { IconButton } from '@/ui/IconButton';
 import { Popover } from '@/ui/Popover';
-import { Segmented } from '@/ui/Segmented';
-import { SeverityBar } from '@/ui/SeverityBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/Tabs';
 import { Tooltip } from '@/ui/Tooltip';
 import { useCountUp } from '@/ui/use-count-up';
@@ -26,12 +24,11 @@ import { IssueDetail } from './IssueDetail';
 import type { IgnoreRules } from './use-ignore';
 import { ignoredOn } from './use-ignore';
 import { ResultList } from './ResultList';
-import type { ResultFilter, SortOrder } from './filter';
+import type { ResultFilter } from './filter';
 import { NO_FILTER, applyFilter, countByKind } from './filter';
 import type { Kind } from './labels';
 import {
   KINDS,
-  KindIcon,
   NBSP,
   SEVERITY_TONE,
   formatCount,
@@ -90,7 +87,6 @@ function KindChip({
     <Tooltip content={kindDescription(kind)}>
       <Chip
         tone={SEVERITY_TONE[TONE_OF_KIND[kind]]}
-        icon={<KindIcon kind={kind} />}
         label={kindLabel(kind)}
         count={shown}
         pressed={pressed}
@@ -103,22 +99,6 @@ function KindChip({
 }
 
 const SEVERITIES = ['critical', 'warning', 'notice'] as const;
-
-/** "3 critical · 2 warnings", leaving out severities with nothing in them. */
-function severityLine(issues: readonly IssueDto[]): string {
-  const count = (severity: IssueDto['severity']) =>
-    issues.filter((issue) => issue.severity === severity).length;
-  const parts: string[] = [];
-  const critical = count('critical');
-  const warning = count('warning');
-  const notice = count('notice');
-  if (critical > 0)
-    parts.push(i18n.t('results.severityCount.critical', critical, [formatCount(critical)]));
-  if (warning > 0)
-    parts.push(i18n.t('results.severityCount.warning', warning, [formatCount(warning)]));
-  if (notice > 0) parts.push(i18n.t('results.severityCount.notice', notice, [formatCount(notice)]));
-  return parts.join(' · ');
-}
 
 function severitySummary(issues: readonly IssueDto[]): string {
   const count = (severity: IssueDto['severity']) =>
@@ -262,6 +242,11 @@ function ResultsBody({
   const loadDetails = useCallback((id: string) => controller.details(id), [controller]);
   const loadFixes = useCallback((id: string) => controller.fixes(id), [controller]);
   const screenshot = useCallback((id: string) => controller.screenshot(id), [controller]);
+  const tryText = useCallback(
+    (value: TextValueDto | null, id: string) => controller.tryText(value, id),
+    [controller],
+  );
+  const textOf = useCallback((id: string) => controller.textOf(id), [controller]);
   const preview = useCallback(
     (id: string, key: PreviewKey | null) => controller.preview(id, key),
     [controller],
@@ -339,6 +324,8 @@ function ResultsBody({
         onPreview={preview}
         report={report}
         onScreenshot={screenshot}
+        onTryText={tryText}
+        onTextOf={textOf}
         ignored={ignoring.ids.has(open.id)}
         onIgnore={
           ignoring.ignore &&
@@ -370,65 +357,68 @@ function ResultsBody({
       {/* List controls step aside while a narrow detail is open; they don't affect it. */}
       {(wide || !open) && (
         <>
-          <div className="flex flex-col gap-1">
-            <SeverityBar
-              label={severitySummary(issues)}
-              segments={SEVERITIES.map((severity) => ({
-                key: severity,
-                count: issues.filter((issue) => issue.severity === severity).length,
-                colorClass: TONE_BG[SEVERITY_TONE[severity]],
-              }))}
-            />
-            <div className="flex flex-wrap items-center justify-between gap-x-2">
-              <span className="flex min-w-0 items-center">
-                <p className="text-small text-fg-muted tabular-nums" aria-hidden="true">
-                  {severityLine(issues)}
-                </p>
-                <Popover
-                  label={i18n.t('results.severityHelp.title')}
-                  trigger={
-                    <IconButton
-                      label={i18n.t('results.severityHelp.title')}
-                      icon={<CircleHelp size={14} strokeWidth={1.5} />}
-                    />
-                  }
-                >
-                  <SeverityHelp />
-                </Popover>
-              </span>
-              <span className="flex flex-wrap items-center">
-                {ignoring.count > 0 && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-pressed={ignoring.shown}
-                    onClick={ignoring.toggle}
+          {/* One line of what was found, the filters, then search: the list starts high. */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-small tabular-nums">
+              <span className="sr-only">{severitySummary(issues)}</span>
+              {SEVERITIES.map((severity) => {
+                const count = issues.filter((issue) => issue.severity === severity).length;
+                if (count === 0) return null;
+                return (
+                  <span
+                    key={severity}
+                    aria-hidden="true"
+                    className="inline-flex items-center gap-1.5 text-fg-muted"
                   >
-                    {ignoring.shown
-                      ? i18n.t('results.hideIgnored')
-                      : i18n.t('results.showIgnored', ignoring.count, [
-                          formatCount(ignoring.count),
-                        ])}
-                  </Button>
-                )}
+                    <span className={`size-2 rounded-full ${TONE_BG[SEVERITY_TONE[severity]]}`} />
+                    {i18n.t(`results.severityCount.${severity}`, count, [formatCount(count)])}
+                  </span>
+                );
+              })}
+            </span>
+            <span className="flex shrink-0 flex-wrap items-center justify-end">
+              <Popover
+                label={i18n.t('results.severityHelp.title')}
+                trigger={
+                  <IconButton
+                    className="size-7"
+                    label={i18n.t('results.severityHelp.title')}
+                    icon={<CircleHelp size={14} strokeWidth={1.5} />}
+                  />
+                }
+              >
+                <SeverityHelp />
+              </Popover>
+              {ignoring.count > 0 && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => {
-                    controller.clearResults();
-                  }}
+                  aria-pressed={ignoring.shown}
+                  onClick={ignoring.toggle}
                 >
-                  {i18n.t('actions.clearResults')}
+                  {ignoring.shown
+                    ? i18n.t('results.hideIgnored')
+                    : i18n.t('results.showIgnored', ignoring.count, [formatCount(ignoring.count)])}
                 </Button>
-              </span>
-            </div>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-fg-muted hover:text-fg"
+                icon={<Eraser size={14} strokeWidth={1.5} />}
+                onClick={() => {
+                  controller.clearResults();
+                }}
+              >
+                <span className="max-[359px]:sr-only">{i18n.t('actions.clearResults')}</span>
+              </Button>
+            </span>
           </div>
           <div
             role="group"
             aria-label={i18n.t('results.filters')}
             className="flex flex-wrap items-center gap-1.5"
           >
-            <span className="text-small text-fg-muted">{i18n.t('results.filterLabel')}</span>
             {KINDS.filter((kind) => counts.has(kind)).map((kind) => (
               <KindChip
                 key={kind}
@@ -442,6 +432,7 @@ function ResultsBody({
               <Button
                 size="sm"
                 variant="ghost"
+                className="text-fg-muted hover:text-fg"
                 onClick={() => {
                   setFilter((current) => ({ ...current, kinds: new Set(), query: '' }));
                 }}
@@ -450,14 +441,14 @@ function ResultsBody({
               </Button>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="relative min-w-48 flex-1">
+          <div className="flex items-center gap-1">
+            <label className="relative min-w-0 flex-1">
               <span className="sr-only">{i18n.t('results.search')}</span>
               <Search
                 size={14}
                 strokeWidth={1.5}
                 aria-hidden="true"
-                className="pointer-events-none absolute start-2 top-1/2 -translate-y-1/2 text-fg-muted"
+                className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
               />
               <input
                 ref={searchRef}
@@ -471,19 +462,30 @@ function ResultsBody({
                   const value = event.target.value;
                   setFilter((current) => ({ ...current, query: value }));
                 }}
-                className="min-h-8 w-full rounded-control border border-line-strong bg-raised ps-7 pe-2"
+                className="min-h-8 w-full rounded-control border border-line-strong bg-raised ps-8 pe-2 transition-[border-color] duration-(--duration-press) ease-(--ease-out) placeholder:text-fg-muted focus:border-accent"
               />
             </label>
-            <Segmented<SortOrder>
-              label={i18n.t('results.sort')}
-              value={filter.sort}
-              onChange={(sort) => {
-                setFilter((current) => ({ ...current, sort }));
+            {/* Sort is a toggle: severity first (the default) or the order on the page. */}
+            <IconButton
+              label={
+                filter.sort === 'severity'
+                  ? i18n.t('results.sortToPage')
+                  : i18n.t('results.sortToSeverity')
+              }
+              aria-pressed={filter.sort === 'page'}
+              icon={
+                filter.sort === 'severity' ? (
+                  <ArrowDownWideNarrow size={16} strokeWidth={1.5} />
+                ) : (
+                  <ListOrdered size={16} strokeWidth={1.5} />
+                )
+              }
+              onClick={() => {
+                setFilter((current) => ({
+                  ...current,
+                  sort: current.sort === 'severity' ? 'page' : 'severity',
+                }));
               }}
-              options={[
-                { value: 'severity', label: i18n.t('results.sortSeverity') },
-                { value: 'page', label: i18n.t('results.sortPage') },
-              ]}
             />
           </div>
         </>

@@ -49,6 +49,7 @@ import { useToast } from '@/ui/Toast';
 import { useMediaQuery } from '@/ui/use-media-query';
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
+const SMALL_ICON = { size: 14, strokeWidth: 1.5 } as const;
 
 /** ⌘ on macOS, Ctrl elsewhere. */
 const modKey = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl ';
@@ -67,6 +68,7 @@ export function App() {
     (value: TextValueDto | null) => controller.tryText(value),
     [controller],
   );
+  const textOf = useCallback(() => controller.textOf(), [controller]);
   const ignoredIds = ignoredOn(ignore.rules, state.page ? siteOf(state.page.url) : null);
   useEffect(() => {
     // The toolbar badge counts what the panel shows: ignored issues are left out.
@@ -379,36 +381,46 @@ export function App() {
         />
 
         {(hasResults || stressOpen || state.picking || state.picked) && (
-          <div className="flex flex-wrap gap-2">
+          // One primary action; the two modes are quiet until they're on.
+          <div className="flex flex-wrap items-center gap-1">
             <Button
               // While stress text is on, Revert (in the stress bar) is the main action.
               variant={state.stressActive ? 'secondary' : 'primary'}
-              icon={<ScanText {...ICON} />}
+              size="sm"
+              icon={<ScanText {...SMALL_ICON} />}
               disabled={busy || noTab}
               onClick={scan}
+              className="me-1"
             >
               {hasResults ? i18n.t('actions.scanAgain') : i18n.t('actions.scan')}
             </Button>
             <Button
-              icon={<WholeWord {...ICON} />}
+              variant="ghost"
+              size="sm"
+              icon={<WholeWord {...SMALL_ICON} />}
               aria-pressed={stressOpen}
               aria-expanded={stressOpen}
               disabled={noTab}
-              className="aria-pressed:border-accent aria-pressed:bg-accent-soft"
+              className="text-fg-muted hover:text-fg aria-pressed:bg-accent-soft aria-pressed:text-fg"
               onClick={() => {
                 setStressOpen((open) => !open);
               }}
             >
-              {i18n.t('actions.stressShort')}
+              {/* Below 360 px the label is only read out, so the toolbar keeps one line. */}
+              <span className="max-[359px]:sr-only">{i18n.t('actions.stressShort')}</span>
             </Button>
             <Button
-              icon={<Crosshair {...ICON} />}
+              variant="ghost"
+              size="sm"
+              icon={<Crosshair {...SMALL_ICON} />}
               aria-pressed={state.picking}
               disabled={busy || noTab}
-              className="aria-pressed:border-accent aria-pressed:bg-accent-soft"
+              className="text-fg-muted hover:text-fg aria-pressed:bg-accent-soft aria-pressed:text-fg"
               onClick={pick}
             >
-              {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspectShort')}
+              <span className="max-[359px]:sr-only">
+                {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspectShort')}
+              </span>
             </Button>
           </div>
         )}
@@ -451,6 +463,7 @@ export function App() {
             controller.closeInspect();
           }}
           onTryText={tryText}
+          onTextOf={textOf}
         />
       </div>
 

@@ -286,10 +286,23 @@ export class PanelController {
    * Puts a text in the picked element and measures it; `null` puts the
    * element's own text back. Null when the page can't be reached.
    */
-  async tryText(value: TextValueDto | null): Promise<TextTrialDto | null> {
+  async tryText(value: TextValueDto | null, findingId?: string): Promise<TextTrialDto | null> {
     try {
       const connection = await this.ensureConnection();
-      return await connection.request('tryText', { value });
+      return await connection.request('tryText', {
+        value,
+        ...(findingId !== undefined && { findingId }),
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  /** The whole text of a result's element, or of the picked one, to start editing from. */
+  async textOf(findingId?: string): Promise<string | null> {
+    try {
+      const connection = await this.ensureConnection();
+      return await connection.request('textOf', findingId === undefined ? {} : { findingId });
     } catch {
       return null;
     }

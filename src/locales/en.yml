@@ -120,6 +120,8 @@ results:
   sort: Sort results
   sortSeverity: Severity
   sortPage: Page order
+  sortToPage: Sorted by severity. Sort in page order
+  sortToSeverity: Sorted in page order. Sort by severity
   coverage: What was checked
   coverageTextNodes: Texts checked
   coverageInputs: Fields checked
@@ -162,6 +164,7 @@ detail:
   text: Text
   before: Before
   cause: Likely cause
+  why: Why it happens
   confidenceHigh: High confidence
   confidenceMedium: Medium confidence
   noCause: No single CSS property explains this.
@@ -218,11 +221,11 @@ stress:
   scopePage: Whole page
   scopePicked: Picked element
   apply: Apply and scan
-  active: Longer test text is on the page. Revert puts every text back exactly.
-  activeTranslation: The accented words are added on purpose, to make each text as long as a translation.
-  activePseudo: The accents and [brackets] are added on purpose. A missing ] shows where a text was cut.
-  activeLongWords: The long words, links and email addresses are added on purpose, to test text that can’t wrap.
-  activeLanguage: The text is replaced with real text in another language, to test other scripts.
+  active: Longer test text is on the page
+  activeTranslation: The accented words are added on purpose, to make each text as long as a translation. Revert puts every text back exactly.
+  activePseudo: The accents and [brackets] are added on purpose. A missing ] shows where a text was cut. Revert puts every text back exactly.
+  activeLongWords: The long words, links and email addresses are added on purpose, to test text that can’t wrap. Revert puts every text back exactly.
+  activeLanguage: The text is replaced with real text in another language, to test other scripts. Revert puts every text back exactly.
   scopePickedHint: To test one element, pick it with Measure an element first.
 strategy:
   translation: Translation length
@@ -261,7 +264,7 @@ inspect:
   needsChars: needs $1
   measure: Fits up to $1 characters; a translation needs about $2.
   tryHeading: Try other text
-  tryHint: The text changes on the page while you try. It goes back when you close this.
+  tryHint: Edit the text, and the page shows it as you type. It goes back when you close this.
   length: Length
   chars:
     1: 1 character
@@ -366,6 +369,15 @@ report:
   issues:
     1: 1 issue
     n: $1 issues
+try:
+  open: Try other text
+  heading: Try other text
+  hint: Edit the text, and the page shows it as you type. It goes back when you leave.
+  label: Text on the page
+  lengths: Lengths to try
+  translation: Translation length
+  worstCase: Worst case
+  double: Twice as long
 toast:
   label: Notifications
   restored:

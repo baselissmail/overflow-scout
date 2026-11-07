@@ -31,25 +31,33 @@ function explanation(strategy: StressStrategy): string {
 export function StressBar({ strategy, pending, busy, onRevert, onReapply }: StressBarProps) {
   return (
     <section
-      className="flex animate-enter flex-col gap-2 rounded-card border border-warning bg-warning-soft p-3 text-fg"
+      className="flex animate-enter flex-col gap-2 rounded-card bg-raised p-3 shadow-raised"
       aria-label={i18n.t('stress.heading')}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-medium">{i18n.t('stress.active')}</p>
-          <p className="text-small">{explanation(strategy)}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 gap-2">
+          {/* The page is changed: the one warning mark on the panel. */}
+          <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-warning" />
+          <div className="min-w-0">
+            <p className="font-medium">{i18n.t('stress.active')}</p>
+            <p className="text-small text-fg-muted">{explanation(strategy)}</p>
+          </div>
         </div>
         <Button
           variant="primary"
+          size="sm"
           disabled={busy}
-          icon={<RotateCcw size={16} strokeWidth={1.5} />}
+          icon={<RotateCcw size={14} strokeWidth={1.5} />}
           onClick={onRevert}
         >
           {i18n.t('actions.revert')}
         </Button>
       </div>
       {pending > 0 && (
-        <p className="flex flex-wrap items-center justify-between gap-2" role="status">
+        <p
+          className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2 text-small"
+          role="status"
+        >
           <span>{i18n.t('page.reset', pending, [String(pending)])}</span>
           <Button size="sm" disabled={busy} onClick={onReapply}>
             {i18n.t('actions.reapply')}

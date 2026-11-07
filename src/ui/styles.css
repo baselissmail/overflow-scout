@@ -113,18 +113,20 @@
   --text-title: 15px;
   --text-title--line-height: 20px;
 
-  --radius-control: 6px;
-  --radius-card: 10px;
+  --radius-control: 8px;
+  --radius-card: 12px;
 
-  --ease-out: cubic-bezier(0.2, 0, 0, 1);
-  --duration-press: 120ms;
-  --duration-enter: 180ms;
-  --duration-view: 240ms;
+  /* One curve for everything; short for feedback, a little longer for what enters. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-press: 150ms;
+  --duration-enter: 220ms;
+  --duration-view: 280ms;
 
-  --shadow-float: 0 8px 24px rgb(10 12 20 / 0.16), 0 0 0 1px var(--os-line);
-  --shadow-raised: 0 1px 2px rgb(10 12 20 / 0.06), 0 0 0 1px var(--os-line);
+  /* Raised surfaces are a hairline, not a shadow; only floating layers cast one. */
+  --shadow-float: 0 8px 24px rgb(10 12 20 / 0.12), 0 0 0 1px var(--os-line);
+  --shadow-raised: 0 0 0 1px var(--os-line);
 
-  --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-arrive: var(--ease-out);
   --animate-enter: os-enter var(--duration-enter) var(--ease-arrive) both;
   --animate-scan: os-scan 1.4s linear infinite;
   --animate-grow: os-grow 420ms var(--ease-arrive) both;
@@ -134,7 +136,7 @@
 @keyframes os-enter {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
 }
 
