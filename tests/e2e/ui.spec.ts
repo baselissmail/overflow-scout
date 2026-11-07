@@ -53,7 +53,6 @@ const STATES: readonly { name: string; enter: (panel: Page, demo: Page) => Promi
     enter: async (panel) => {
       await panel.keyboard.press('Escape');
       await panel.getByRole('button', { name: /^(Test with longer text|Longer text)/ }).click();
-      await panel.getByRole('button', { name: 'Apply and scan' }).click();
       await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
     },
   },

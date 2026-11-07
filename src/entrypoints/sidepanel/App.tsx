@@ -7,7 +7,9 @@ import {
   Eraser,
   ExternalLink,
   FileJson,
+  House,
   Keyboard,
+  ListChecks,
   Monitor,
   Moon,
   RotateCcw,
@@ -75,6 +77,8 @@ export function App() {
     controller.setIgnored(ignoredIds);
   }, [controller, ignoredIds]);
   const [view, setView] = useState<'main' | 'settings'>('main');
+  // Asked for Home while there are results; any new action leaves it again.
+  const [home, setHome] = useState(false);
   const [stressOpen, setStressOpen] = useState(false);
   const [scope, setScope] = useState<StressScope>('page');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -88,6 +92,17 @@ export function App() {
   const effectiveScope: StressScope = state.picked ? scope : 'page';
   const noTab = state.tabId === null;
   const hasResults = state.showing !== null;
+  // Home is the start screen, and where the Home button leads: never while work is under way.
+  const atHome = !busy && !stressOpen && !state.picking && !state.picked && (home || !hasResults);
+  const shownIssues =
+    state.showing === 'scan'
+      ? state.scan?.issues
+      : state.showing === 'stress' && state.stress
+        ? [...state.stress.brokenNow, ...state.stress.atRisk]
+        : undefined;
+  const resultCount = shownIssues
+    ? shownIssues.filter((issue) => !ignoredIds.has(issue.id)).length
+    : null;
 
   useEffect(() => {
     applyTheme(settings.theme);
@@ -130,9 +145,13 @@ export function App() {
     };
   }, [controller, state.picking]);
 
-  const scan = () => void controller.scan(settings.includeInputs);
+  const scan = () => {
+    setHome(false);
+    void controller.scan(settings.includeInputs);
+  };
   const stress = () => {
     // The results need the room; the revert bar shows that stress is on.
+    setHome(false);
     setStressOpen(false);
     void controller.stress(
       {
@@ -146,6 +165,22 @@ export function App() {
     );
   };
   const pick = () => void controller.pick(!state.picking);
+  /** One click, the saved defaults; a second click puts the page back. */
+  const toggleStress = () => {
+    if (state.stressActive) void controller.revert();
+    else stress();
+  };
+  /** The start screen. Results stay (Home leads back to them); stress text stays until reverted. */
+  const goHome = () => {
+    setView('main');
+    setHome(true);
+    setStressOpen(false);
+    if (state.picking) void controller.pick(false);
+    if (state.picked) controller.closeInspect();
+  };
+  const toResults = () => {
+    setHome(false);
+  };
   const demo = () => void browser.tabs.create({ url: browser.runtime.getURL('/demo.html') });
 
   // Rebuilt every render (it's small), so it always reflects the current state.
@@ -180,6 +215,7 @@ export function App() {
         icon: <SlidersHorizontal {...ICON} />,
         keywords: 'stress test strategy intensity settings',
         run: () => {
+          setHome(false);
           setStressOpen(true);
         },
       },
@@ -252,6 +288,22 @@ export function App() {
           run: () => {
             controller.clearResults();
           },
+        },
+      !atHome && {
+        id: 'home',
+        group: viewGroup,
+        label: i18n.t('commands.home'),
+        icon: <House {...ICON} />,
+        keywords: 'start main back',
+        run: goHome,
+      },
+      hasResults &&
+        atHome && {
+          id: 'results',
+          group: viewGroup,
+          label: i18n.t('home.results'),
+          icon: <ListChecks {...ICON} />,
+          run: toResults,
         },
       {
         id: 'settings',
@@ -327,18 +379,36 @@ export function App() {
     // One scroll for the whole panel, used only when the controls leave the results
     // too little room (narrow panels, long translations); the list keeps its own.
     <div className="flex h-dvh flex-col overflow-y-auto">
-      <header className="sticky top-0 z-10 flex shrink-0 items-center gap-2 bg-canvas px-3 pt-3 pb-2">
-        <span className="text-accent">
-          <BrandMark />
-        </span>
-        <h1 className="min-w-0 flex-1 text-title font-semibold">{i18n.t('extName')}</h1>
+      <header className="sticky top-0 z-10 flex shrink-0 items-center gap-1 bg-canvas px-3 pt-3 pb-2">
+        {/* The name leads Home, as on most sites; the house button says so in plain sight. */}
+        <h1 className="min-w-0 flex-1 text-title font-semibold">
+          <button
+            type="button"
+            onClick={goHome}
+            aria-current={atHome ? 'page' : undefined}
+            className="-ms-1.5 inline-flex max-w-full items-center gap-2 rounded-control px-1.5 py-0.5 text-start transition-[background-color] duration-(--duration-press) ease-(--ease-out) hover:bg-surface"
+          >
+            <span className="shrink-0 text-accent">
+              <BrandMark />
+            </span>
+            {/* Wraps rather than truncates: the panel's own rule, checked by its self-test. */}
+            <span className="min-w-0 break-words">{i18n.t('extName')}</span>
+          </button>
+        </h1>
+        <IconButton
+          label={i18n.t('actions.home')}
+          icon={<House {...ICON} />}
+          aria-current={atHome ? 'page' : undefined}
+          className="aria-[current=page]:bg-surface aria-[current=page]:text-fg"
+          onClick={goHome}
+        />
         <button
           type="button"
           onClick={() => {
             setCommandsOpen(true);
           }}
           aria-keyshortcuts={modKey === '⌘' ? 'Meta+K' : 'Control+K'}
-          className="inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-control border border-line bg-raised px-2 text-small text-fg-muted transition-[border-color,color] duration-(--duration-press) hover:border-line-strong hover:text-fg"
+          className="ms-1 inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-control border border-line bg-raised px-2 text-small text-fg-muted transition-[border-color,color] duration-(--duration-press) hover:border-line-strong hover:text-fg"
         >
           <CommandIcon
             size={14}
@@ -380,7 +450,7 @@ export function App() {
           }}
         />
 
-        {(hasResults || stressOpen || state.picking || state.picked) && (
+        {!atHome && (hasResults || stressOpen || state.picking || state.picked) && (
           // One primary action; the two modes are quiet until they're on.
           <div className="flex flex-wrap items-center gap-1">
             <Button
@@ -398,16 +468,14 @@ export function App() {
               variant="ghost"
               size="sm"
               icon={<WholeWord {...SMALL_ICON} />}
-              aria-pressed={stressOpen}
-              aria-expanded={stressOpen}
-              disabled={noTab}
+              // On while longer text is on the page; pressing it again puts the text back.
+              aria-pressed={state.stressActive}
+              disabled={busy || noTab}
               className="text-fg-muted hover:text-fg aria-pressed:bg-accent-soft aria-pressed:text-fg"
-              onClick={() => {
-                setStressOpen((open) => !open);
-              }}
+              onClick={toggleStress}
             >
-              {/* Below 360 px the label is only read out, so the toolbar keeps one line. */}
-              <span className="max-[359px]:sr-only">{i18n.t('actions.stressShort')}</span>
+              {/* Words, not a bare icon: on narrow panels the row wraps instead. */}
+              {i18n.t('actions.stressShort')}
             </Button>
             <Button
               variant="ghost"
@@ -418,9 +486,7 @@ export function App() {
               className="text-fg-muted hover:text-fg aria-pressed:bg-accent-soft aria-pressed:text-fg"
               onClick={pick}
             >
-              <span className="max-[359px]:sr-only">
-                {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspectShort')}
-              </span>
+              {state.picking ? i18n.t('actions.stopInspecting') : i18n.t('actions.inspectShort')}
             </Button>
           </div>
         )}
@@ -451,8 +517,13 @@ export function App() {
             strategy={state.stressOptions?.strategy ?? settings.strategy}
             pending={state.pending}
             busy={busy}
+            optionsOpen={stressOpen}
             onRevert={() => void controller.revert()}
             onReapply={() => void controller.reapply()}
+            onOptions={() => {
+              setHome(false);
+              setStressOpen((open) => !open);
+            }}
           />
         )}
 
@@ -462,39 +533,40 @@ export function App() {
           onClose={() => {
             controller.closeInspect();
           }}
+          onCancelPick={() => void controller.pick(false)}
           onTryText={tryText}
           onTextOf={textOf}
         />
       </div>
 
-      <div className={cx('flex flex-1 flex-col px-3 pb-3', hasResults ? 'min-h-96' : 'min-h-0')}>
-        {hasResults ? (
-          <ResultsView
-            state={state}
-            controller={controller}
-            ignore={ignore}
-            wide={wide}
-            searchRef={searchRef}
-            onRunStress={() => {
-              setStressOpen(true);
-            }}
-          />
+      <div
+        className={cx(
+          'flex flex-1 flex-col px-3 pb-3',
+          hasResults && !atHome ? 'min-h-96' : 'min-h-0',
+        )}
+      >
+        {atHome ? (
+          <div className="min-h-0 overflow-y-auto">
+            <Home
+              disabled={noTab}
+              resultCount={hasResults ? resultCount : null}
+              onResults={toResults}
+              onScan={scan}
+              onStress={stress}
+              onInspect={pick}
+              onDemo={demo}
+            />
+          </div>
         ) : (
-          !busy &&
-          !stressOpen &&
-          !state.picking &&
-          !state.picked && (
-            <div className="min-h-0 overflow-y-auto">
-              <Home
-                disabled={noTab}
-                onScan={scan}
-                onStress={() => {
-                  setStressOpen(true);
-                }}
-                onInspect={pick}
-                onDemo={demo}
-              />
-            </div>
+          hasResults && (
+            <ResultsView
+              state={state}
+              controller={controller}
+              ignore={ignore}
+              wide={wide}
+              searchRef={searchRef}
+              onRunStress={stress}
+            />
           )
         )}
       </div>

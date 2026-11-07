@@ -17,7 +17,7 @@ For day-to-day work, `pnpm dev` opens Chrome with the extension loaded and reloa
 
 ### First run and the demo
 
-- [ ] Click the toolbar button. The side panel opens on Home, with the animated demo, **Scan page**, **Test with longer text** and **Measure an element**.
+- [ ] Click the toolbar button. The side panel opens on Home: "Save changes" turns into the German "Änderungen speichern" and runs past its button, then **Scan page**, **Test with longer text** and **Measure an element**.
 - [ ] Click **Try the demo page**, then **Scan page**. Five results appear, with critical ones first.
 - [ ] Hover a result: it's outlined on the page. Click it: the page scrolls to it and the details open.
 - [ ] In the details of "Waterproof hiking jacket…", the height fix says **Fixes it. The box gets … taller.**
@@ -27,17 +27,19 @@ For day-to-day work, `pnpm dev` opens Chrome with the extension loaded and reloa
 - [ ] **Copy screenshot**, then paste it. It's the element with some room around it, outlined.
 - [ ] **Ignore on this site**: the result disappears and **Show 1 ignored** appears. Settings lists it under **Ignored results**. Remove it there.
 - [ ] **Export results** (footer) → **Save as JSON**: a file downloads.
+- [ ] Click **Home** (the house at the top, or the name). Home shows **Back to results** with the number of issues; it brings the list back.
 
 ### Longer text
 
-- [ ] **Longer text** → **Apply and scan**. The page shows longer, accented text, and the panel lists **New with longer text** and **Already broken**.
-- [ ] The bar above explains the added text. **Revert** puts every text back exactly; a reload shows nothing changed.
+- [ ] **Longer text** runs straight away. Each text on the page repeats some of its own words (readable, no accents), and the panel lists **New with longer text** and **Already broken**.
+- [ ] The bar above explains the added text and names the options used. **Change** opens the options; pick **Language samples** → German and **Apply and scan**: the page shows real German.
+- [ ] **Revert** puts every text back exactly; a reload shows nothing changed. **Longer text** again, then click it once more: it reverts too.
 - [ ] Run it again and use the **Revert** pill on the page instead. Same result.
 - [ ] Run it again and close the side panel. The page goes back to normal by itself.
 
 ### Measure
 
-- [ ] **Measure** → click a button on the page. The card shows how many characters fit and whether a translation fits.
+- [ ] **Measure** → the panel says to click any text on the page, with **Cancel**. Click a button on the page. The card shows how many characters fit and whether a translation fits.
 - [ ] Drag the **Length** slider: the button's text changes live, and the card says what breaks.
 - [ ] Try **Name**, **Email** and your own text.
 - [ ] **Close measurement** puts the button's text back.

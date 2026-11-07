@@ -5,6 +5,14 @@ import type { TextStressOptions } from './generate';
 import { accent, hasLetters, resizeParts, stressParts, stressText, textLength } from './generate';
 import { LANGUAGE_SAMPLES, LONG_WORDS, SAMPLE_LANGUAGES } from './samples';
 
+/**
+ * Page-wide filler stops at the nearest whole word, so its length lands within
+ * half a word (and its space) of the target.
+ */
+function expectNear(length: number, target: number, longestWord: number): void {
+  expect(Math.abs(length - target)).toBeLessThanOrEqual(Math.ceil((longestWord + 1) / 2));
+}
+
 const options = (overrides: Partial<TextStressOptions> = {}): TextStressOptions => ({
   strategy: 'translation',
   intensity: 'worst',
@@ -14,17 +22,23 @@ const options = (overrides: Partial<TextStressOptions> = {}): TextStressOptions 
 });
 
 describe('translation strategy', () => {
-  it('keeps the original as a prefix and reaches the translated length', () => {
+  it('keeps the original as a prefix and reaches about the translated length', () => {
     for (const intensity of STRESS_INTENSITIES) {
       const stressed = stressText('Save changes', options({ intensity }));
       expect(stressed.startsWith('Save changes ')).toBe(true);
-      expect(textLength([stressed])).toBe(translatedLength(12, intensity));
+      expectNear(textLength([stressed]), translatedLength(12, intensity), 'changes'.length);
     }
   });
 
-  it('pads with accented copies of the string’s own words', () => {
-    const stressed = stressText('Save changes', options());
-    expect(stressed.slice('Save changes '.length)).toMatch(/^[Šåṽéçĥñĝš ]+$/u);
+  it('pads with whole words of the string’s own, as they are written', () => {
+    for (let seed = 0; seed < 20; seed += 1) {
+      for (const intensity of STRESS_INTENSITIES) {
+        const words = stressText('Save changes', options({ seed, intensity }))
+          .slice('Save changes '.length)
+          .split(' ');
+        for (const word of words) expect(['Save', 'changes']).toContain(word);
+      }
+    }
   });
 
   it('preserves leading and trailing whitespace', () => {
@@ -53,7 +67,11 @@ describe('translation strategy', () => {
     expect(stressed[0]?.startsWith('You have ')).toBe(true);
     expect(stressed[2]?.startsWith(' unread messages')).toBe(true);
     // 26 characters grow by 80% as a whole, not by 100–200% per short piece.
-    expect(textLength(stressed)).toBe(translatedLength(textLength(parts), 'worst'));
+    expectNear(
+      textLength(stressed),
+      translatedLength(textLength(parts), 'worst'),
+      'messages'.length,
+    );
   });
 
   it('grows unspaced scripts without inserting spaces', () => {
@@ -83,7 +101,7 @@ describe('pseudo strategy', () => {
   it('accents letters, brackets the string, and grows it', () => {
     const stressed = stressText('Save changes', options({ strategy: 'pseudo' }));
     expect(stressed).toMatch(/^\[Šåṽé çĥåñĝéš .+\]$/u);
-    expect(textLength([stressed])).toBe(translatedLength(12, 'worst'));
+    expectNear(textLength([stressed]), translatedLength(12, 'worst'), 'changes'.length);
   });
 
   it('opens the bracket on the first piece and closes it on the last', () => {
@@ -173,6 +191,14 @@ describe('resizeParts', () => {
     const parts = ['Save ', 'changes'];
     for (const target of [1, 4, 6, 12, 20, 57]) {
       expect(textLength(resizeParts(parts, target, 1))).toBe(target);
+    }
+  });
+
+  it('grows by whole words when asked, for text people read', () => {
+    for (const target of [20, 30, 57]) {
+      const [grown = ''] = resizeParts(['Save changes'], target, 1, { wholeWords: true });
+      expectNear(textLength([grown]), target, 'changes'.length);
+      for (const word of grown.split(' ')) expect(['Save', 'changes']).toContain(word);
     }
   });
 

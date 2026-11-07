@@ -1,8 +1,9 @@
 import { i18n } from '#i18n';
-import { X } from 'lucide-react';
+import { Crosshair, X } from 'lucide-react';
 
 import type { PickedElement } from '@/messaging/protocol';
 import type { Tone } from '@/ui/Chip';
+import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { MeasureBar } from '@/ui/MeasureBar';
@@ -23,6 +24,8 @@ interface InspectCardProps {
   picking: boolean;
   picked: PickedElement | null;
   onClose: () => void;
+  /** Stops picking without measuring anything (also Esc). */
+  onCancelPick: () => void;
   /** Must keep its identity: a new function would put the tried text back. */
   onTryText: TryTextProps['onTry'];
   /** The picked element's whole text, to start editing from. Keep its identity stable. */
@@ -42,15 +45,31 @@ function keyOf(picked: PickedElement): number {
   return key;
 }
 
-export function InspectCard({ picking, picked, onClose, onTryText, onTextOf }: InspectCardProps) {
+export function InspectCard({
+  picking,
+  picked,
+  onClose,
+  onCancelPick,
+  onTryText,
+  onTextOf,
+}: InspectCardProps) {
   if (picking) {
+    // The panel waits for a click on the page: say so where the eye already is, with a way out.
     return (
-      <p
-        className="animate-enter rounded-card bg-accent-soft p-3 shadow-[0_0_0_1px_var(--color-accent)]"
-        role="status"
-      >
-        {i18n.t('inspect.hint')}
-      </p>
+      <div className="flex animate-enter items-center gap-2 rounded-card bg-accent-soft p-3 shadow-[0_0_0_1px_var(--color-accent)]">
+        <Crosshair
+          size={16}
+          strokeWidth={1.5}
+          aria-hidden="true"
+          className="shrink-0 text-accent"
+        />
+        <p className="min-w-0 flex-1" role="status">
+          {i18n.t('inspect.hint')}
+        </p>
+        <Button size="sm" aria-keyshortcuts="Escape" onClick={onCancelPick}>
+          {i18n.t('actions.cancel')}
+        </Button>
+      </div>
     );
   }
   if (!picked) return null;

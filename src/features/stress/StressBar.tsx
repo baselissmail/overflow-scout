@@ -9,8 +9,11 @@ interface StressBarProps {
   strategy: StressStrategy;
   pending: number;
   busy: boolean;
+  /** The options form is open under the bar. */
+  optionsOpen: boolean;
   onRevert: () => void;
   onReapply: () => void;
+  onOptions: () => void;
 }
 
 /** Why the text looks the way it does, so it isn't mistaken for a broken page. */
@@ -28,7 +31,15 @@ function explanation(strategy: StressStrategy): string {
 }
 
 /** Shown while stress text is on the page: the page is never left modified silently. */
-export function StressBar({ strategy, pending, busy, onRevert, onReapply }: StressBarProps) {
+export function StressBar({
+  strategy,
+  pending,
+  busy,
+  optionsOpen,
+  onRevert,
+  onReapply,
+  onOptions,
+}: StressBarProps) {
   return (
     <section
       className="flex animate-enter flex-col gap-2 rounded-card bg-raised p-3 shadow-raised"
@@ -41,6 +52,15 @@ export function StressBar({ strategy, pending, busy, onRevert, onReapply }: Stre
           <div className="min-w-0">
             <p className="font-medium">{i18n.t('stress.active')}</p>
             <p className="text-small text-fg-muted">{explanation(strategy)}</p>
+            {/* The results below name the options used; this is the way to change them. */}
+            <button
+              type="button"
+              aria-expanded={optionsOpen}
+              className="mt-1 text-small text-accent underline decoration-accent/40 underline-offset-[3px] hover:decoration-accent"
+              onClick={onOptions}
+            >
+              {i18n.t('stress.change')}
+            </button>
           </div>
         </div>
         <Button

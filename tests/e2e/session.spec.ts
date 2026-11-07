@@ -19,11 +19,12 @@ async function scan(panel: Page): Promise<void> {
     .click();
 }
 
+/** One click runs it with the saved options: from Home, or from the action bar. */
 async function runStress(panel: Page): Promise<void> {
-  const form = panel.getByRole('form', { name: 'Test with longer text' });
-  if (!(await form.isVisible()))
-    await panel.getByRole('button', { name: /^(Test with longer text|Longer text)/ }).click();
-  await form.getByRole('button', { name: 'Apply and scan' }).click();
+  await panel
+    .getByRole('button', { name: /^(Test with longer text|Longer text)/ })
+    .first()
+    .click();
   await expect(panel.getByRole('button', { name: 'Revert' })).toBeVisible();
 }
 
@@ -78,6 +79,12 @@ test.describe('demo page', () => {
     expect(Number(badge)).toBeGreaterThan(0);
     // Everything runs locally (plan §6.4).
     expect(requests.filter((url) => !url.startsWith('chrome-extension://'))).toEqual([]);
+
+    // Home is one click away from anywhere, and leads back to the results it kept.
+    await panel.getByRole('button', { name: 'Home', exact: true }).click();
+    await expect(results(panel)).toBeHidden();
+    await panel.getByRole('button', { name: /^Back to results \d+ issues on this page/ }).click();
+    await expect(rows(panel).first()).toBeVisible();
 
     // Clearing the results goes back to the start screen.
     await panel.getByRole('button', { name: 'Clear results' }).click();
@@ -262,7 +269,9 @@ test.describe('demo page', () => {
         /^Translation length · Realistic · [\d.]+× longer: \d+ new, \d+ already broken$/,
       ),
     ).toBeVisible();
-    await expect(panel.getByText(/accented words are added on purpose/)).toBeVisible();
+    await expect(panel.getByText(/repeats some of its own words on purpose/)).toBeVisible();
+    // The longer text is real words from the page, not accented look-alikes.
+    expect(await pageText(demo)).not.toMatch(/[åĝöðšĥ]/);
 
     await panel.getByRole('button', { name: 'Revert' }).click();
     await expect(panel.getByRole('button', { name: 'Revert' })).toBeHidden();
@@ -286,7 +295,7 @@ test.describe('demo page', () => {
     const panel = await openPanel(tabId);
 
     await panel.getByRole('button', { name: /^(Measure an element|Measure)/ }).click();
-    await expect(panel.getByText('Click an element on the page.', { exact: false })).toBeVisible();
+    await expect(panel.getByText('Click any text on the page to measure it.')).toBeVisible();
     const button = demo.getByRole('button', { name: 'Add to cart' }).first();
     const box = await button.boundingBox();
     if (!box) throw new Error('The demo button has no box');

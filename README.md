@@ -9,8 +9,9 @@ Chrome's side panel, next to the page:
 
 - **Scan page** finds every text that is clipped with no cue, ends in an ellipsis, runs out of
   its box, or makes the page scroll sideways, and says how much doesn't fit.
-- **Test with longer text** makes every text as long as a translation would be (or pseudo-locale,
-  long words, or real text in other scripts), shows what breaks, then puts the page back exactly.
+- **Test with longer text** makes every text as long as a translation would be, with more of its
+  own words (or real text in other scripts, long words, or accented pseudo-locale), shows what
+  breaks, and puts the page back exactly with one click.
 - **What to do** suggests CSS fixes for each result and tries each one on the page, so you know
   whether it works and how the box changes.
 - **Measure an element** shows how many characters fit and lets you try real names, products,

@@ -1,5 +1,5 @@
 import { i18n } from '#i18n';
-import { ChevronRight, Crosshair, ScanText, WholeWord } from 'lucide-react';
+import { ChevronRight, Crosshair, ListChecks, ScanText, WholeWord } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useOpenShortcut } from '@/features/page/use-open-shortcut';
@@ -7,10 +7,13 @@ import { Button } from '@/ui/Button';
 import { Kbd } from '@/ui/Kbd';
 import { interpolate } from '@/ui/interpolate';
 
-import { OverflowDemo } from './OverflowDemo';
+import { DEMO_SOURCE, DEMO_TRANSLATION, OverflowDemo } from './OverflowDemo';
 
 interface HomeProps {
   disabled: boolean;
+  /** Results kept from the last scan or test (ignored ones left out), or null. */
+  resultCount: number | null;
+  onResults: () => void;
   onScan: () => void;
   onStress: () => void;
   onInspect: () => void;
@@ -60,10 +63,30 @@ function Row({
  * First run and no results yet. It shows the idea before asking for anything:
  * the demo, one primary action, and the two others as rows (plan §5.3).
  */
-export function Home({ disabled, onScan, onStress, onInspect, onDemo }: HomeProps) {
+export function Home({
+  disabled,
+  resultCount,
+  onResults,
+  onScan,
+  onStress,
+  onInspect,
+  onDemo,
+}: HomeProps) {
   const shortcut = useOpenShortcut();
   return (
     <section className="flex flex-col gap-4" aria-labelledby="home-title">
+      {resultCount !== null && (
+        // Coming Home never throws results away: the way back is the first thing here.
+        <div className="overflow-hidden rounded-card bg-raised shadow-raised">
+          <Row
+            icon={<ListChecks {...ICON} />}
+            title={i18n.t('home.results')}
+            body={i18n.t('home.resultsBody', resultCount, [String(resultCount)])}
+            disabled={false}
+            onClick={onResults}
+          />
+        </div>
+      )}
       <div className="flex flex-col gap-3 rounded-card bg-raised p-3 shadow-raised">
         {/* What it's for, then the idea shown, then what the button does. */}
         <h2 id="home-title" className="text-title font-semibold text-balance">
@@ -71,7 +94,9 @@ export function Home({ disabled, onScan, onStress, onInspect, onDemo }: HomeProp
         </h2>
         <figure className="flex flex-col gap-1.5">
           <OverflowDemo />
-          <figcaption className="text-small text-fg-muted">{i18n.t('home.demoCaption')}</figcaption>
+          <figcaption className="text-small text-fg-muted">
+            {i18n.t('home.demoCaption', [DEMO_SOURCE, DEMO_TRANSLATION])}
+          </figcaption>
         </figure>
         <p className="text-pretty text-fg-muted">{i18n.t('home.scan')}</p>
         <Button

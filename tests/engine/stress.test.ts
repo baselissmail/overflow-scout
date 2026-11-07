@@ -35,7 +35,9 @@ describe('StressSession', () => {
 
       expect(doc.getElementById('p')?.firstChild).toBe(node);
       expect(textOf(doc, '#p').startsWith('Save changes ')).toBe(true);
-      expect(Array.from(textOf(doc, '#p'))).toHaveLength(translatedLength(12, 'worst'));
+      // Whole words: within half a word ("changes" and its space) of the translated length.
+      const length = Array.from(textOf(doc, '#p')).length;
+      expect(Math.abs(length - translatedLength(12, 'worst'))).toBeLessThanOrEqual(4);
       expect(stats).toMatchObject({ strings: 2, textNodes: 2, placeholders: 0 });
       expect(stats.growth).toBeGreaterThan(1.5);
       expect(session.active).toBe(true);
@@ -49,7 +51,9 @@ describe('StressSession', () => {
         await new StressSession(doc).apply();
         expect(textOf(doc, 'b')).toBe('3');
         expect(textOf(doc, '#p').startsWith('You have 3 unread messages')).toBe(false);
-        expect(textOf(doc, '#p').replace(/\s+/g, ' ')).toHaveLength(translatedLength(26, 'worst'));
+        const length = textOf(doc, '#p').replace(/\s+/g, ' ').length;
+        // Whole words: within half a word ("messages" and its space) of the translated length.
+        expect(Math.abs(length - translatedLength(26, 'worst'))).toBeLessThanOrEqual(5);
       },
     );
   });
@@ -247,11 +251,12 @@ describe('runStressTest', () => {
       const [finding] = result.atRisk;
       result.session.revert();
 
-      expect(finding).toMatchObject({ kind: 'hidden', growth: 3 });
+      // "Save" becomes "Save Save Save": whole words, the nearest to 3× (12 characters).
+      expect(finding).toMatchObject({ kind: 'hidden', growth: 3.5 });
       expect(finding?.diagnosis.confidence).toBe('high');
       expect(finding?.diagnosis.causes[0]).toMatchObject({ property: 'width', value: '64px' });
       expect(finding?.diagnosis.causes[0]?.note).toMatch(
-        /^Width stayed 64px while the text grew 3×/,
+        /^Width stayed 64px while the text grew 3\.5×/,
       );
     });
   });

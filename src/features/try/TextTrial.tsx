@@ -45,9 +45,12 @@ function presetLabel(kind: PresetKind): string {
 
 const chars = (length: number) => i18n.t('inspect.chars', length, [String(length)]);
 
-/** The text at another length, grown or shortened the way the longer-text test does it. */
-const resized = (text: string, length: number) =>
-  resizeParts([text], Math.max(1, length), 1)[0] ?? text;
+/**
+ * The text at another length, grown or shortened the way the longer-text test
+ * does it. The slider asks for an exact length; the buttons for whole words.
+ */
+const resized = (text: string, length: number, wholeWords = false) =>
+  resizeParts([text], Math.max(1, length), 1, { wholeWords })[0] ?? text;
 
 /** Fits, or what breaks and by how much: icon and words, never color alone. */
 function Outcome({ trial }: { trial: TextTrialDto }) {
@@ -177,7 +180,7 @@ export function TextTrial({
             size="sm"
             onClick={() => {
               setPreset(null);
-              apply(resized(initialText, option.length));
+              apply(resized(initialText, option.length, true));
             }}
           >
             {option.label}

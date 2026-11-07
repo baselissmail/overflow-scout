@@ -1,42 +1,49 @@
 import { i18n } from '#i18n';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-/** A label lengthening the way a translation does (pseudo-locale filler after the original). */
-const FINAL = 'Save changes Šåṽé çĥåñĝéš';
-const START = 'Save';
+/**
+ * A real label and its real translation, so the idea reads without any jargon.
+ * German is the usual first casualty: the same words, about 70% longer.
+ */
+export const DEMO_SOURCE = 'Save changes';
+export const DEMO_TRANSLATION = 'Änderungen speichern';
+/** How long the English label shows before the German is typed over it. */
+const HOLD_MS = 1200;
 const BOX = { x: 16, y: 14, width: 116, height: 34 };
 const TEXT_X = BOX.x + 12;
 /** Overflow is clipped at the box edge; the label starts after the padding. */
 const EDGE = BOX.x + BOX.width;
 const HAS = EDGE - TEXT_X;
-const STEP_MS = 55;
+const STEP_MS = 60;
 const BAR = { y: 72, width: 248 };
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
- * The home screen's one authored moment: a button label grows past its box,
- * a crop mark lands on the edge, and the measure bar shows what it now needs.
- * Plays once. SVG, so the panel's own stress test leaves it alone.
+ * The home screen's one authored moment: an English button label fits, then its
+ * German translation is typed in and runs past the box, a crop mark lands on
+ * the edge, and the measure bar shows what it now needs. Plays once. SVG, so
+ * the panel's own stress test leaves it alone.
  */
 export function OverflowDemo() {
-  const [length, setLength] = useState(() => (reducedMotion() ? FINAL.length : START.length));
+  // 0 shows the English label; then this many letters of the German one.
+  const [step, setStep] = useState(() => (reducedMotion() ? DEMO_TRANSLATION.length : 0));
   const [textWidth, setTextWidth] = useState(0);
   const textRef = useRef<SVGTextElement>(null);
-  const text = FINAL.slice(0, length);
+  const text = step === 0 ? DEMO_SOURCE : DEMO_TRANSLATION.slice(0, step);
 
   useEffect(() => {
-    if (length >= FINAL.length) return;
+    if (step >= DEMO_TRANSLATION.length) return;
     const timer = setTimeout(
       () => {
-        setLength((current) => current + 1);
+        setStep((current) => current + 1);
       },
-      length === START.length ? 500 : STEP_MS,
+      step === 0 ? HOLD_MS : STEP_MS,
     );
     return () => {
       clearTimeout(timer);
     };
-  }, [length]);
+  }, [step]);
 
   useLayoutEffect(() => {
     setTextWidth(textRef.current?.getComputedTextLength() ?? 0);
@@ -53,7 +60,7 @@ export function OverflowDemo() {
       viewBox="0 0 280 104"
       className="w-full max-w-[280px]"
       role="img"
-      aria-label={i18n.t('home.demoLabel')}
+      aria-label={i18n.t('home.demoLabel', [DEMO_SOURCE, DEMO_TRANSLATION])}
     >
       <defs>
         <pattern

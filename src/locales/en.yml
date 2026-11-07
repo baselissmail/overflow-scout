@@ -46,13 +46,19 @@ actions:
   clearResults: Clear results
   previous: Previous place
   next: Next place
+  home: Home
 home:
   scan: Checks this page for text that’s cut off, truncated or overflowing. The page itself doesn’t change.
-  stress: Makes every text as long as a translation would, shows what breaks, then puts the page back.
-  inspect: Pick an element and see how much text fits in it.
+  stress: Makes every text on the page as long as a translation, and lists what breaks. Revert puts it all back.
+  inspect: Click any text on the page to see how much more fits, and try your own words in it.
   shortcut: Open this panel with $1.
-  demoLabel: A button label grows longer, as it would in translation, until it no longer fits its button.
-  demoCaption: The accents stand in for a translation that makes the label longer. Overflow Scout shows where it’s cut, and by how much.
+  demoLabel: The button label “$1” becomes “$2” in German, and no longer fits its button.
+  demoCaption: “$1” is “$2” in German, and no longer fits. Overflow Scout finds text like this, and shows how much is cut.
+  results: Back to results
+  resultsBody:
+    0: Nothing was cut off on this page.
+    1: 1 issue on this page.
+    n: $1 issues on this page.
 busy:
   connecting: Connecting to the page…
   scanning: Scanning…
@@ -222,19 +228,20 @@ stress:
   scopePicked: Picked element
   apply: Apply and scan
   active: Longer test text is on the page
-  activeTranslation: The accented words are added on purpose, to make each text as long as a translation. Revert puts every text back exactly.
-  activePseudo: The accents and [brackets] are added on purpose. A missing ] shows where a text was cut. Revert puts every text back exactly.
+  activeTranslation: Each text repeats some of its own words on purpose, to make it as long as a translation. Revert puts every text back exactly.
+  activePseudo: The accented letters and [brackets] are added on purpose. A missing ] shows where a text was cut. Revert puts every text back exactly.
   activeLongWords: The long words, links and email addresses are added on purpose, to test text that can’t wrap. Revert puts every text back exactly.
   activeLanguage: The text is replaced with real text in another language, to test other scripts. Revert puts every text back exactly.
   scopePickedHint: To test one element, pick it with Measure an element first.
+  change: Change options
 strategy:
   translation: Translation length
-  pseudo: Pseudo-locale
+  pseudo: Accented pseudo-locale
   longWords: Long words
   language: Language samples
 strategyDescription:
-  translation: Adds accented copies of each string’s words, up to the length a translation needs.
-  pseudo: Accents every letter and brackets each string. A missing ] means the end was cut off.
+  translation: Repeats some of each text’s own words, up to the length a translation needs. The text stays readable.
+  pseudo: Swaps each letter for an accented look-alike (Save → Šåṽé) and brackets each text. A missing ] means the end was cut off.
   longWords: Adds a long word, URL or email address that can’t wrap.
   language: Replaces text with real text in another language and script.
 intensity:
@@ -255,7 +262,7 @@ language:
 inspect:
   heading: Measure
   close: Close measurement
-  hint: Click an element on the page. Press Esc to cancel.
+  hint: Click any text on the page to measure it.
   noText: This element has no text to grow.
   fitsUpTo: Fits up to $1 characters.
   fitsAll: Still fits at $1 characters.
@@ -336,6 +343,7 @@ commands:
   groupHelp: Help
   runStress: Test with longer text now
   stressOptions: Longer text options
+  home: Go to Home
   clearResults: Clear results
   copyReport: Copy report as Markdown
   saveJson: Save results as JSON

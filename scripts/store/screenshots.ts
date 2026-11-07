@@ -105,7 +105,6 @@ async function main(): Promise<void> {
     // 3. Longer text: what breaks once the page is translated.
     await panel.keyboard.press('Escape');
     await panel.getByRole('button', { name: /^(Longer text|Test with longer text)/ }).click();
-    await panel.getByRole('button', { name: 'Apply and scan' }).click();
     await panel.getByRole('button', { name: 'Revert' }).waitFor();
     await rows.first().waitFor();
     await demo.evaluate(() => {

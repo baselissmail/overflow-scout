@@ -119,8 +119,8 @@ A first-time user called the panel cumbersome. The pass followed `unslop`
 and the chrome around it stays quiet.
 
 - **One primary action per view.** In the toolbar, Scan is filled; Longer text
-  and Measure are quiet until they're on. Below 360 px their labels are only
-  read out, so the toolbar keeps one line.
+  and Measure are quiet until they're on. Their labels always show; on narrow
+  panels the row wraps rather than leaving bare icons (see Wayfinding).
 - **Severity is a dot and words**, never a colored pill, in rows, chips and
   headers. The three-color severity bar is gone: one line of counts says it.
 - **Results start high.** One summary line (counts, what the levels mean,
@@ -172,13 +172,37 @@ narrow (< 520 px)                         wide (≥ 520 px)
   and content that is truncated on purpose (long page text, selectors) carries
   its full text in a `title` and in the detail view.
 
+### Wayfinding (2026-11-07)
+
+The same user saw pseudo-locale text as gibberish, couldn't find the way back to
+the start screen, and found clicks confusing. The pass checked the panel against
+Nielsen's heuristics and the cognitive-load checklist in Impeccable's
+`critique.md`:
+
+- **Home is always one click away** (user control and freedom). The house
+  button in the header, and the name beside the mark, lead Home from any view.
+  Home never throws results away: its first row is "Back to results" with the
+  count. Going Home closes the Measure card and the options form; longer text
+  stays on the page, with its bar, until reverted.
+- **A button does what it says** (match with the real world). "Longer text" and
+  "Test with longer text" run the test with the saved options; pressing the
+  toolbar button again reverts. The options (strategy, intensity, direction,
+  scope) moved behind "Change options" in the stress bar, the command palette,
+  and Settings: four choices no longer stand between the first click and the
+  result.
+- **Waiting for a click on the page says so, with a way out** (visibility of
+  status). Measure shows "Click any text on the page to measure it" and Cancel.
+- **Labels over bare icons** (recognition rather than recall): the toolbar keeps
+  its words at every width.
+
 ## Writing
 
 - Name things by what users do and see: "Scan page", "Test with longer text",
   "Measure an element", "Revert". Not tool jargon: "stress test" reads as load
   testing to QA, and "Inspect" as DevTools. The code keeps `stress` and
   `inspect` as ids. Once results show, the toolbar uses the short forms
-  "Longer text" and "Measure" so the three actions fit on one row at 400 px;
+  "Longer text" and "Measure" so the three actions fit on one row at 400 px
+  (narrower, the row wraps);
   Home and the command palette keep the full names, and the palette also finds
   them by their old names. Problems
   are named by what goes wrong ("Cut off", "Overflows", "Wider than window",
@@ -189,7 +213,12 @@ narrow (< 520 px)                         wide (≥ 520 px)
 - Stress results say how they were made: strategy (or language), intensity,
   and growth. Intensity applies to every strategy, language samples included.
 - Stress text that looks odd says so: the stress bar explains, per strategy,
-  that the accents, brackets or long words are added on purpose.
+  that the repeated words, accents, brackets or long words are added on purpose.
+- Use real words wherever people read them. The default longer text repeats a
+  text's own words ("4d ago 4d ago 4d"), so it stays readable in the page's own
+  language; accented pseudo-locale ("Šåṽé") is an option for those who know it,
+  never the default. The Home demo is a real translation: "Save changes" →
+  "Änderungen speichern".
 - No implementation words in the UI: "texts", not "text nodes" or "strings";
   "window", not "viewport".
 - Every result ends in a next step: the detail leads with "What to do" (a plain

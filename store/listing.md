@@ -19,7 +19,7 @@ It opens in Chrome's side panel, next to the page, and changes nothing until you
 
 WHAT IT DOES
 • Scan page: lists every text that is clipped with no cue, ends in an ellipsis, runs out of its box, or makes the page scroll sideways, and how much doesn't fit.
-• Test with longer text: makes every text as long as a translation would be (or uses pseudo-locale, long words, or real German, Finnish, Russian, Arabic, Japanese or Thai text), shows what breaks, then puts the page back exactly.
+• Test with longer text: makes every text as long as a translation would be (or uses pseudo-locale, long words, or real German, Finnish, Russian, Arabic, Japanese or Thai text), shows what breaks, and puts the page back exactly with one click.
 • What to do: each result comes with CSS fixes, and each fix is tried on the page for a moment, so you know whether it works and how the box changes.
 • Measure an element: pick any element, see how many characters fit, and try real names, products, links, emails or your own text, live.
 • Reports: copy a Markdown report for GitHub or Jira, copy a cropped screenshot, or save everything as JSON.
