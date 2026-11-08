@@ -18,7 +18,7 @@ Overflow Scout 1.0 goes out as an **update to the existing Chrome Web Store item
 
 ## Each release
 
-1. **Merge to `main`.** The **Release** workflow keeps a pull request named `chore(main): release x.y.z` up to date, with the version bump and the changelog.
+1. **Merge to `main`.** The **Release** workflow keeps a pull request named `chore(main): release x.y.z` up to date, with the version bump and the changelog. The version follows the commits since the last release: `fix:` gives a patch, `feat:` a minor version.
 2. **Review and merge that pull request.** The workflow then:
    - tags `vx.y.z`;
    - publishes a GitHub release with the changelog;
@@ -28,7 +28,6 @@ Overflow Scout 1.0 goes out as an **update to the existing Chrome Web Store item
 
 3. **Test the zip by hand** with [TESTING.md](TESTING.md) (about 15 minutes).
 4. **Update the store item** (next section).
-5. **After 1.0.0 only:** remove `"release-as": "1.0.0"` from `release-please-config.json`, so later versions follow the commits (`fix:` gives a patch, `feat:` a minor version).
 
 To build the zip locally instead, run `pnpm zip` on the release tag. The result is in `.output/`.
 
