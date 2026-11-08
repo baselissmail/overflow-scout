@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Layout wrappers that text runs out of harmlessly</title>
+    <!--
+      Found while dogfooding (Phase 6): boxes with no visible edge whose content
+      runs past them without landing on anything. Readers see an ordinary page.
+    -->
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+        /* Hero art may bleed past the window; the page doesn't scroll sideways. */
+        overflow-x: hidden;
+      }
+      .case {
+        margin: 0 0 32px;
+      }
+      .card {
+        display: inline-block;
+        width: 260px;
+        margin-right: 16px;
+        padding: 8px;
+        border: 1px solid #ccc;
+        vertical-align: top;
+      }
+      .card-title {
+        white-space: nowrap;
+      }
+      pre {
+        margin: 0;
+        font: 14px/20px monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A code sample in a fixed-height row of a taller dark panel (a docs hero). -->
+    <section class="case" style="height: 320px; padding: 16px; background: #111; color: #eee">
+      <div style="height: 80px">
+        <pre data-expect="ok">
+import { createRoot } from 'react-dom/client';
+
+const root = createRoot(document.getElementById('app'));
+root.render(&lt;App /&gt;);
+// The rest of the sample fills the panel below the row.
+console.log('ready');</pre>
+      </div>
+    </section>
+
+    <!-- A zero-height wrapper whose list shows below it, under a decorative overlay. -->
+    <div
+      class="case"
+      style="position: relative; height: 200px; overflow: auto; border: 1px solid #ccc"
+    >
+      <div
+        style="position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 4px #eef"
+      ></div>
+      <div style="height: 0">
+        <p style="margin: 0" data-expect="ok">Rethinking Best Practices</p>
+        <p style="margin: 0" data-expect="ok">Introducing React Native</p>
+        <p style="margin: 0" data-expect="ok">Data Fetching with React Server Components</p>
+      </div>
+    </div>
+
+    <!-- A product mock wider than the window, cropped by its frame past the window's edge. -->
+    <div class="case" style="position: relative; width: 1300px; height: 64px; overflow: hidden">
+      <div class="card" style="position: absolute; left: 0">
+        <div class="card-title" data-expect="ok">Clean up deprecated APIs</div>
+      </div>
+      <div class="card" style="position: absolute; left: 300px">
+        <div class="card-title" data-expect="ok">Improve fallback messaging</div>
+      </div>
+      <div class="card" style="position: absolute; left: 600px">
+        <div class="card-title" data-expect="ok">Reduce ETA fluctuations</div>
+      </div>
+      <div class="card" style="position: absolute; left: 1150px">
+        <div class="card-title" data-expect="ok">Remove contentData fields</div>
+      </div>
+    </div>
+
+    <!-- A code sample wider than its block, in a padded scroll container: it scrolls. -->
+    <div class="case" style="width: 300px; height: 120px; padding: 16px; overflow: auto">
+      <div>
+        <pre data-expect="ok">
+&lt;Stack direction="row" spacing={2} useFlexGap sx={{ width: '100%' }}&gt;</pre>
+      </div>
+    </div>
+
+    <!-- A product mock wider than the column it sits in; the column has no visible edge. -->
+    <div class="case" style="width: 300px">
+      <div style="width: 420px; display: flex; gap: 8px">
+        <div style="flex: none; width: 240px" data-expect="ok">Ship faster with components</div>
+        <button type="button" style="flex: none" data-expect="ok">Install library</button>
+      </div>
+    </div>
+
+    <!-- A layered illustration: a chart layer over a timeline layer; its legend runs past its row. -->
+    <div class="case" style="position: relative; height: 160px; background: #111; color: #aaa">
+      <div style="position: relative; height: 160px">JAN · FEB · MAR · APR</div>
+      <div style="position: absolute; inset: 20px 0 auto 0">
+        <div style="height: 80px"></div>
+        <div style="display: flex; gap: 24px; height: 8px">
+          <div style="height: 8px; line-height: 20px" data-expect="ok">Oct 2025</div>
+          <div style="height: 8px; line-height: 20px" data-expect="ok">Nov 2025</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- An app shell one window tall, whose content continues below it. Nothing follows it. -->
+    <div style="height: 100vh">
+      <article>
+        <h2 data-expect="ok">Getting started</h2>
+        <p data-expect="ok">
+          The shell is exactly one window tall, as single-page apps often make it. Its content runs
+          past the bottom, and the page simply scrolls to show it.
+        </p>
+        <div style="height: 900px"></div>
+        <p data-expect="ok">Help · Documentation · Status · Privacy · Terms</p>
+      </article>
+    </div>
+  </body>
+</html>

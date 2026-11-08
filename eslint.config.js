@@ -38,6 +38,8 @@ export default defineConfig(
     'coverage/',
     'playwright-report/',
     'test-results/',
+    // Dogfood runs: the built engine and scratch scripts (pnpm dogfood).
+    '.dogfood/',
     'stats.html',
   ]),
 

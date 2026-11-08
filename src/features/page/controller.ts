@@ -52,6 +52,11 @@ export class CaptureNotAllowed extends Error {
   override name = 'CaptureNotAllowed';
 }
 
+/** The panel's tab isn't the one in front, so a capture would show another page. */
+export class CaptureHidden extends Error {
+  override name = 'CaptureHidden';
+}
+
 export interface ControllerDeps {
   connect: (tabId: number) => Promise<{ connection: PageConnection; page: PageInfo }>;
   /** Shows the issue count on the toolbar button for a tab; null clears it. */
@@ -93,6 +98,8 @@ export class PanelController {
   private connection: PageConnection | null = null;
   private connecting: Promise<PageConnection> | null = null;
 
+  /** Counts navigations, so work they interrupted ends quietly instead of as an error. */
+  private navigations = 0;
   /** The issues the badge counts, so it can be redone when ignore rules change. */
   private badged: readonly IssueDto[] | null = null;
   private ignored: ReadonlySet<string> = new Set();
@@ -113,8 +120,14 @@ export class PanelController {
     this.set({ ...INITIAL, tabId });
   }
 
-  /** The target tab started loading a new document. */
+  /**
+   * The page the results describe is gone: a new document loaded (the port
+   * closed) or a single-page app changed route (the page said so). Ending the
+   * connection makes the page put stress text back and remove its overlay,
+   * whether or not its script is still there.
+   */
   navigated(): void {
+    this.navigations += 1;
     this.disconnect();
     if (this.state.tabId !== null) this.deps.setBadge(this.state.tabId, null);
     this.set({
@@ -253,6 +266,15 @@ export class PanelController {
     await this.run(null, (connection) => connection.request('reveal', { findingId }));
   }
 
+  /**
+   * The tab started loading. With a connection open, the port closing (or the
+   * page's own `navigated`) handles it; without one, nothing else will: a
+   * restricted-page notice or a half-finished connect would stay on screen.
+   */
+  tabLoading(): void {
+    if (!this.connection) this.navigated();
+  }
+
   /** Closes the inspect card, puts any tried text back, and clears its outline. */
   closeInspect(): void {
     this.set({ picked: null });
@@ -323,14 +345,16 @@ export class PanelController {
   ): Promise<void> {
     if (busy && this.state.busy) return;
     const tabId = this.state.tabId;
+    const navigations = this.navigations;
     if (busy) this.set({ busy, error: null });
     try {
       const connection = await this.ensureConnection();
       await work(connection);
     } catch (error) {
-      // The tab may have changed while we waited; its state is gone already.
+      // The tab may have changed or navigated while we waited; the stale notice says so.
       const cancelled = error instanceof RequestError && error.code === 'cancelled';
-      if (tabId === this.state.tabId && !cancelled && !(error instanceof ConnectionError)) {
+      const moved = tabId !== this.state.tabId || navigations !== this.navigations;
+      if (!moved && !cancelled && !(error instanceof ConnectionError)) {
         this.set({ error: message(error) });
       }
     } finally {
@@ -402,12 +426,15 @@ export class PanelController {
         case 'pick-cancelled':
           this.set({ picking: false });
           break;
+        case 'navigated':
+          this.navigated();
+          break;
       }
     });
     connection.onClose((expected) => {
       if (connection !== this.connection) return;
       this.connection = null;
-      // Unexpected: the page navigated, reloaded, or was closed.
+      // Unexpected: a new document loaded, or the tab closed or went into the back/forward cache.
       if (!expected) this.navigated();
     });
   }

@@ -28,20 +28,16 @@
   </head>
   <body>
     <!--
-      Both patterns cut text on purpose and give a visual cue. The engine can't
-      tell intent from geometry alone, so it reports them as hidden text.
-      Phase 6 dogfooding decides how to recognize them.
+      Both patterns cut text on purpose and give a visual cue. The carousel is
+      recognized since Phase 6 (the slide is placed past the edge, not outgrown
+      by its text). A fading "Read more" preview still is reported: its text
+      does outgrow its box, and the fade is only paint.
     -->
     <div class="case" style="width: 300px; overflow: hidden">
       <div style="display: flex; gap: 16px">
         <div style="flex: 0 0 200px">First slide caption</div>
-        <div
-          style="flex: 0 0 200px"
-          data-expect="ok"
-          data-limitation="carousels that show part of the next slide are reported as hidden text"
-        >
-          Second slide peeks into view
-        </div>
+        <!-- Fixed in Phase 6: the slide's own box is placed past the edge, so it's a crop. -->
+        <div style="flex: 0 0 200px" data-expect="ok">Second slide peeks into view</div>
       </div>
     </div>
     <div class="case">
@@ -55,5 +51,30 @@
       </p>
       <a href="#">Read more</a>
     </div>
+    <!--
+      A sidebar that scrolls only while hovered (`overflow: hidden`, and
+      `overflow-y: auto` on :hover). Found while dogfooding (Phase 6). Telling
+      it apart means reading the page's style rules.
+    -->
+    <style>
+      .hover-scroll {
+        width: 200px;
+        max-height: 60px;
+        overflow: hidden;
+      }
+      .hover-scroll:hover {
+        overflow-y: auto;
+      }
+    </style>
+    <nav class="case hover-scroll">
+      <div>Getting started</div>
+      <div>Components</div>
+      <div
+        data-expect="ok"
+        data-limitation="sidebars that scroll only on hover are reported as hidden text"
+      >
+        Navigation
+      </div>
+    </nav>
   </body>
 </html>

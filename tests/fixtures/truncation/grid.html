@@ -39,14 +39,18 @@
       </div>
       <div data-expect="ok">Open</div>
     </div>
-    <!-- 1fr has an automatic minimum, so the column grows and the grid overflows its box -->
+    <!--
+      1fr has an automatic minimum, so the column grows and the grid overflows its box.
+      The title that grew it is the finding. "Open" is only pushed along: its own cell
+      fits it, and the grid has no visible edge for it to cross (Phase 6 dogfooding).
+    -->
     <div class="case grid-auto">
       <div>
         <div class="truncate" data-expect="spilling">
           Infrastructure monitoring dashboard overview
         </div>
       </div>
-      <div data-expect="spilling">Open</div>
+      <div data-expect="ok">Open</div>
     </div>
     <div class="case grid" style="width: 500px">
       <div><div class="truncate" data-expect="ok">Dashboard</div></div>

@@ -13,7 +13,7 @@ import {
 import { useEffect, useState } from 'react';
 
 import type { ReportContext } from '@/features/report/markdown';
-import { CaptureNotAllowed } from '@/features/page/controller';
+import { CaptureHidden, CaptureNotAllowed } from '@/features/page/controller';
 import { downloadBlob, screenshotName } from '@/features/report/export';
 import { issueMarkdown } from '@/features/report/markdown';
 import type { FixTrialsDto, IssueDto, PreviewKey, ResultOf } from '@/messaging/protocol';
@@ -269,9 +269,11 @@ export function IssueDetail({
                   toast(
                     error instanceof CaptureNotAllowed
                       ? i18n.t('detail.screenshotNeedsClick')
-                      : i18n.t('detail.screenshotFailed', [
-                          error instanceof Error ? error.message : String(error),
-                        ]),
+                      : error instanceof CaptureHidden
+                        ? i18n.t('detail.screenshotHidden')
+                        : i18n.t('detail.screenshotFailed', [
+                            error instanceof Error ? error.message : String(error),
+                          ]),
                   );
                 })
                 .finally(() => {

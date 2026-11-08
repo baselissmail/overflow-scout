@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Boxes placed past a clip, and text that outgrew its box</title>
+    <!--
+      Found while dogfooding (Phase 6). A box placed partly past a clipping edge
+      is cropped on purpose (a product mock in a hero frame); its text fits the
+      box. Text that outgrows its own box and gets clipped is still a problem.
+    -->
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+      .column {
+        flex: none;
+        width: 240px;
+        padding: 8px;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A board mock cropped by its frame inside the window: the last column crosses the edge. -->
+    <div class="case" style="width: 600px; overflow: hidden">
+      <div style="display: flex; gap: 16px">
+        <div class="column"><div data-expect="ok">Backlog</div></div>
+        <div class="column"><div data-expect="ok">In progress</div></div>
+        <div class="column"><div data-expect="ok">Done this week</div></div>
+      </div>
+    </div>
+
+    <!-- A label that can't shrink, cut off by its toolbar: it outgrew the room it has. -->
+    <div class="case" style="display: flex; width: 200px; overflow: hidden; gap: 8px">
+      <span style="flex: none; white-space: nowrap" data-expect="hidden"
+        >Export everything to a spreadsheet</span
+      >
+    </div>
+
+    <!-- Text that outgrew a box of fixed width, inside a clipping column. -->
+    <div class="case" style="width: 300px; overflow: hidden">
+      <p style="margin: 0; white-space: nowrap" data-expect="hidden">
+        Free returns within 30 days on every order, including sale items
+      </p>
+    </div>
+  </body>
+</html>

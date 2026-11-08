@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A spill inside a shadow root</title>
+    <!-- The neighbour search looks at a shadow root's top-level children too. Phase 6 review. -->
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <teaser-card class="case">
+      <template shadowrootmode="open">
+        <div style="width: 240px; height: 40px">
+          <p style="margin: 0" data-expect="spilling">
+            A teaser of fixed height inside a web component: its text runs over the line below it.
+          </p>
+        </div>
+        <p style="margin: 0" data-expect="ok">Posted 3 days ago</p>
+      </template>
+    </teaser-card>
+  </body>
+</html>

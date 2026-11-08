@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" style="color-scheme: dark">
+  <head>
+    <meta charset="utf-8" />
+    <title>A white card on a dark page</title>
+    <!-- The canvas is dark (color-scheme), so a white card's edge is visible. Phase 6 review. -->
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case" style="width: 240px; height: 40px; background: #fff; color: #111">
+      <p style="margin: 0" data-expect="spilling">
+        A white card of fixed height on a dark page. Its text runs past the card's bottom edge.
+      </p>
+    </div>
+  </body>
+</html>

@@ -32,7 +32,7 @@ export default defineConfig({
     // activeTab: the toolbar button, shortcut and context menu grant access to the current tab.
     // scripting: inject the page runtime into that tab when the user starts a scan.
     // sidePanel: the whole UI. storage: hand the latest gesture to a panel that is still opening.
-    // contextMenus: "Inspect text overflow here".
+    // contextMenus: "Measure this element with Overflow Scout".
     permissions: ['activeTab', 'contextMenus', 'scripting', 'sidePanel', 'storage'],
     // Requested per site, from a click in the panel ("Always allow on this site").
     optional_host_permissions: ['http://*/*', 'https://*/*'],

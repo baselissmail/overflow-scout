@@ -5,6 +5,7 @@ import type { IssueDto } from '@/messaging/protocol';
 import { LAST_GESTURE_KEY, gestureMessageSchema } from '@/messaging/protocol';
 
 import { PageConnection } from './connection';
+import { CaptureHidden } from './controller';
 import type { PanelState } from './controller';
 import { PanelController } from './controller';
 
@@ -42,6 +43,9 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
         setBadge,
         capture: async (tabId) => {
           const tab = await browser.tabs.get(tabId);
+          // A capture shows whatever tab is in front; a panel pinned to another tab mustn't
+          // crop someone else's page.
+          if (!tab.active) throw new CaptureHidden();
           return browser.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
         },
       }),
@@ -80,7 +84,7 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
     };
     const onUpdated = (tabId: number, change: { status?: string }) => {
       if (tabId === controller.getState().tabId && change.status === 'loading') {
-        controller.navigated();
+        controller.tabLoading();
       }
     };
     const onRemoved = (tabId: number) => {

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spills past boxes with no visible edge</title>
+    <!--
+      A box without a border or background still breaks when its text lands on
+      what comes next (found while dogfooding, Phase 6).
+    -->
+    <style>
+      body {
+        margin: 16px;
+        font: 16px/1.4 sans-serif;
+      }
+      .case {
+        margin: 0 0 24px;
+        width: 260px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="case">
+      <div style="height: 40px">
+        <p style="margin: 0" data-expect="spilling">
+          A fixed-height teaser with no border: its four lines of text run over the paragraph right
+          below it.
+        </p>
+      </div>
+      <p style="margin: 0" data-expect="ok">Posted 3 days ago</p>
+    </div>
+    <div class="case">
+      <div style="min-height: 40px">
+        <p style="margin: 0" data-expect="ok">
+          With min-height the teaser grows, and the line below moves down to make room.
+        </p>
+      </div>
+      <p style="margin: 0" data-expect="ok">Posted 3 days ago</p>
+    </div>
+  </body>
+</html>

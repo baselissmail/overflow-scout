@@ -291,6 +291,8 @@ export const pageMessageSchema = z.discriminatedUnion('type', [
   /** Stress was reverted on the page itself (the overlay's Revert button). */
   z.object({ type: z.literal('reverted'), result: revertResultSchema }),
   z.object({ type: z.literal('picked'), picked: pickedElementSchema }),
+  /** The page changed route without loading (single-page apps); results describe the old one. */
+  z.object({ type: z.literal('navigated') }),
   z.object({ type: z.literal('pick-cancelled') }),
 ]);
 
