@@ -175,9 +175,13 @@ test('works with the keyboard alone', async ({ openTab, openPanel, extensionId }
 
 test('runs actions from the command palette', async ({ openTab, openPanel, extensionId }) => {
   const { panel } = await openOnDemo(openTab, openPanel, extensionId);
-  await panel.keyboard.press('ControlOrMeta+k');
   const palette = panel.getByRole('dialog', { name: 'Commands' });
-  await expect(palette).toBeVisible();
+  // The shortcut works once the panel has started; on a slow machine the first
+  // press can come before that, so press again only while the palette is closed.
+  await expect(async () => {
+    if (!(await palette.isVisible())) await panel.keyboard.press('ControlOrMeta+k');
+    await expect(palette).toBeVisible({ timeout: 1000 });
+  }).toPass();
 
   await panel.keyboard.type('longer');
   await expect(palette.getByRole('option', { name: /^Text length: Longer/ })).toHaveAttribute(

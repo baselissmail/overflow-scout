@@ -324,12 +324,12 @@ test.describe('demo page', () => {
     expect((await tried.textContent())?.length).toBeGreaterThan('Add to cart'.length);
     await view.getByRole('button', { name: 'Long link' }).click();
     await expect.poll(() => tried.textContent()).toContain('https://');
-    // Your own words, live as you type.
-    await field.fill('Add to basket');
-    await expect.poll(() => tried.textContent()).toBe('Add to basket');
-    await expect(view).toContainText(/Fits at 13 characters\./);
+    // Your own words, live as you type. Short ones, so they fit with any font.
+    await field.fill('Buy now');
+    await expect.poll(() => tried.textContent()).toBe('Buy now');
+    await expect(view).toContainText(/Fits at 7 characters\./);
     await view.getByRole('button', { name: 'Longer', exact: true }).click();
-    await expect(field).not.toHaveValue('Add to basket');
+    await expect(field).not.toHaveValue('Buy now');
     await view.getByRole('button', { name: 'Put the text back' }).click();
     await expect.poll(() => tried.textContent()).toBe('Add to cart');
 
