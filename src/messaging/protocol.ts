@@ -13,6 +13,7 @@ import {
   FINDING_KINDS,
   FIX_KEYS,
   SAMPLE_LANGUAGES,
+  SCALE_LIMITS,
   STRESS_INTENSITIES,
   STRESS_STRATEGIES,
 } from '@/core';
@@ -112,6 +113,8 @@ export const stressOptionsSchema = z.object({
   intensity: z.enum(STRESS_INTENSITIES),
   language: z.enum(SAMPLE_LANGUAGES),
   rtl: z.boolean(),
+  /** A custom test: every text this many times as long, in place of `intensity`. */
+  scale: z.optional(z.number().check(z.gte(SCALE_LIMITS.min), z.lte(SCALE_LIMITS.max))),
 });
 
 const stressStatsSchema = z.object({

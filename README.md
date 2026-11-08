@@ -10,13 +10,15 @@ Chrome's side panel, next to the page:
 - **Check page** finds every text that is cut off with no sign, cut short with "...", spills out
   of its box, or makes the page scroll sideways, and says how much doesn't fit.
 - **Text length** (Normal, Longer, Much longer) makes every text as long as a translation would
-  be, by repeating some of its own words, and shows what breaks. **Normal** puts the page back
-  exactly.
+  be, by repeating some of its own words, and shows what breaks. **Custom** makes it as many
+  times as long as you choose. **Normal** puts the page back exactly. Each tab keeps its own
+  results while you look at another.
 - **How to fix it** suggests CSS fixes for each problem and tries each one on the page, so you
   know whether it works and how the box changes.
 - **Try your own text** puts any text in any element, live: type your own, or fill it with a
   longer version, a long name, a long link or a paragraph.
-- **Reports**: copy Markdown for GitHub or Jira, a cropped screenshot, or save everything as JSON.
+- **Reports**: copy Markdown for GitHub or Jira, copy or download a cropped screenshot, or save
+  everything as JSON.
 
 Everything runs in your browser. It collects no data, has no analytics and makes no network
 requests ([privacy policy](site/privacy.html)).

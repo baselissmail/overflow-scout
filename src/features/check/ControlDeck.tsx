@@ -1,17 +1,87 @@
 import { i18n } from '#i18n';
 import { MousePointerClick, ScanText } from 'lucide-react';
+import { useId, useState } from 'react';
 
+import { SCALE_LIMITS } from '@/core';
 import { Button } from '@/ui/Button';
 import { Segmented } from '@/ui/Segmented';
 
 import type { TextLength } from './length';
-import { TEXT_LENGTHS, lengthHint, lengthLabel } from './length';
+import { TEXT_LENGTHS, formatScale, lengthHint, lengthLabel } from './length';
 
 const ICON = { size: 16, strokeWidth: 1.5 } as const;
+
+/**
+ * How many times as long a custom test makes the text. Typing doesn't touch
+ * the page; Apply (or Enter) does, since a test of the whole page takes a moment.
+ */
+function ScaleField({
+  scale,
+  disabled,
+  hintId,
+  onApply,
+}: {
+  scale: number;
+  disabled: boolean;
+  hintId: string;
+  onApply: (scale: number) => void;
+}) {
+  const errorId = useId();
+  const [draft, setDraft] = useState(() => formatScale(scale));
+  const value = Number(draft);
+  const valid =
+    draft.trim() !== '' &&
+    Number.isFinite(value) &&
+    value >= SCALE_LIMITS.min &&
+    value <= SCALE_LIMITS.max;
+  return (
+    // The range is checked here, with a message in words; the browser's own
+    // check would also refuse any number off its step, without saying so.
+    <form
+      noValidate
+      className="flex flex-wrap items-center gap-x-2 gap-y-1"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (valid && value !== scale) onApply(value);
+      }}
+    >
+      <label className="flex items-center gap-2">
+        <input
+          type="number"
+          inputMode="decimal"
+          min={SCALE_LIMITS.min}
+          max={SCALE_LIMITS.max}
+          step="any"
+          value={draft}
+          aria-invalid={!valid}
+          aria-describedby={valid ? hintId : errorId}
+          onChange={(event) => {
+            setDraft(event.target.value);
+          }}
+          className="min-h-8 w-16 rounded-control border border-line-strong bg-raised px-2 tabular-nums transition-[border-color] duration-(--duration-press) ease-(--ease-out) focus:border-accent aria-invalid:border-critical"
+        />
+        <span>{i18n.t('length.times')}</span>
+      </label>
+      <Button size="sm" type="submit" disabled={disabled || !valid || value === scale}>
+        {i18n.t('length.apply')}
+      </Button>
+      {!valid && (
+        <p id={errorId} className="w-full text-small text-critical">
+          {i18n.t('length.scaleRange', [
+            formatScale(SCALE_LIMITS.min),
+            formatScale(SCALE_LIMITS.max),
+          ])}
+        </p>
+      )}
+    </form>
+  );
+}
 
 interface ControlDeckProps {
   /** The length the page's text is at (or is going to, while that runs). */
   length: TextLength;
+  /** Times as long, for the custom length. */
+  scale: number;
   hasResults: boolean;
   busy: boolean;
   /** No tab to work on. */
@@ -21,6 +91,7 @@ interface ControlDeckProps {
   pending: number;
   onCheck: () => void;
   onLength: (length: TextLength) => void;
+  onScale: (scale: number) => void;
   onPick: () => void;
   onCancelPick: () => void;
   onReapply: () => void;
@@ -33,6 +104,7 @@ interface ControlDeckProps {
  */
 export function ControlDeck({
   length,
+  scale,
   hasResults,
   busy,
   disabled,
@@ -40,11 +112,13 @@ export function ControlDeck({
   pending,
   onCheck,
   onLength,
+  onScale,
   onPick,
   onCancelPick,
   onReapply,
 }: ControlDeckProps) {
   const off = busy || disabled;
+  const hintId = useId();
 
   if (picking) {
     // Waiting for a click on the page: say so where the eye already is, with the way out.
@@ -88,7 +162,13 @@ export function ControlDeck({
           options={TEXT_LENGTHS.map((value) => ({ value, label: lengthLabel(value) }))}
           onChange={onLength}
         />
-        <p className="text-small text-pretty text-fg-muted">{lengthHint(length)}</p>
+        {length === 'custom' && (
+          // A new scale from outside (another tab) starts the field over.
+          <ScaleField key={scale} scale={scale} disabled={off} hintId={hintId} onApply={onScale} />
+        )}
+        <p id={hintId} className="text-small text-pretty text-fg-muted">
+          {lengthHint(length, scale)}
+        </p>
         {pending > 0 && (
           <p
             className="mt-1 flex flex-wrap items-center justify-between gap-2 text-small"

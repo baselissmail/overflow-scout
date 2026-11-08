@@ -4,7 +4,7 @@ import { fixCss, fixesFor } from '@/core';
 import { adviceText, verdictText } from '@/features/results/fix-text';
 import { formatCount, kindDescription, kindLabel, severityLabel } from '@/features/results/labels';
 import { measurement, measurementSentence } from '@/features/results/measure';
-import { lengthLabel } from '@/features/check/length';
+import { lengthLabel, lengthOf } from '@/features/check/length';
 import type {
   FindingDto,
   FixTrialsDto,
@@ -56,7 +56,7 @@ const quote = (text: string) => `"${escapeText(text)}"`;
 
 function testLine(stress: NonNullable<ReportContext['stress']>): string {
   const { options, growth } = stress;
-  return i18n.t('report.test', [lengthLabel(options.intensity), String(growth)]);
+  return i18n.t('report.test', [lengthLabel(lengthOf(options)), String(growth)]);
 }
 
 /** "Page: https://..., window 800x900, Chrome 156", and the test it ran with. */

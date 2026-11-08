@@ -4,6 +4,7 @@ export type { TextEdit, TextTrial, TextValue } from './try-text';
 export type { BreakingPoint, BreakingPointOptions, BreakingVerdict } from './breaking-point';
 export {
   EXPANSION_BANDS,
+  SCALE_LIMITS,
   STRESS_INTENSITIES,
   expansionBand,
   expansionFor,

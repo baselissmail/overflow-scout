@@ -17,14 +17,14 @@ For day-to-day work, `pnpm dev` opens Chrome with the extension loaded and reloa
 
 ### First run and the demo
 
-- [ ] Click the toolbar button. The side panel opens with **Find text that gets cut off**, then **Check page**, **Try your own text** and **Text length** (Normal, Longer, Much longer). Every word in the panel is plain English.
+- [ ] Click the toolbar button. The side panel opens with **Find text that gets cut off**, then **Check page**, **Try your own text** and **Text length** (Normal, Longer, Much longer, Custom). Every word in the panel is plain English.
 - [ ] Click **Open the demo page**, then **Check page**. "5 problems" appears, with the most serious first.
 - [ ] Hover a problem: it's outlined on the page. Click it: the page scrolls to it and its details open, with **All problems** at the top to go back.
 - [ ] In the details of "Waterproof hiking jacket...", **How to fix it** says **Fixes it. The box gets ... taller.**
   - [ ] **Preview on page** applies it to the page.
   - [ ] **Stop preview** puts it back.
 - [ ] **Copy report**, then paste it into a GitHub issue (**Preview** tab) and into a Jira ticket. The heading, lists and code show correctly.
-- [ ] **Copy screenshot**, then paste it. It's the element with some room around it, outlined.
+- [ ] **Copy screenshot**, then paste it. It's the element with some room around it, outlined. **Download screenshot** saves the same image as a file.
 - [ ] Under **Try your own text** in the same details, type something short (it fits) and click **Much longer** (it's cut off, by how much). **All problems** puts the page's own text back.
 - [ ] **Ignore on this site**, then **All problems**: the problem is gone and **Show 1 ignored** appears. Settings lists it under **Ignored problems**. Remove it there.
 - [ ] **Copy report** above the list, then paste it: every problem, in plain text.
@@ -35,13 +35,16 @@ For day-to-day work, `pnpm dev` opens Chrome with the extension loaded and reloa
 
 - [ ] **Text length → Longer** runs straight away. Each text on the page repeats some of its own words (readable English, nothing else added), the hint under the control says so, and the list marks the problems that are **New** with longer text, first.
 - [ ] **Much longer** does the same, longer.
+- [ ] **Custom** makes every text twice as long. Change the number to 4 and press Enter (or **Apply**): every text gets about 4 times as long. A number above 10 says which numbers work. Back on **Normal** and then **Custom** again, it remembers 4.
 - [ ] **Normal** puts every text back exactly, and the list is checked again; a reload shows nothing changed.
 - [ ] Choose **Longer** again and use **Back to normal** on the page instead. Same result, and the control shows **Normal**.
 - [ ] Run it again and close the side panel. The page goes back to normal by itself.
+- [ ] Check a page, choose **Longer**, and open a problem. Switch to another tab and back: the problem is still open, the page still has the longer text, and **Text length** still says **Longer**. Close the panel: every page you left with longer text goes back to normal.
 
 ### Try your own text
 
 - [ ] **Try your own text** → the panel says to click any text on the page, with **Cancel**. Click a button on the page. It shows how many characters fit and whether a translation fits.
+- [ ] Do the same on a number, such as a price or a like count next to an icon. It works too, and says numbers stay the same in a translation.
 - [ ] Type your own text: the button's text changes as you type, and the panel says whether it fits or what breaks.
 - [ ] Try **Longer**, **Much longer**, **Long name**, **Long link** and **Paragraph**. Pressing one again shows another example.
 - [ ] **Back** puts the button's text back. **Pick other text** picks another element.

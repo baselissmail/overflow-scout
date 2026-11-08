@@ -30,12 +30,14 @@ actions:
   copyCss: Copy CSS
   copyReport: Copy report
   copyScreenshot: Copy screenshot
+  downloadScreenshot: Download screenshot
   ignore: Ignore on this site
   unignore: Stop ignoring
   preview: Preview on page
   previewAll: Preview them together
   stopPreview: Stop preview
   copied: Copied
+  downloaded: Downloaded
   settings: Settings
   close: Close
   previous: Previous place
@@ -49,9 +51,14 @@ length:
   normal: Normal
   realistic: Longer
   worst: Much longer
+  custom: Custom
+  times: times as long
+  apply: Apply
   hintNormal: Choose Longer to see what breaks when text gets as long as a translation.
   hintRealistic: Each text repeats some of its own words, to be as long as a typical translation. Choose Normal to put the text back.
   hintWorst: Each text repeats some of its own words, to be as long as the longest translations. Choose Normal to put the text back.
+  hintCustom: Each text repeats some of its own words until it's $1 times as long. Choose Normal to put the text back.
+  scaleRange: Use a number from $1 to $2.
 picking:
   hint: Now click any text on the page to try your own text in it.
 busy:
@@ -262,6 +269,7 @@ commands:
   lengthNormal: 'Text length: Normal'
   lengthRealistic: 'Text length: Longer'
   lengthWorst: 'Text length: Much longer'
+  lengthCustom: 'Text length: Custom'
   copyReport: Copy report as Markdown
   saveMarkdown: Save report as Markdown
   saveJson: Save problems as JSON

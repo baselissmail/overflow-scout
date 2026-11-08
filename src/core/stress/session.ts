@@ -24,6 +24,8 @@ export interface StressOptions extends TraversalOptions, SliceOptions {
   strategy?: StressStrategy;
   /** Default `worst`. */
   intensity?: StressIntensity;
+  /** Makes every string this many times as long instead (see `TextStressOptions`). */
+  scale?: number | undefined;
   /** Language for the `language` strategy. Default `de`. */
   language?: SampleLanguage;
   /** Sets `dir="rtl"` on the root element while stress is active. */
@@ -106,6 +108,7 @@ export class StressSession {
       intensity: this.options.intensity ?? 'worst',
       language: this.options.language ?? 'de',
       seed: this.options.seed ?? DEFAULT_SEED,
+      ...(this.options.scale !== undefined && { scale: this.options.scale }),
     };
   }
 

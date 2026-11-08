@@ -83,12 +83,11 @@ export function usePanel(): { state: PanelState; controller: PanelController } {
       if (pinned === null && info.windowId === windowId) controller.setTarget(info.tabId);
     };
     const onUpdated = (tabId: number, change: { status?: string }) => {
-      if (tabId === controller.getState().tabId && change.status === 'loading') {
-        controller.tabLoading();
-      }
+      // Any tab: one the panel left keeps results that a reload makes stale.
+      if (change.status === 'loading') controller.tabLoading(tabId);
     };
     const onRemoved = (tabId: number) => {
-      if (tabId === controller.getState().tabId) controller.setTarget(null);
+      controller.tabClosed(tabId);
     };
     const onMessage = (raw: unknown, sender: { id?: string }) => {
       if (sender.id !== browser.runtime.id) return;

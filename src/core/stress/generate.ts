@@ -35,6 +35,11 @@ export interface TextStressOptions {
   /** Language for the `language` strategy. */
   language: SampleLanguage;
   seed: number;
+  /**
+   * Makes every string this many times as long (2 doubles it), in place of
+   * the translation table that `intensity` picks from. For a custom test.
+   */
+  scale?: number;
 }
 
 const LETTER = /\p{L}/u;
@@ -270,7 +275,10 @@ export function stressParts(parts: readonly string[], options: TextStressOptions
 
   const random = stringRandom(parts, options);
   const length = textLength(parts);
-  const extra = translatedLength(length, options.intensity) - length;
+  const extra =
+    (options.scale === undefined
+      ? translatedLength(length, options.intensity)
+      : Math.round(length * options.scale)) - length;
   const shares = allocate(
     extra,
     pieces.map((piece) => (piece.letters ? Math.max(1, piece.length) : 0)),

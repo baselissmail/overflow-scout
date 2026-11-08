@@ -22,6 +22,17 @@ const options = (overrides: Partial<TextStressOptions> = {}): TextStressOptions 
 });
 
 describe('translation strategy', () => {
+  it('makes text the chosen number of times as long, for a custom test', () => {
+    for (const scale of [1.5, 3, 10]) {
+      for (const text of ['Save', 'Save changes', 'Free shipping on orders over 40 dollars']) {
+        const stressed = stressText(text, options({ scale }));
+        expect(stressed.startsWith(text)).toBe(true);
+        const longest = Math.max(...text.split(' ').map((word) => word.length));
+        expectNear(textLength([stressed]), Math.round(text.length * scale), longest);
+      }
+    }
+  });
+
   it('keeps the original as a prefix and reaches about the translated length', () => {
     for (const intensity of STRESS_INTENSITIES) {
       const stressed = stressText('Save changes', options({ intensity }));

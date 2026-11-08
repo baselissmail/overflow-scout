@@ -19,10 +19,10 @@ It opens in Chrome's side panel, next to the page, and changes nothing until you
 
 WHAT IT DOES
 • Check page: lists every text that is cut off with no sign, cut short with "...", spills out of its box, or makes the page scroll sideways, and how much doesn't fit.
-• Text length: Longer and Much longer make every text as long as a translation would be, by repeating some of its own words, and show what breaks. Normal puts the page back exactly.
+• Text length: Longer and Much longer make every text as long as a translation would be, by repeating some of its own words, and show what breaks. Custom makes it as many times as long as you choose. Normal puts the page back exactly.
 • How to fix it: each problem comes with CSS fixes, and each fix is tried on the page for a moment, so you know whether it works and how the box changes.
 • Try your own text: pick any element, see how many characters fit, and put any text in it, live: your own, a longer version, a long name, a long link or a paragraph.
-• Reports: copy a Markdown report for GitHub or Jira, copy a cropped screenshot, or save everything as JSON.
+• Reports: copy a Markdown report for GitHub or Jira, copy or download a cropped screenshot, or save everything as JSON.
 • Ignore problems you accept, per site. Keyboard shortcuts and a command palette (Ctrl+K or Cmd+K). Light and dark themes.
 
 PRIVATE BY DESIGN

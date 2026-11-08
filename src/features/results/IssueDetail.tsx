@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCopy,
+  Download,
   Eye,
   EyeOff,
   LocateFixed,
@@ -93,6 +94,7 @@ export function IssueDetail({
 }: IssueDetailProps) {
   const [copied, markCopied] = useCopied();
   const [shotCopied, markShotCopied] = useCopied();
+  const [shotSaved, markShotSaved] = useCopied();
   const [shooting, setShooting] = useState(false);
   const toast = useToast();
   const [index, setIndex] = useState(0);
@@ -170,6 +172,20 @@ export function IssueDetail({
     void navigator.clipboard.writeText(markdown).then(markCopied);
   };
 
+  const shotName = () => `${screenshotName(report?.url ?? '', finding.element.label)}.png`;
+  /** Says why a screenshot couldn't be taken, and what to do about it. */
+  const shotFailed = (error: unknown) => {
+    toast(
+      error instanceof CaptureNotAllowed
+        ? i18n.t('detail.screenshotNeedsClick')
+        : error instanceof CaptureHidden
+          ? i18n.t('detail.screenshotHidden')
+          : i18n.t('detail.screenshotFailed', [
+              error instanceof Error ? error.message : String(error),
+            ]),
+    );
+  };
+
   const copyScreenshot = () => {
     setShooting(true);
     const image = onScreenshot(finding.id);
@@ -178,22 +194,23 @@ export function IssueDetail({
       .write([new ClipboardItem({ 'image/png': image })])
       .then(markShotCopied, async () => {
         // No clipboard (or the capture failed): save the file instead, or say why not.
-        const name = `${screenshotName(report?.url ?? '', finding.element.label)}.png`;
-        const blob = await image;
-        downloadBlob(name, blob);
+        downloadBlob(shotName(), await image);
         toast(i18n.t('detail.screenshotSaved'));
       })
-      .catch((error: unknown) => {
-        toast(
-          error instanceof CaptureNotAllowed
-            ? i18n.t('detail.screenshotNeedsClick')
-            : error instanceof CaptureHidden
-              ? i18n.t('detail.screenshotHidden')
-              : i18n.t('detail.screenshotFailed', [
-                  error instanceof Error ? error.message : String(error),
-                ]),
-        );
+      .catch(shotFailed)
+      .finally(() => {
+        setShooting(false);
+      });
+  };
+
+  const downloadScreenshot = () => {
+    setShooting(true);
+    onScreenshot(finding.id)
+      .then((image) => {
+        downloadBlob(shotName(), image);
+        markShotSaved();
       })
+      .catch(shotFailed)
       .finally(() => {
         setShooting(false);
       });
@@ -308,6 +325,15 @@ export function IssueDetail({
           onClick={copyScreenshot}
         >
           {shotCopied ? i18n.t('actions.copied') : i18n.t('actions.copyScreenshot')}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={shooting}
+          icon={shotSaved ? <Check {...SMALL} className="text-ok" /> : <Download {...SMALL} />}
+          onClick={downloadScreenshot}
+        >
+          {shotSaved ? i18n.t('actions.downloaded') : i18n.t('actions.downloadScreenshot')}
         </Button>
         {ignored ? (
           <Button size="sm" variant="ghost" icon={<Eye {...SMALL} />} onClick={onUnignore}>

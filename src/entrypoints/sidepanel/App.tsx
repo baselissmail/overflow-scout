@@ -21,13 +21,14 @@ import { browser } from 'wxt/browser';
 
 import { ControlDeck } from '@/features/check/ControlDeck';
 import type { TextLength } from '@/features/check/length';
-import { TEXT_LENGTHS, lengthLabel, stressOptions } from '@/features/check/length';
+import { TEXT_LENGTHS, lengthLabel, lengthOf, stressOptions } from '@/features/check/length';
 import type { Command } from '@/features/commands/CommandPalette';
 import { CommandPalette } from '@/features/commands/CommandPalette';
 import { PageNotice } from '@/features/page/PageNotice';
 import { ScanProgress } from '@/features/page/ScanProgress';
 import { SiteAccess } from '@/features/page/SiteAccess';
 import { usePanel } from '@/features/page/use-panel';
+import { usePerTab } from '@/features/page/use-per-tab';
 import { downloadText, exportResults } from '@/features/report/export';
 import {
   ProblemList,
@@ -88,9 +89,10 @@ export function App() {
   }, [controller, ignoring.ids]);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
+  // Each tab keeps its own: switching back shows the problem that was open there.
+  const [openId, setOpenId] = usePerTab<string | null>(state.tabId, null);
+  const [selectedId, setSelectedId] = usePerTab<string | null>(state.tabId, null);
+  const [query, setQuery] = usePerTab(state.tabId, '');
   // The length asked for, shown while the page gets there.
   const [requested, setRequested] = useState<TextLength>('normal');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -103,12 +105,11 @@ export function App() {
   const shown = shownResults(state);
   const hasResults = shown !== null;
   const openIssue = shown?.issues.find((issue) => issue.id === openId) ?? null;
-  const intensity = state.stressOptions?.intensity;
-  const actual: TextLength = !state.stressActive
-    ? 'normal'
-    : intensity === 'realistic'
-      ? 'realistic'
-      : 'worst';
+  const actual: TextLength =
+    state.stressActive && state.stressOptions ? lengthOf(state.stressOptions) : 'normal';
+  // The scale on the page while a custom length is on it, or the one last used.
+  const scale = state.stressOptions?.scale;
+  const customScale = actual === 'custom' && scale !== undefined ? scale : settings.customScale;
   const changing = state.busy === 'stress' || state.busy === 'revert';
   const length = changing ? requested : actual;
 
@@ -129,9 +130,9 @@ export function App() {
     controller.highlight(null);
     if (state.picking) void controller.pick(false);
     if (state.picked) controller.closeInspect();
-  }, [controller, state.picking, state.picked]);
+  }, [controller, setOpenId, state.picking, state.picked]);
 
-  const check = (to: TextLength = actual) => {
+  const check = (to: TextLength = actual, times = customScale) => {
     setOpenId(null);
     setSelectedId(null);
     setRequested(to);
@@ -140,7 +141,7 @@ export function App() {
       if (state.stressActive) void controller.revert();
       else void controller.scan(settings.includeInputs);
     } else {
-      void controller.stress(stressOptions(to), 'page', settings.includeInputs);
+      void controller.stress(stressOptions(to, times), 'page', settings.includeInputs);
     }
   };
   const setLength = (to: TextLength) => {
@@ -224,7 +225,9 @@ export function App() {
                 ? i18n.t('commands.lengthNormal')
                 : value === 'realistic'
                   ? i18n.t('commands.lengthRealistic')
-                  : i18n.t('commands.lengthWorst'),
+                  : value === 'worst'
+                    ? i18n.t('commands.lengthWorst')
+                    : i18n.t('commands.lengthCustom'),
             icon: <WholeWord {...ICON} />,
             // The names people may know it by.
             keywords: `${lengthLabel(value)} stress test translation expand revert undo`,
@@ -423,6 +426,7 @@ export function App() {
         />
         <ControlDeck
           length={length}
+          scale={customScale}
           hasResults={hasResults}
           busy={busy}
           disabled={noTab}
@@ -432,6 +436,10 @@ export function App() {
             check();
           }}
           onLength={setLength}
+          onScale={(times) => {
+            updateSettings({ customScale: times });
+            check('custom', times);
+          }}
           onPick={pick}
           onCancelPick={() => void controller.pick(false)}
           onReapply={() => void controller.reapply()}

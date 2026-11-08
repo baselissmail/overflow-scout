@@ -15,6 +15,12 @@ describe('normalizeSettings', () => {
     });
   });
 
+  it('keeps a custom length only within its limits', () => {
+    expect(normalizeSettings({ customScale: 3.5 }).customScale).toBe(3.5);
+    expect(normalizeSettings({ customScale: 1 }).customScale).toBe(DEFAULT_SETTINGS.customScale);
+    expect(normalizeSettings({ customScale: 50 }).customScale).toBe(DEFAULT_SETTINGS.customScale);
+  });
+
   it('drops the longer-text options older versions stored', () => {
     expect(normalizeSettings({ theme: 'light', strategy: 'pseudo', rtl: true })).toEqual({
       ...DEFAULT_SETTINGS,

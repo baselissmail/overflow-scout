@@ -10,7 +10,7 @@ type Chrome = typeof browser;
 const results = (panel: Page) => panel.getByRole('listbox', { name: 'Problems' });
 const rows = (panel: Page) => results(panel).getByRole('option');
 const pageText = (page: Page) => page.evaluate(() => document.body.innerHTML);
-const length = (panel: Page, name: 'Normal' | 'Longer' | 'Much longer') =>
+const length = (panel: Page, name: 'Normal' | 'Longer' | 'Much longer' | 'Custom') =>
   panel.getByRole('radio', { name, exact: true });
 
 /** The main button: Check page, or Check again once there are problems. */
@@ -375,6 +375,39 @@ test.describe('other pages', () => {
     await expect(page.locator('overflow-scout-root')).toHaveCount(0);
   });
 
+  test('makes the text as long as you choose', async ({ openTab, openPanel }) => {
+    const { page, tabId } = await openTab(`${TEST_ORIGIN}/`);
+    const panel = await openPanel(tabId);
+    const before = await pageText(page);
+    const tab = page.locator('.tab').first();
+    const own = (await tab.textContent()) ?? '';
+
+    // Custom starts at twice as long, and can be changed.
+    await length(panel, 'Custom').click();
+    await expect(length(panel, 'Custom')).toHaveAttribute('aria-checked', 'true');
+    await expect(length(panel, 'Custom')).toBeEnabled();
+    const times = panel.getByRole('spinbutton', { name: 'times as long' });
+    await expect(times).toHaveValue('2');
+    const apply = panel.getByRole('button', { name: 'Apply', exact: true });
+    await expect(apply).toBeDisabled();
+    await times.fill('20');
+    await expect(panel.getByText('Use a number from 1.1 to 10.')).toBeVisible();
+    await expect(apply).toBeDisabled();
+    await times.fill('4');
+    await times.press('Enter');
+    await expect(panel.getByText(/until it's 4 times as long/)).toBeVisible();
+    await expect(length(panel, 'Custom')).toBeEnabled();
+    const grown = (await tab.textContent()) ?? '';
+    expect(grown.length).toBeGreaterThanOrEqual(own.length * 3.5);
+    expect(grown.length).toBeLessThanOrEqual(own.length * 4.5);
+
+    await revert(panel);
+    await expect.poll(() => pageText(page)).toBe(before);
+    // The scale is remembered for next time.
+    await length(panel, 'Custom').click();
+    await expect(times).toHaveValue('4');
+  });
+
   test('offers to re-apply stress text the page re-rendered', async ({ openTab, openPanel }) => {
     const { page, tabId } = await openTab(`${TEST_ORIGIN}/`);
     const panel = await openPanel(tabId);
@@ -402,9 +435,13 @@ test.describe('other pages', () => {
     await rows(panel).first().click();
     await page.bringToFront();
     await panel.getByRole('button', { name: 'Copy screenshot' }).click();
-    await expect(
-      panel.getByText(/allows screenshots only after you click the Overflow Scout button/),
-    ).toBeVisible();
+    const refused = panel
+      .getByRole('region', { name: /^Notifications/ })
+      .getByText(/allows screenshots only after you click the Overflow Scout button/);
+    await expect(refused).toBeVisible();
+    // Downloading needs the same capture, so it says the same.
+    await panel.getByRole('button', { name: 'Download screenshot' }).click();
+    await expect(refused).toHaveCount(2);
     // The page was brought into view for the capture, with the result outlined.
     await expect(page.locator('overflow-scout-root .box[data-role="target"]')).toHaveCount(1);
   });

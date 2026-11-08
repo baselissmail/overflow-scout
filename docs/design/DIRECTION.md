@@ -120,7 +120,7 @@ main screen                               one step in
 | [] Overflow Scout          *  |         | [] Overflow Scout          *  |
 | [Check page] [Try your own..] |         | <- All problems   Place 1 of 2|
 | Text length                   |         | . Cut off                     |
-| [ Normal | Longer | Much ... ]|         | The box hides the end of ...  |
+| [Normal|Longer|Much..|Custom]|         | The box hides the end of ...  |
 | hint: what the length does    |         | +---------------------------+ |
 | 5 problems       [Copy report]|         | | Waterproof hiking jacket  | |
 | Found in 28 texts.            |         | | with detachable|insulated | |
@@ -136,12 +136,16 @@ main screen                               one step in
   are always at the top of the main screen; the list is below. Before the
   first check, one heading and one sentence above them say what it's for, and
   a link at the bottom opens the demo page.
-- **Text length is the page's state, not an action.** Normal, Longer and Much
-  longer show how long the page's text is right now. Choosing Longer makes it
+- **Text length is the page's state, not an action.** Normal, Longer, Much
+  longer and Custom show how long the page's text is right now. Custom makes
+  every text a chosen number of times as long (2 at first, remembered), for
+  when the translation lengths aren't enough; its number applies with Apply or
+  Enter, since a whole-page test takes a moment. Choosing Longer makes it
   longer and checks it; choosing Normal puts it back and checks again, so the
   list always describes the page as it is. The button on the page ("Back to
   normal") does the same. The hint under the control says what the page is
-  showing and how to get back. Only the translation length is offered: the
+  showing and how to get back. Each tab keeps its own length and results
+  while the panel is open. Only the translation length is offered: the
   other strategies (pseudo-locale, language samples, long words, right to
   left, a picked region) stay in the engine and its tests, not in the panel.
 - **New problems come first.** With longer text, the list shows every problem,

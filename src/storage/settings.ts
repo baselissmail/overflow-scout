@@ -1,12 +1,16 @@
 import * as z from 'zod/mini';
 import { storage } from 'wxt/utils/storage';
 
+import { SCALE_LIMITS } from '@/core/stress/expansion';
+
 export const THEMES = ['system', 'light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
 
 const settingsSchema = z.object({
   theme: z.enum(THEMES),
   includeInputs: z.boolean(),
+  /** The custom text length last used, in times as long. */
+  customScale: z.number().check(z.gte(SCALE_LIMITS.min), z.lte(SCALE_LIMITS.max)),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -14,6 +18,7 @@ export type Settings = z.infer<typeof settingsSchema>;
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   includeInputs: true,
+  customScale: 2,
 };
 
 /**

@@ -145,6 +145,26 @@ describe('resultsMarkdown', () => {
     expect(markdown).toContain('- **detail.before:** "Jacket"');
     expect(markdown).toContain('### results.brokenNow (0)\n\nresults.noneNow');
   });
+
+  it('names a custom length as one', () => {
+    const markdown = resultsMarkdown(
+      { atRisk: [], brokenNow: [] },
+      {
+        ...context,
+        stress: {
+          options: {
+            strategy: 'translation',
+            intensity: 'worst',
+            language: 'de',
+            rtl: false,
+            scale: 3,
+          },
+          growth: 2.9,
+        },
+      },
+    );
+    expect(markdown).toContain('report.test(length.custom, 2.9)');
+  });
 });
 
 describe('export helpers', () => {
