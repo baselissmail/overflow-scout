@@ -11,7 +11,7 @@ const ruleSchema = z.object({
   site: z.string(),
   issueId: z.string(),
   kind: z.enum(FINDING_KINDS),
-  /** The element, as shown when it was ignored (`nav › a.tab`). */
+  /** The element, as shown when it was ignored (`nav > a.tab`). */
   label: z.string(),
   at: z.number(),
 });

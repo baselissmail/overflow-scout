@@ -1,5 +1,3 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
-
 import { cx } from './cx';
 
 export type Tone = 'critical' | 'warning' | 'notice' | 'ok' | 'neutral';
@@ -28,56 +26,16 @@ export const TONE_BG: Readonly<Record<Tone, string>> = {
   neutral: 'bg-fg-muted',
 };
 
-/** A status label: icon, color and text, never color alone. */
-export function Badge({
-  tone,
-  icon,
-  children,
-}: {
-  tone: Tone;
-  icon?: ReactNode;
-  children: string;
-}) {
+/**
+ * A category with its severity: a small colored dot and the words. Color marks
+ * the dot only, so a list of results doesn't light up (and the words carry the
+ * meaning, never the color alone). Long labels wrap.
+ */
+export function Badge({ tone, children }: { tone: Tone; children: string }) {
   return (
-    <span
-      className={cx(
-        'inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 text-small font-semibold',
-        TONE_SOFT[tone],
-      )}
-    >
-      {icon !== undefined && <span aria-hidden="true">{icon}</span>}
-      {children}
+    <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 text-small font-medium text-fg">
+      <span aria-hidden="true" className={cx('size-2 shrink-0 rounded-full', TONE_BG[tone])} />
+      <span className="min-w-0 break-words">{children}</span>
     </span>
-  );
-}
-
-export interface ChipProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
-  tone: Tone;
-  icon?: ReactNode;
-  label: string;
-  count: number;
-  pressed: boolean;
-}
-
-/** A summary count that doubles as a filter toggle. */
-export function Chip({ tone, icon, label, count, pressed, className, ...props }: ChipProps) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      className={cx(
-        'inline-flex min-h-6 items-center gap-1.5 rounded-control border px-2 text-small',
-        'transition-[background-color,border-color] duration-(--duration-press) ease-(--ease-out)',
-        pressed ? 'border-accent bg-accent-soft' : 'border-line bg-raised hover:bg-surface',
-        className,
-      )}
-      {...props}
-    >
-      <span className={cx('inline-flex', TONE_TEXT[tone])} aria-hidden="true">
-        {icon ?? <span className="size-2 rounded-full bg-current" />}
-      </span>
-      <span>{label}</span>
-      <span className="font-semibold tabular-nums">{count}</span>
-    </button>
   );
 }

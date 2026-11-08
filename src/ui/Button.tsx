@@ -6,7 +6,8 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const VARIANTS: Readonly<Record<ButtonVariant, string>> = {
   primary: 'bg-accent text-accent-fg hover:bg-accent/90',
-  secondary: 'border border-line-strong bg-canvas text-fg hover:bg-surface',
+  // A raised surface on a hairline: quiet next to the one primary action.
+  secondary: 'bg-raised text-fg shadow-raised hover:bg-surface',
   ghost: 'text-fg hover:bg-surface',
   danger: 'bg-fg text-canvas hover:bg-fg/85',
 };
@@ -37,7 +38,7 @@ export function Button({
         'inline-flex items-center justify-center gap-1.5 rounded-control text-start font-medium',
         'transition-[background-color,border-color,color,transform] duration-(--duration-press) ease-(--ease-out)',
         'active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
-        size === 'md' ? 'min-h-8 px-3 py-1' : 'min-h-6 px-2 py-0.5 text-small',
+        size === 'md' ? 'min-h-8 px-3 py-1' : 'min-h-7 px-2.5 py-0.5 text-small',
         VARIANTS[variant],
         className,
       )}

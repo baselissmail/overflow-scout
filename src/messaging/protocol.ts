@@ -13,6 +13,7 @@ import {
   FINDING_KINDS,
   FIX_KEYS,
   SAMPLE_LANGUAGES,
+  SCALE_LIMITS,
   STRESS_INTENSITIES,
   STRESS_STRATEGIES,
 } from '@/core';
@@ -40,7 +41,7 @@ const mechanismSchema = z.enum([
 
 /** An element on the page, as the panel sees it. */
 export const elementRefSchema = z.object({
-  /** Short path such as `nav › a.nav-link`. */
+  /** Short path such as `nav > a.nav-link`. */
   label: z.string(),
   /** Unique selector, computed only where someone is likely to look. */
   selector: z.optional(z.string()),
@@ -112,6 +113,8 @@ export const stressOptionsSchema = z.object({
   intensity: z.enum(STRESS_INTENSITIES),
   language: z.enum(SAMPLE_LANGUAGES),
   rtl: z.boolean(),
+  /** A custom test: every text this many times as long, in place of `intensity`. */
+  scale: z.optional(z.number().check(z.gte(SCALE_LIMITS.min), z.lte(SCALE_LIMITS.max))),
 });
 
 const stressStatsSchema = z.object({
@@ -181,6 +184,8 @@ export const pickedElementSchema = z.object({
       fitsUpTo: z.nullable(count),
       maxTested: count,
       needs: z.object({ realistic: count, worst: count }),
+      /** False for numbers and symbols, which translations leave as they are. */
+      translatable: z.boolean(),
       verdict: z.enum(['fits', 'at-risk', 'will-break', 'broken']),
       breaksAs: z.nullable(findingKindSchema),
     }),
@@ -219,6 +224,8 @@ export const pageRequestSchema = z.discriminatedUnion('type', [
   z.object({
     id,
     type: z.literal('tryText'),
+    /** A result's element; without it, the element last picked with the picker. */
+    findingId: z.optional(z.string()),
     value: z.nullable(
       z.union([
         z.object({ length: count.check(z.maximum(5000)) }),
@@ -226,6 +233,8 @@ export const pageRequestSchema = z.discriminatedUnion('type', [
       ]),
     ),
   }),
+  /** The whole text of a result's element (or the picked one), to start editing from. */
+  z.object({ id, type: z.literal('textOf'), findingId: z.optional(z.string()) }),
   /** Scrolls a finding into view for a screenshot and says where it is in the window. */
   z.object({ id, type: z.literal('frame'), findingId: z.string() }),
   /** Tries each suggested fix for one measurement, then restores the page exactly. */
@@ -261,6 +270,7 @@ export const pageResultSchemas = {
   pick: z.null(),
   fixes: z.nullable(fixTrialsSchema),
   tryText: z.nullable(textTrialSchema),
+  textOf: z.nullable(z.string()),
   frame: z.nullable(
     z.object({
       /** The finding's box, its text and its container, in CSS pixels from the window's corner. */

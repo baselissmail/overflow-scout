@@ -138,12 +138,118 @@ describe('PanelController', () => {
     });
   });
 
-  it('closes the connection when the tab changes, so the page reverts', async () => {
-    const { controller, fake } = setup({ scan: SCAN });
-    await controller.scan();
-    controller.setTarget(8);
-    expect(fake.close).toHaveBeenCalled();
-    expect(controller.getState()).toMatchObject({ tabId: 8, scan: null, connection: 'idle' });
+  describe('with more than one tab', () => {
+    const STRESS = { brokenNow: [], atRisk: SCAN.issues, stats: {} };
+    const OPTIONS = {
+      strategy: 'translation',
+      intensity: 'worst',
+      language: 'de',
+      rtl: false,
+    } as const;
+
+    /** A connection per tab, so each tab's page can be told apart. */
+    function tabs() {
+      const fakes = new Map<number, ReturnType<typeof fakeConnection>>();
+      const fakeFor = (tabId: number) => {
+        let fake = fakes.get(tabId);
+        if (!fake) {
+          fake = fakeConnection({ scan: SCAN, stress: STRESS });
+          fakes.set(tabId, fake);
+        }
+        return fake;
+      };
+      const connect = vi.fn((tabId: number) =>
+        Promise.resolve({ connection: fakeFor(tabId).connection, page: PAGE }),
+      );
+      const setBadge = vi.fn();
+      const controller = new PanelController({
+        connect,
+        setBadge,
+        capture: () => Promise.resolve('data:image/png;base64,'),
+      });
+      controller.setTarget(7);
+      return { controller, fakeFor, connect, setBadge };
+    }
+
+    it('keeps a tab as it was left, longer text and all, until the panel closes', async () => {
+      const { controller, fakeFor, connect } = tabs();
+      await controller.stress(OPTIONS);
+      const seven = fakeFor(7);
+
+      controller.setTarget(8);
+      expect(controller.getState()).toMatchObject({ tabId: 8, stress: null, connection: 'idle' });
+      expect(seven.close).not.toHaveBeenCalled();
+      // Nobody is looking: tried text, a previewed fix and the outline go away.
+      expect(seven.request).toHaveBeenCalledWith('tryText', { value: null });
+      expect(seven.request).toHaveBeenCalledWith('preview', { findingId: '', key: null });
+      expect(seven.request).toHaveBeenCalledWith('highlight', { findingId: null });
+
+      // The page left behind still talks to its tab's state.
+      seven.emit({ type: 'pending', count: 2 });
+      expect(controller.getState().pending).toBe(0);
+
+      controller.setTarget(7);
+      expect(controller.getState()).toMatchObject({
+        tabId: 7,
+        connection: 'ready',
+        stress: STRESS,
+        showing: 'stress',
+        stressActive: true,
+        pending: 2,
+      });
+      await controller.scan();
+      expect(connect.mock.calls.filter(([tab]) => tab === 7)).toHaveLength(1);
+
+      controller.setTarget(8);
+      await controller.scan();
+      controller.dispose();
+      expect(seven.close).toHaveBeenCalled();
+      expect(fakeFor(8).close).toHaveBeenCalled();
+    });
+
+    it('lands work that ends after a tab switch on its own tab', async () => {
+      const { controller, fakeFor } = tabs();
+      const seven = fakeFor(7);
+      let finish: (scan: ScanResultDto) => void = () => undefined;
+      seven.request.mockImplementation((type: PageRequestType) =>
+        type === 'scan'
+          ? new Promise((resolve) => {
+              finish = resolve;
+            })
+          : Promise.resolve(null),
+      );
+      const scanning = controller.scan();
+      await vi.waitFor(() => {
+        expect(seven.request).toHaveBeenCalledWith('scan', { includeInputs: true });
+      });
+      controller.setTarget(8);
+      finish(SCAN);
+      await scanning;
+      expect(controller.getState()).toMatchObject({ tabId: 8, scan: null, busy: null });
+      controller.setTarget(7);
+      expect(controller.getState()).toMatchObject({ scan: SCAN, busy: null });
+    });
+
+    it('marks a tab left behind stale when it navigates, and lets go of closed tabs', async () => {
+      const { controller, fakeFor, setBadge } = tabs();
+      await controller.scan();
+      controller.setTarget(8);
+      fakeFor(7).drop();
+      expect(setBadge).toHaveBeenLastCalledWith(7, null);
+      controller.setTarget(7);
+      expect(controller.getState()).toMatchObject({ scan: SCAN, stale: true });
+
+      await controller.scan();
+      controller.setTarget(8);
+      controller.tabClosed(7);
+      expect(fakeFor(7).close).toHaveBeenCalled();
+      controller.setTarget(7);
+      expect(controller.getState()).toMatchObject({ scan: null, connection: 'idle' });
+
+      // The tab on screen closing leaves the panel without one.
+      controller.tabClosed(7);
+      expect(controller.getState().tabId).toBeNull();
+    });
   });
 
   it('marks results stale when the page goes away', async () => {
@@ -215,6 +321,31 @@ describe('PanelController', () => {
     expect(controller.getState().pending).toBe(2);
     fake.emit({ type: 'reverted', result: { restored: 3, keptPageChanges: 0 } });
     expect(controller.getState()).toMatchObject({ stressActive: false, pending: 0 });
+  });
+
+  it('checks the page again once the text is back to normal', async () => {
+    const { controller, fake, request } = setup({
+      stress: { brokenNow: [], atRisk: SCAN.issues, stats: {} },
+      revert: { restored: 3, keptPageChanges: 0 },
+      scan: SCAN,
+    });
+    const options = {
+      strategy: 'translation',
+      intensity: 'realistic',
+      language: 'de',
+      rtl: false,
+    } as const;
+    await controller.stress(options, 'page', false);
+    await controller.revert();
+    expect(controller.getState()).toMatchObject({ stressActive: false, showing: 'scan' });
+    expect(request).toHaveBeenLastCalledWith('scan', { includeInputs: false });
+
+    // The same when the button on the page puts the text back.
+    await controller.stress(options);
+    fake.emit({ type: 'reverted', result: { restored: 3, keptPageChanges: 0 } });
+    await vi.waitFor(() => {
+      expect(controller.getState().showing).toBe('scan');
+    });
   });
 
   it('runs the picker and receives the picked element', async () => {

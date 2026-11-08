@@ -27,7 +27,7 @@ interface Item {
   trial: TrialDto | undefined;
 }
 
-const ICON = { size: 14, strokeWidth: 1.5 } as const;
+const ICON = { size: 16, strokeWidth: 1.5 } as const;
 
 /** What a trial showed, as icon + words (never color alone). */
 function Verdict({ trial, together = false }: { trial: TrialDto; together?: boolean }) {
@@ -40,7 +40,7 @@ function Verdict({ trial, together = false }: { trial: TrialDto; together?: bool
       <CircleMinus {...ICON} className="text-fg-muted" />
     );
   return (
-    <p className="flex items-start gap-1.5 text-small">
+    <p className="flex items-start gap-2">
       <span aria-hidden="true" className="mt-0.5 shrink-0">
         {icon}
       </span>
@@ -61,9 +61,10 @@ function PreviewButton({
   return (
     <Button
       size="sm"
-      className="self-start"
+      variant="ghost"
+      className="-ms-2 self-start aria-pressed:bg-accent-soft"
       aria-pressed={active}
-      icon={active ? <EyeOff {...ICON} /> : <Eye {...ICON} />}
+      icon={active ? <EyeOff size={14} strokeWidth={1.5} /> : <Eye size={14} strokeWidth={1.5} />}
       onClick={onToggle}
     >
       {active
@@ -119,18 +120,18 @@ export function Fixes({ finding, result, onPreview }: FixesProps) {
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="font-medium">{i18n.t('detail.whatToDo')}</h2>
+      <h2 className="text-title font-semibold">{i18n.t('detail.fix')}</h2>
       <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-card bg-raised shadow-raised">
         {items.map((item) => (
-          <li key={item.key} className="flex flex-col gap-1.5 p-2.5">
+          <li key={item.key} className="flex flex-col gap-2 p-3">
             {item.added && (
               <span className="text-small text-fg-muted">{i18n.t('fix.addedNote')}</span>
             )}
             <span>{adviceText(item.key)}</span>
             {item.css && (
-              <span className="flex items-start justify-between gap-2">
+              <span className="flex items-start gap-1 rounded-control bg-surface ps-3">
                 <code
-                  className="min-w-0 rounded-[4px] bg-surface px-1.5 py-1 font-mono text-small break-all whitespace-pre-wrap"
+                  className="min-w-0 flex-1 py-2 font-mono text-small break-all whitespace-pre-wrap"
                   translate="no"
                 >
                   {item.css}
@@ -153,7 +154,7 @@ export function Fixes({ finding, result, onPreview }: FixesProps) {
           </li>
         ))}
         {result?.combined && (
-          <li className="flex flex-col gap-1.5 p-2.5">
+          <li className="flex flex-col gap-2 p-3">
             <Verdict trial={result.combined} together />
             <PreviewButton
               all

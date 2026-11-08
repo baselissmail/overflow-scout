@@ -53,6 +53,26 @@ describe('tryText', () => {
     }
   });
 
+  it('puts any text in a count, and grows a count by digits', async () => {
+    const { doc, dispose } = await loadFixture(page('<button id="b"><span>42</span></button>'));
+    try {
+      const button = doc.getElementById('b');
+      if (!button) throw new Error('fixture');
+      const typed = tryText(button, { text: '12,345,678' });
+      expect(button.textContent).toBe('12,345,678');
+      expect(typed?.trial).toMatchObject({ length: 10, fits: true });
+      typed?.undo();
+      expect(button.innerHTML).toBe('<span>42</span>');
+
+      const grown = tryText(button, { length: 7 });
+      expect(button.textContent).toMatch(/^42\d{5}$/);
+      grown?.undo();
+      expect(button.textContent).toBe('42');
+    } finally {
+      dispose();
+    }
+  });
+
   it('leaves text the page changed meanwhile, and skips elements without text', async () => {
     const { doc, dispose } = await loadFixture(page('<p id="p">Hello</p><p id="e"> </p>'));
     try {

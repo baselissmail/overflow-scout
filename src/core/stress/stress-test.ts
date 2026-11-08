@@ -55,7 +55,7 @@ function behaviorCause(
   const was = before[dimension];
   const now = after[dimension];
   const needed = now + finding.overflow[axis];
-  const grew = growth === null ? 'grew' : `grew ${String(growth)}×`;
+  const grew = growth === null ? 'grew' : `grew ${String(growth)}x`;
   let note: string;
   if (Math.abs(now - was) <= 0.5) {
     note = `${label} stayed ${pxText(was)} while the text ${grew}; it needs about ${pxText(needed)}.`;

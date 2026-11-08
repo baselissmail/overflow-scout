@@ -21,8 +21,13 @@ export interface BreakingPoint {
   /** The most characters that fit, or null when even `maxTested` fits. */
   fitsUpTo: number | null;
   maxTested: number;
-  /** Characters a translation is expected to need: realistic and worst case (plan §4.1). */
+  /**
+   * Characters a translation is expected to need: realistic and worst case (plan §4.1).
+   * Text without letters (a count, a price) stays the same, so both are its own length.
+   */
   needs: { realistic: number; worst: number };
+  /** False for text without letters, which translations leave as it is. */
+  translatable: boolean;
   /**
    * - `fits`: room for a worst-case translation.
    * - `at-risk`: room for a realistic translation, not the worst case.
@@ -63,7 +68,7 @@ export function growableText(element: Element, options: TraversalOptions = {}): 
  * writes, measures, and the original text is restored before returning, all
  * in one task, so nothing is ever painted.
  *
- * Returns null when the element has no text to grow.
+ * Returns null when the element has no text at all.
  */
 export function findBreakingPoint(
   element: Element,
@@ -72,9 +77,9 @@ export function findBreakingPoint(
   const doc = element.ownerDocument;
   const nodes = growableText(element, options);
   const originals = nodes.map((node) => node.data);
-  if (!originals.some(hasLetters)) return null;
-
   const length = textLength(originals);
+  if (length === 0) return null;
+  const translatable = originals.some(hasLetters);
   const maxTested = options.maxLength ?? Math.max(length * 4, length + 40);
   const seed = options.seed ?? 1;
   const scanOptions = {
@@ -96,10 +101,12 @@ export function findBreakingPoint(
   };
 
   try {
-    const needs = {
-      realistic: translatedLength(length, 'realistic'),
-      worst: translatedLength(length, 'worst'),
-    };
+    const needs = translatable
+      ? {
+          realistic: translatedLength(length, 'realistic'),
+          worst: translatedLength(length, 'worst'),
+        }
+      : { realistic: length, worst: length };
     const now = trial(length);
 
     if (now.kind) {
@@ -116,6 +123,7 @@ export function findBreakingPoint(
         fitsUpTo: low,
         maxTested,
         needs,
+        translatable,
         verdict: 'broken',
         breaksAs: now.kind,
         iterations,
@@ -129,6 +137,7 @@ export function findBreakingPoint(
         fitsUpTo: null,
         maxTested,
         needs,
+        translatable,
         verdict: 'fits',
         breaksAs: null,
         iterations,
@@ -153,6 +162,7 @@ export function findBreakingPoint(
       fitsUpTo: low,
       maxTested,
       needs,
+      translatable,
       verdict: verdictFor(low, needs),
       breaksAs,
       iterations,

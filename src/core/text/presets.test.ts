@@ -16,6 +16,12 @@ describe('PRESET_POOLS', () => {
     for (const entry of pool) expect(entry).toBe(entry.trim());
   });
 
+  it('uses plain ASCII only, as the panel shows these', () => {
+    for (const kind of PRESET_KINDS) {
+      for (const entry of PRESET_POOLS[kind]) expect(entry).toMatch(/^[\x20-\x7e]+$/);
+    }
+  });
+
   it('only uses reserved domains for URLs', () => {
     for (const url of PRESET_POOLS.url) {
       expect(new URL(url).hostname).toMatch(RESERVED_HOST);

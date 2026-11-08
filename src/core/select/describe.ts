@@ -14,7 +14,7 @@ export interface ElementDescription {
    * joined with Playwright's ` >> ` chaining, so the result works in tests.
    */
   selector: string;
-  /** Short human-readable path, e.g. `nav › li › a.nav-link`. */
+  /** Short human-readable path of parents, e.g. `nav > li > a.nav-link`. */
   label: string;
 }
 
@@ -54,7 +54,7 @@ export function elementSelector(element: Element): string {
   return isShadowRoot(root) ? `${elementSelector(root.host)} >> ${inner}` : inner;
 }
 
-/** Short human-readable path, e.g. `nav › li › a.nav-link`. Cheap. */
+/** Short human-readable path of parents, e.g. `nav > li > a.nav-link`. Cheap. */
 export function elementLabel(element: Element): string {
   const parts: string[] = [];
   for (
@@ -65,7 +65,7 @@ export function elementLabel(element: Element): string {
     if (current.localName === 'body' || current.localName === 'html') break;
     if (current.localName !== 'slot') parts.unshift(segment(current));
   }
-  return parts.join(' › ');
+  return parts.join(' > ');
 }
 
 /** Describes an element for reports and test selectors. */

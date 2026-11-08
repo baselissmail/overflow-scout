@@ -13,13 +13,6 @@ export interface ResultFilter {
 
 export const NO_FILTER: ResultFilter = { kinds: new Set(), query: '', sort: 'severity' };
 
-/** Issues per kind, for the summary chips. */
-export function countByKind(issues: readonly IssueDto[]): Map<Kind, number> {
-  const counts = new Map<Kind, number>();
-  for (const issue of issues) counts.set(issue.kind, (counts.get(issue.kind) ?? 0) + 1);
-  return counts;
-}
-
 function matches(issue: IssueDto, query: string): boolean {
   return issue.instances.some(
     (finding) =>

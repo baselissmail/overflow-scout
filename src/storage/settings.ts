@@ -1,33 +1,30 @@
 import * as z from 'zod/mini';
 import { storage } from 'wxt/utils/storage';
 
-import { SAMPLE_LANGUAGES, STRESS_INTENSITIES, STRESS_STRATEGIES } from '@/core';
+import { SCALE_LIMITS } from '@/core/stress/expansion';
 
 export const THEMES = ['system', 'light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
 
 const settingsSchema = z.object({
   theme: z.enum(THEMES),
-  strategy: z.enum(STRESS_STRATEGIES),
-  intensity: z.enum(STRESS_INTENSITIES),
-  language: z.enum(SAMPLE_LANGUAGES),
-  rtl: z.boolean(),
   includeInputs: z.boolean(),
+  /** The custom text length last used, in times as long. */
+  customScale: z.number().check(z.gte(SCALE_LIMITS.min), z.lte(SCALE_LIMITS.max)),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
-  strategy: 'translation',
-  // Realistic: the length most translations reach, so findings are the ones worth fixing.
-  intensity: 'realistic',
-  language: 'de',
-  rtl: false,
   includeInputs: true,
+  customScale: 2,
 };
 
-/** Keeps every valid stored field and falls back to the default for the rest. */
+/**
+ * Keeps every valid stored field and falls back to the default for the rest.
+ * Fields from older versions (the longer-text options) are dropped.
+ */
 export function normalizeSettings(value: unknown): Settings {
   if (typeof value !== 'object' || value === null) return DEFAULT_SETTINGS;
   const stored = value as Record<string, unknown>;

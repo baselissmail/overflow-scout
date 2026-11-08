@@ -11,10 +11,12 @@ import type { SampleLanguage } from './samples';
 import { LANGUAGE_SAMPLES, LONG_WORDS } from './samples';
 
 /**
- * - `translation`: keeps the original and appends accented copies of its words
- *   up to the expected translated length, so strings stay recognizable.
+ * - `translation`: keeps the original and appends more of its own words, up to
+ *   the expected translated length. The text stays readable and recognizable,
+ *   in the page's own language and script.
  * - `pseudo`: accents every letter and wraps the string in brackets; a missing
- *   `]` shows at a glance that the end was cut off.
+ *   `]` shows at a glance that the end was cut off. Opt-in: it reads as
+ *   gibberish to anyone who hasn't met pseudo-localization.
  * - `long-words`: appends a long unbreakable word, URL, or email address.
  * - `language`: replaces the text with real text in another language and script.
  */
@@ -33,6 +35,11 @@ export interface TextStressOptions {
   /** Language for the `language` strategy. */
   language: SampleLanguage;
   seed: number;
+  /**
+   * Makes every string this many times as long (2 doubles it), in place of
+   * the translation table that `intensity` picks from. For a custom test.
+   */
+  scale?: number;
 }
 
 const LETTER = /\p{L}/u;
@@ -151,12 +158,47 @@ function sampleSource(language: SampleLanguage): FillerSource {
 /** An endless supply of filler characters, cycling through a source from a random start. */
 class Filler {
   private position: number;
+  private readonly wordStarts: ReadonlySet<number>;
 
   constructor(
     private readonly source: FillerSource,
     random: Random,
   ) {
     this.position = source.starts[randomIndex(random, source.starts.length)] ?? 0;
+    this.wordStarts = new Set(source.starts);
+  }
+
+  private atWordStart(position: number): boolean {
+    return this.wordStarts.has(position % this.source.units.length);
+  }
+
+  /**
+   * Whole words of about `count` characters: stops at the word boundary
+   * nearest to it (a tie goes longer), so the filler never ends in a cut word
+   * or two words run together. Scripts written without spaces have a boundary
+   * at every character, so they come out exact. May be empty for a tiny count.
+   */
+  takeWords(count: number): string {
+    const { units } = this.source;
+    if (count <= 0 || !units.some((unit) => unit !== ' ')) return '';
+    while (!this.atWordStart(this.position)) this.position += 1;
+    let out = '';
+    let length = 0;
+    while (length < count) {
+      // The next word, with the space after it (none in unspaced scripts).
+      let word = '';
+      let next = this.position;
+      do {
+        word += units[next % units.length] ?? '';
+        next += 1;
+      } while (!this.atWordStart(next));
+      const longer = graphemes(`${out}${word}`.trimEnd()).length;
+      if (count - length < longer - count) break;
+      out += word;
+      length = longer;
+      this.position = next;
+    }
+    return out.trimEnd();
   }
 
   private next(): string {
@@ -182,12 +224,20 @@ class Filler {
   }
 }
 
-/** Filler made from the string itself: accented copies of its words, or its characters. */
-function selfFiller(contents: string, unspaced: boolean, random: Random): Filler {
+/**
+ * Filler made from the string itself: its own words (accented for pseudo-locale),
+ * or its characters in scripts written without spaces.
+ */
+function selfFiller(
+  contents: string,
+  unspaced: boolean,
+  random: Random,
+  transform: (word: string) => string = (word) => word,
+): Filler {
   return new Filler(
     unspaced
       ? characterSource(contents)
-      : wordSource(contents.split(/\s+/).filter(Boolean).map(accent)),
+      : wordSource(contents.split(/\s+/).filter(Boolean).map(transform)),
     random,
   );
 }
@@ -201,6 +251,12 @@ function grow(content: string, extra: number, filler: Filler, separator: string)
   if (extra <= 0) return content;
   if (extra <= separator.length) return content + filler.take(extra);
   return content + separator + filler.take(extra - separator.length);
+}
+
+/** Appends about `extra` characters of whole words to `content`: readable, never cut mid-word. */
+function growWords(content: string, extra: number, filler: Filler, separator: string): string {
+  const words = extra > separator.length ? filler.takeWords(extra - separator.length) : '';
+  return words === '' ? content : content + separator + words;
 }
 
 function stringRandom(parts: readonly string[], options: TextStressOptions): Random {
@@ -219,7 +275,10 @@ export function stressParts(parts: readonly string[], options: TextStressOptions
 
   const random = stringRandom(parts, options);
   const length = textLength(parts);
-  const extra = translatedLength(length, options.intensity) - length;
+  const extra =
+    (options.scale === undefined
+      ? translatedLength(length, options.intensity)
+      : Math.round(length * options.scale)) - length;
   const shares = allocate(
     extra,
     pieces.map((piece) => (piece.letters ? Math.max(1, piece.length) : 0)),
@@ -238,17 +297,19 @@ export function stressParts(parts: readonly string[], options: TextStressOptions
   switch (options.strategy) {
     case 'translation': {
       const filler = selfFiller(contents, unspaced, random);
-      return rebuild((piece, index) => grow(piece.content, shares[index] ?? 0, filler, separator));
+      return rebuild((piece, index) =>
+        growWords(piece.content, shares[index] ?? 0, filler, separator),
+      );
     }
     case 'pseudo': {
-      const filler = selfFiller(contents, unspaced, random);
+      const filler = selfFiller(contents, unspaced, random, accent);
       // The brackets count toward the expected length.
       const trimmed = allocate(
         Math.max(0, extra - 2),
         pieces.map((piece) => (piece.letters ? Math.max(1, piece.length) : 0)),
       );
       return rebuild((piece, index) => {
-        const body = grow(accent(piece.content), trimmed[index] ?? 0, filler, separator);
+        const body = growWords(accent(piece.content), trimmed[index] ?? 0, filler, separator);
         return `${index === first ? '[' : ''}${body}${index === last ? ']' : ''}`;
       });
     }
@@ -273,31 +334,55 @@ export function stressText(text: string, options: TextStressOptions): string {
   return stressParts([text], options)[0] ?? text;
 }
 
+/** The characters a letter-free text grows by: its digits, so a count reads as a bigger count. */
+function ownCharacters(text: string): string {
+  return /\d/.test(text) ? text.replace(/\D/g, '') : text.replace(/\s/g, '');
+}
+
 /**
  * Resizes a string to about `target` characters for breaking-point search:
  * longer by appending translation filler, shorter by cutting from the end.
+ * Exact to the character by default (a length slider, a search); with
+ * `wholeWords`, growth stops at the nearest whole word, for text people read.
  * Callers should measure the result with `textLength`.
+ *
+ * Text with letters grows by its own words, and its numbers stay as they are.
+ * Text without any letters (a count, a price) grows by its own digits.
  */
-export function resizeParts(parts: readonly string[], target: number, seed: number): string[] {
+export function resizeParts(
+  parts: readonly string[],
+  target: number,
+  seed: number,
+  { wholeWords = false }: { wholeWords?: boolean } = {},
+): string[] {
   const length = textLength(parts);
   if (target === length) return [...parts];
   const pieces = parts.map(toPiece);
 
   if (target > length) {
-    const letterPieces = pieces.filter((piece) => piece.letters);
-    if (letterPieces.length === 0) return [...parts];
+    const words = pieces.some((piece) => piece.letters);
+    const grows = (piece: Piece) => (words ? piece.letters : piece.length > 0);
+    const growing = pieces.filter(grows);
+    if (growing.length === 0) return [...parts];
     const random = createRandom(hashString(parts.join(''), seed >>> 0));
-    const contents = letterPieces.map((piece) => piece.content).join(' ');
-    const unspaced = isUnspaced(contents);
-    const filler = selfFiller(contents, unspaced, random);
+    const contents = growing.map((piece) => piece.content).join(' ');
+    const unspaced = !words || isUnspaced(contents);
+    const filler = words
+      ? selfFiller(contents, unspaced, random)
+      : new Filler(characterSource(ownCharacters(contents)), random);
     const shares = allocate(
       target - length,
-      pieces.map((piece) => (piece.letters ? Math.max(1, piece.length) : 0)),
+      pieces.map((piece) => (grows(piece) ? Math.max(1, piece.length) : 0)),
     );
     return pieces.map((piece, index) =>
-      piece.letters
+      grows(piece)
         ? piece.lead +
-          grow(piece.content, shares[index] ?? 0, filler, unspaced ? '' : ' ') +
+          (wholeWords ? growWords : grow)(
+            piece.content,
+            shares[index] ?? 0,
+            filler,
+            unspaced ? '' : ' ',
+          ) +
           piece.trail
         : (parts[index] ?? ''),
     );

@@ -1,0 +1,155 @@
+:root {
+  --canvas: #f3f4f8;
+  --raised: #ffffff;
+  --fg: #14161b;
+  --muted: #555b69;
+  --line: #dcdfe7;
+  --accent: #3451d1;
+  --accent-fg: #ffffff;
+  --bleed: #c2272d;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0b0c10;
+    --raised: #15171c;
+    --fg: #eceef3;
+    --muted: #a3a8b5;
+    --line: #2a2e38;
+    --accent: #8ea2ff;
+    --accent-fg: #0b0c10;
+    --bleed: #ff9592;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--fg);
+  font:
+    17px/1.6 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+a {
+  color: var(--accent);
+}
+a:focus-visible,
+.button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+header.site {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 0;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 650;
+}
+.brand img {
+  width: 32px;
+  height: 32px;
+}
+nav.site {
+  display: flex;
+  gap: 20px;
+  font-size: 15px;
+}
+h1 {
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 48px 0 16px;
+  text-wrap: balance;
+}
+h2 {
+  font-size: 24px;
+  margin: 56px 0 12px;
+  letter-spacing: -0.01em;
+}
+.lede {
+  font-size: 20px;
+  color: var(--muted);
+  max-width: 40em;
+  margin: 0 0 28px;
+  text-wrap: pretty;
+}
+.button {
+  display: inline-block;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+  text-decoration: none;
+}
+.shots {
+  display: grid;
+  gap: 20px;
+  margin-top: 40px;
+}
+.shots figure {
+  margin: 0;
+}
+.shots img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+.shots figcaption {
+  color: var(--muted);
+  font-size: 15px;
+  margin-top: 8px;
+}
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  padding: 0;
+  list-style: none;
+}
+.features li {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.features strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.prose {
+  max-width: 44em;
+}
+.prose h1 {
+  font-size: 40px;
+}
+footer.site {
+  border-top: 1px solid var(--line);
+  margin-top: 72px;
+  padding: 24px 0 48px;
+  color: var(--muted);
+  font-size: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}

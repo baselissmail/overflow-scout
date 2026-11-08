@@ -1,21 +1,10 @@
 import { i18n } from '#i18n';
-import {
-  ArrowRightFromLine,
-  Ellipsis,
-  EyeOff,
-  MoveHorizontal,
-  TextCursorInput,
-} from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import type { IssueDto } from '@/messaging/protocol';
 import type { Tone } from '@/ui/Chip';
 
 export type Kind = IssueDto['kind'];
 export type Severity = IssueDto['severity'];
-
-/** Display order of kinds in the summary chips: most serious first. */
-export const KINDS: readonly Kind[] = ['hidden', 'page-scroll', 'truncated', 'spilling', 'input'];
 
 export function kindLabel(kind: Kind): string {
   switch (kind) {
@@ -46,20 +35,6 @@ export function kindDescription(kind: Kind): string {
     case 'input':
       return i18n.t('kindDescription.input');
   }
-}
-
-const KIND_ICONS = {
-  hidden: EyeOff,
-  'page-scroll': MoveHorizontal,
-  truncated: Ellipsis,
-  spilling: ArrowRightFromLine,
-  input: TextCursorInput,
-} as const satisfies Record<Kind, unknown>;
-
-/** One drawn icon per kind of problem, so lists scan by shape as well as color and text. */
-export function KindIcon({ kind, size = 12 }: { kind: Kind; size?: number }): ReactNode {
-  const Icon = KIND_ICONS[kind];
-  return <Icon size={size} strokeWidth={2} className="rtl:-scale-x-100" />;
 }
 
 export function severityLabel(severity: Severity): string {

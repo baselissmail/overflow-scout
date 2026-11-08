@@ -194,7 +194,7 @@ export function diagnose(layout: LayoutReader, input: DiagnosisInput): Diagnosis
           element,
           property: 'overflow-wrap',
           value: 'normal',
-          note: `"${token.slice(0, 32)}${token.length > 32 ? '…' : ''}" has no break opportunity.`,
+          note: `"${token.slice(0, 32)}${token.length > 32 ? '...' : ''}" has no break opportunity.`,
         });
         decisive = true;
       }

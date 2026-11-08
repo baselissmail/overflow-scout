@@ -133,18 +133,9 @@ export function PageNotice({
     );
   }
 
+  // Check again is the main button, right under this: no second one here.
   if (state.stale && state.busy === null) {
-    return (
-      <Notice
-        tone="neutral"
-        message={i18n.t('page.stale')}
-        action={
-          <Button size="sm" onClick={onScan}>
-            {i18n.t('actions.scanAgain')}
-          </Button>
-        }
-      />
-    );
+    return <Notice tone="neutral" message={i18n.t('page.stale')} />;
   }
 
   return null;

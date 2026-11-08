@@ -80,8 +80,30 @@ describe('findBreakingPoint', () => {
     });
   });
 
-  it('returns null when there is no text to grow', async () => {
-    await withPage(page('<div id="empty"><span>42</span></div>'), (doc) => {
+  it('measures a count too: it grows by digits, and a translation keeps it as it is', async () => {
+    // A like or comment count next to an icon, like the ones under an article.
+    await withPage(page('<div class="clip" id="count">42</div>'), (doc) => {
+      const count = doc.getElementById('count');
+      if (!count) throw new Error('missing fixture element');
+      const before = snapshotDom(doc);
+      const result = findBreakingPoint(count);
+      expect(result).toMatchObject({
+        length: 2,
+        translatable: false,
+        needs: { realistic: 2, worst: 2 },
+        verdict: 'fits',
+        breaksAs: 'hidden',
+      });
+      const fitsUpTo = result?.fitsUpTo ?? 0;
+      expect(fitsUpTo).toBeGreaterThan(2);
+      expect(fitsAt(count, fitsUpTo)).toBe(true);
+      expect(fitsAt(count, fitsUpTo + 1)).toBe(false);
+      expect(snapshotDom(doc)).toEqual(before);
+    });
+  });
+
+  it('returns null when there is no text at all', async () => {
+    await withPage(page('<div id="empty"><svg width="16" height="16"></svg> </div>'), (doc) => {
       const element = doc.getElementById('empty');
       if (!element) throw new Error('missing fixture element');
       expect(findBreakingPoint(element)).toBeNull();

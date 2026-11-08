@@ -4,7 +4,7 @@ import { fixCss, fixesFor } from '@/core';
 import { adviceText, verdictText } from '@/features/results/fix-text';
 import { formatCount, kindDescription, kindLabel, severityLabel } from '@/features/results/labels';
 import { measurement, measurementSentence } from '@/features/results/measure';
-import { intensityLabel, languageLabel, strategyLabel } from '@/features/stress/options';
+import { lengthLabel, lengthOf } from '@/features/check/length';
 import type {
   FindingDto,
   FixTrialsDto,
@@ -32,6 +32,12 @@ export interface ReportPlace {
   fixes: FixTrialsDto | null;
 }
 
+/**
+ * The panel keeps numbers and units together with no-break spaces; a pasted
+ * report is plain text, so they become ordinary spaces.
+ */
+const plain = (text: string) => text.replace(/\u00a0/g, ' ');
+
 /** Text that Markdown would otherwise format (emphasis, links, HTML, tables). */
 export function escapeText(text: string): string {
   return text.replace(/[\\`*_[\]<>|~]/g, '\\$&');
@@ -46,23 +52,19 @@ export function code(text: string): string {
   return `${fence}${pad}${flat}${pad}${fence}`;
 }
 
-const quote = (text: string) => `“${escapeText(text)}”`;
+const quote = (text: string) => `"${escapeText(text)}"`;
 
 function testLine(stress: NonNullable<ReportContext['stress']>): string {
   const { options, growth } = stress;
-  const strategy =
-    options.strategy === 'language'
-      ? languageLabel(options.language)
-      : strategyLabel(options.strategy);
-  return i18n.t('report.test', [strategy, intensityLabel(options.intensity), String(growth)]);
+  return i18n.t('report.test', [lengthLabel(lengthOf(options)), String(growth)]);
 }
 
-/** "Page: https://… · window 800×900 · Chrome 156", and the test it ran with. */
+/** "Page: https://..., window 800x900, Chrome 156", and the test it ran with. */
 export function contextLines(context: ReportContext): string[] {
-  const window = `${String(context.viewport.width)}×${String(context.viewport.height)}`;
+  const window = `${String(context.viewport.width)}x${String(context.viewport.height)}`;
   const where = [context.url, i18n.t('report.window', [window]), context.browser].filter(Boolean);
   return [
-    `- **${i18n.t('report.page')}:** ${where.join(' · ')}`,
+    `- **${i18n.t('report.page')}:** ${where.join(', ')}`,
     ...(context.stress ? [`- **${i18n.t('report.testLabel')}:** ${testLine(context.stress)}`] : []),
   ];
 }
@@ -154,7 +156,7 @@ export function issueMarkdown(
     ...causeLines(finding),
     ...fixLines(finding, fixes),
   ];
-  return `${lines.join('\n')}\n`;
+  return plain(`${lines.join('\n')}\n`);
 }
 
 /** The first place of an issue: the one that arrives with its selector and cut. */
@@ -220,12 +222,14 @@ export function resultsMarkdown(
         ];
   const count =
     'issues' in results ? results.issues.length : results.atRisk.length + results.brokenNow.length;
-  return [
-    `## ${i18n.t('report.title')}`,
-    '',
-    ...contextLines(context),
-    `- **${i18n.t('report.found')}:** ${i18n.t('report.issues', count, [formatCount(count)])}`,
-    '',
-    ...body,
-  ].join('\n');
+  return plain(
+    [
+      `## ${i18n.t('report.title')}`,
+      '',
+      ...contextLines(context),
+      `- **${i18n.t('report.found')}:** ${i18n.t('report.issues', count, [formatCount(count)])}`,
+      '',
+      ...body,
+    ].join('\n'),
+  );
 }

@@ -1,5 +1,5 @@
 import { i18n } from '#i18n';
-import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink, Keyboard, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { browser } from 'wxt/browser';
@@ -7,12 +7,12 @@ import { browser } from 'wxt/browser';
 import { useOpenShortcut } from '@/features/page/use-open-shortcut';
 import { kindLabel } from '@/features/results/labels';
 import type { IgnoreRules } from '@/features/results/use-ignore';
-import { StressOptionFields } from '@/features/stress/StressOptionFields';
 import type { Settings, Theme } from '@/storage/settings';
 import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
 import { Kbd } from '@/ui/Kbd';
 import { Segmented } from '@/ui/Segmented';
+import { StepHeader } from '@/ui/StepHeader';
 import { Switch } from '@/ui/Switch';
 import { interpolate } from '@/ui/interpolate';
 
@@ -31,9 +31,9 @@ function Group({
   return (
     <section className="flex flex-col gap-2" aria-labelledby={id}>
       <div className="px-1">
-        <h2 id={id} className="font-semibold">
+        <h3 id={id} className="font-semibold">
           {title}
-        </h2>
+        </h3>
         {description && <p className="text-small text-fg-muted">{description}</p>}
       </div>
       <div className="flex flex-col gap-3 rounded-card bg-raised p-3 shadow-raised">{children}</div>
@@ -79,26 +79,31 @@ interface SettingsViewProps {
   settings: Settings;
   onSettings: (patch: Partial<Settings>) => void;
   onBack: () => void;
+  onShortcuts: () => void;
+  onDemo: () => void;
   ignore: IgnoreRules;
 }
 
-export function SettingsView({ settings, onSettings, onBack, ignore }: SettingsViewProps) {
+export function SettingsView({
+  settings,
+  onSettings,
+  onBack,
+  onShortcuts,
+  onDemo,
+  ignore,
+}: SettingsViewProps) {
   const [sites, removeSite] = useGrantedSites();
   const shortcut = useOpenShortcut();
   const { version } = browser.runtime.getManifest();
 
   return (
-    <main className="flex flex-col gap-5 p-3" aria-labelledby="settings-title">
-      <header className="flex items-center gap-2">
-        <IconButton
-          label={i18n.t('actions.back')}
-          icon={<ArrowLeft {...ICON} className="rtl:rotate-180" />}
-          onClick={onBack}
-        />
-        <h1 id="settings-title" className="text-title font-semibold">
+    <section className="flex animate-enter flex-col gap-6" aria-labelledby="settings-title">
+      <div className="flex flex-col gap-1">
+        <StepHeader backLabel={i18n.t('actions.back')} onBack={onBack} />
+        <h2 id="settings-title" className="text-title font-semibold">
           {i18n.t('settings.heading')}
-        </h1>
-      </header>
+        </h2>
+      </div>
 
       <Group title={i18n.t('settings.appearance')}>
         <div className="flex flex-col gap-1">
@@ -116,18 +121,6 @@ export function SettingsView({ settings, onSettings, onBack, ignore }: SettingsV
             ]}
           />
         </div>
-      </Group>
-
-      <Group title={i18n.t('settings.defaults')}>
-        <StressOptionFields settings={settings} onSettings={onSettings} />
-        <Switch
-          label={i18n.t('stress.rtl')}
-          description={i18n.t('stress.rtlDescription')}
-          checked={settings.rtl}
-          onChange={(rtl) => {
-            onSettings({ rtl });
-          }}
-        />
       </Group>
 
       <Group title={i18n.t('settings.scanning')}>
@@ -153,7 +146,7 @@ export function SettingsView({ settings, onSettings, onBack, ignore }: SettingsV
               >
                 <span className="flex min-w-0 flex-col">
                   <span className="text-small">
-                    {kindLabel(rule.kind)} · {siteName(rule.site)}
+                    {kindLabel(rule.kind)}, {siteName(rule.site)}
                   </span>
                   <span className="font-mono text-small break-all text-fg-muted" translate="no">
                     {rule.label}
@@ -207,23 +200,30 @@ export function SettingsView({ settings, onSettings, onBack, ignore }: SettingsV
                 )
               : i18n.t('settings.shortcutNone')}
         </p>
-        <Button
-          size="sm"
-          className="self-start"
-          icon={<ExternalLink {...ICON} />}
-          onClick={() => {
-            void browser.tabs.create({ url: 'chrome://extensions/shortcuts' });
-          }}
-        >
-          {i18n.t('settings.changeShortcut')}
-        </Button>
+        <span className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            icon={<ExternalLink {...ICON} />}
+            onClick={() => {
+              void browser.tabs.create({ url: 'chrome://extensions/shortcuts' });
+            }}
+          >
+            {i18n.t('settings.changeShortcut')}
+          </Button>
+          <Button size="sm" icon={<Keyboard {...ICON} />} onClick={onShortcuts}>
+            {i18n.t('settings.showShortcuts')}
+          </Button>
+        </span>
       </Group>
 
       <Group title={i18n.t('settings.about')}>
         <p className="tabular-nums">{i18n.t('settings.version', [version])}</p>
         <p className="text-fg-muted">{i18n.t('settings.privacy')}</p>
         <p className="text-fg-muted">{i18n.t('settings.credit')}</p>
+        <Button size="sm" className="self-start" icon={<ExternalLink {...ICON} />} onClick={onDemo}>
+          {i18n.t('settings.demo')}
+        </Button>
       </Group>
-    </main>
+    </section>
   );
 }

@@ -20,6 +20,12 @@ export const STRESS_INTENSITIES = [
   'extreme',
 ] as const satisfies readonly StressIntensity[];
 
+/**
+ * Limits of a custom test's scale (times as long). Past 10, text runs for
+ * pages and the test says more about memory than about layout.
+ */
+export const SCALE_LIMITS = { min: 1.1, max: 10 } as const;
+
 export interface ExpansionBand {
   /** Longest source text (in characters) this band applies to. */
   maxLength: number;

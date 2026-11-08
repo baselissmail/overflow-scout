@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Overflow Scout: find text that gets cut off</title>
+    <meta
+      name="description"
+      content="A Chrome extension that finds text that's cut off or overflowing, tests your layout with translation-length text, and checks CSS fixes on the page."
+    />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site">
+        <a class="brand" href="./"><img src="icon.svg" alt="" />Overflow Scout</a>
+        <nav class="site" aria-label="Site">
+          <a href="privacy.html">Privacy</a>
+          <a href="https://github.com/baselissmail/overflow-scout">GitHub</a>
+        </nav>
+      </header>
+
+      <main>
+        <h1>Find text that gets cut off, before your users do.</h1>
+        <p class="lede">
+          Overflow Scout is a Chrome extension for developers and QA. It finds text that's clipped,
+          truncated or overflowing, shows what breaks once your text is translated, and checks CSS
+          fixes on the page itself.
+        </p>
+        <a
+          class="button"
+          href="https://chromewebstore.google.com/detail/overflow-scout/mfinclnlokodigpdeefonldgmcdgnpim"
+          >Add to Chrome</a
+        >
+
+        <div class="shots">
+          <figure>
+            <img
+              src="screenshots/1-scan.png"
+              width="1280"
+              height="800"
+              alt="A shop page with the Overflow Scout side panel listing what's cut off, truncated or overflowing."
+            />
+          </figure>
+        </div>
+
+        <h2>What it does</h2>
+        <ul class="features">
+          <li>
+            <strong>Check page</strong>Every text that's cut off with no sign, cut short with "...",
+            spills out of its box, or makes the page scroll sideways, and how much doesn't fit.
+          </li>
+          <li>
+            <strong>Text length</strong>Makes every text as long as a translation would be, shows
+            what breaks, then puts the page back exactly.
+          </li>
+          <li>
+            <strong>Fixes checked on the page</strong>Each suggested CSS fix is tried for a moment
+            and measured, so you know whether it works.
+          </li>
+          <li>
+            <strong>Try your own text</strong>See how many characters fit, and put any text in any
+            element, live.
+          </li>
+          <li>
+            <strong>Reports</strong>Copy Markdown for GitHub or Jira, copy or download a cropped
+            screenshot, or save everything as JSON.
+          </li>
+          <li>
+            <strong>Private</strong>Runs entirely in your browser. No data collected, no analytics,
+            no network requests.
+          </li>
+        </ul>
+
+        <div class="shots">
+          <figure>
+            <img
+              src="screenshots/2-fixes.png"
+              width="1280"
+              height="800"
+              loading="lazy"
+              alt="The details of a cut-off title, with a CSS fix that was tried on the page and fixes it."
+            />
+          </figure>
+          <figure>
+            <img
+              src="screenshots/3-longer-text.png"
+              width="1280"
+              height="800"
+              loading="lazy"
+              alt="The shop page with every text made longer, and the panel listing what breaks only with longer text."
+            />
+          </figure>
+        </div>
+      </main>
+
+      <footer class="site">
+        <span>Made by Basel Issmail. Open source under the MIT license.</span>
+        <a href="privacy.html">Privacy policy</a>
+        <a href="https://github.com/baselissmail/overflow-scout/releases">Changelog</a>
+        <a href="https://github.com/baselissmail/overflow-scout/issues">Report a problem</a>
+      </footer>
+    </div>
+  </body>
+</html>

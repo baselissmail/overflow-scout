@@ -11,6 +11,10 @@ by re-fetching it at a new commit, reading the diff, and changing this table.
 
 | `impeccable` (guidance only) | `pbakaus/impeccable` @ `c8891a9ae865d6ee311836ae5199bfce0fe115b1`, `.agent/skills/impeccable/reference/*.md` | Apache-2.0 | Thirteen reference documents, unchanged, behind our own `SKILL.md`. The upstream skill runs a launcher that downloads and executes a binary, and pre-approves `npx impeccable`; neither its `SKILL.md`, its scripts nor its hooks are vendored. Steps in the references that call the launcher are skipped. |
 
+| `unslop` (guidance only) | `heydamir/unslop` @ `a6f121eee5f29c2f74976b75456feae8b66afb3a`, `skills/unslop/SKILL.md` and `references/{signs,tokens}.md` | CC-BY-4.0 | Added 2026-11-07: first published 2026-10-29, about 11k stars. Turns AI-looking UI into a designed one: audit the signs, then spacing, color, icons, copy, type, layout, details and motion in that order. Its scripts (live-page snapshots, story videos) and reference images aren't vendored. Credit kept as the license asks. |
+
+Consulted, not added: `hallmark` (`Nutlope/hallmark`, MIT, about 50k stars, April 2026). Its interaction-and-states and flow references shaped the 2026-11-07 pass ("density is the design", "motion is state, never decoration"), but the skill is built around generating landing pages, with themes, screenshots and evaluation scripts this project doesn't need.
+
 Bar for adding a skill: released or updated in the last six months, or more
 than 2,000 GitHub stars, and read in full first.
 

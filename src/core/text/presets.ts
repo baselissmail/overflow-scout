@@ -2,25 +2,26 @@
  * Curated, realistic long strings for interactive testing (the Inspect presets).
  *
  * Rules for every entry:
- * - Names are fictional and cover many scripts, diacritics and naming customs.
+ * - Plain ASCII: the panel shows them, and it uses English characters only.
+ * - Names are fictional and cover many naming customs (long, hyphenated, several parts).
  * - Products are generic (no trademarks).
  * - URLs and emails only use reserved domains (`.example`, `example.com/.net/.org`,
  *   RFC 2606) so a test string can never point at a real site or inbox.
  */
 export const PRESET_POOLS = {
   longName: [
-    'María José Fernández-Villalobos de la Cruz',
-    'Jean-Baptiste Aurélien Delacroix-Montfort',
-    'Nguyễn Thị Phương Thảo Hoàng',
-    'Wojciech Grzegorz Brzęczyszczykiewicz',
-    'Þórunn Guðmundsdóttir Sigurðardóttir',
+    'Maria Jose Fernandez-Villalobos de la Cruz',
+    'Jean-Baptiste Aurelien Delacroix-Montfort',
+    'Nguyen Thi Phuong Thao Hoang',
+    'Wojciech Grzegorz Brzeczyszczykiewicz',
+    'Thorunn Gudmundsdottir Sigurdardottir',
     'Oluwaseun Adebayo Okonkwo-Adeyemi',
     'Aleksandra Konstantinovna Vasilyeva-Orlova',
     'Siddharth Venkataraman Subramanian Iyer',
-    'Leilani Kaʻiulani Makoa-Kealoha',
+    'Leilani Kaiulani Makoa-Kealoha',
     'Abdulrahman Khalid Al-Mansouri',
     'Hans-Joachim Friedrich von Hohenberg-Lindau',
-    'Çağla Gülşen Öztürk-Yılmaz',
+    'Cagla Gulsen Ozturk-Yilmaz',
   ],
   product: [
     'Professional 16-inch Laptop, 64 GB RAM, 2 TB SSD, Space Gray',
@@ -32,8 +33,8 @@ export const PRESET_POOLS = {
     'Cordless Stick Vacuum with Laser Dust Detection and HEPA Filtration',
     'Organic Cold-Pressed Extra Virgin Olive Oil, 1 Litre (Pack of 3)',
     "Children's Waterproof Hiking Boots, Wide Fit, EU 34 / UK 1.5",
-    'Annual Premium Subscription — Unlimited Projects, Priority Support',
-    'Adjustable Standing Desk Frame with Memory Presets, 160 × 80 cm',
+    'Annual Premium Subscription - Unlimited Projects, Priority Support',
+    'Adjustable Standing Desk Frame with Memory Presets, 160 x 80 cm',
     'Smart Thermostat with Room Sensors, Energy Reports and Geofencing',
   ],
   url: [
@@ -47,7 +48,7 @@ export const PRESET_POOLS = {
     'https://support.customer-service-helpdesk.example/tickets/2026/11/000123456',
     'https://analytics.data-tracking-dashboard.example.com/reports/quarterly/q4-summary',
     'https://admin.enterprise-management-console.example/settings/organization/billing',
-    'https://münchen-stadtführungen.example/touren/altstadt-und-viktualienmarkt',
+    'https://city-walking-tours-and-guides.example/tours/old-town-and-market-square',
     'https://storage.cloud-backup-service-provider.example.net/buckets/archive-2026',
   ],
   email: [
@@ -56,7 +57,7 @@ export const PRESET_POOLS = {
     'accounts.payable@financial-services-department.example.org',
     'security.alerts@cybersecurity-operations-center.example.net',
     'partnership.opportunities@strategic-alliances.example',
-    'maría.fernández-villalobos@universidad-autónoma.example',
+    'maria.fernandez-villalobos@universidad-autonoma.example',
     'notifications+weekly-digest@product-updates.example.com',
     'very.long.first.name.and.last.name@subdomain.department.example.org',
     'human.resources@talent-acquisition-office.example',
