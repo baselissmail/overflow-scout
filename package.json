@@ -1,6 +1,6 @@
 {
   "name": "overflow-scout",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Find clipped and truncated text before users do. Stress-test with translation-length text and get verified CSS fixes.",
   "license": "MIT",
