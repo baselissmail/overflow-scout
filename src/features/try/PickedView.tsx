@@ -92,7 +92,9 @@ export function PickedView({
             {point.fitsUpTo === null
               ? i18n.t('inspect.fitsAll', [String(point.maxTested)])
               : i18n.t('inspect.fitsUpTo', [String(point.fitsUpTo), String(point.length)])}{' '}
-            {i18n.t('inspect.needs', [String(point.needs.realistic), String(point.needs.worst)])}
+            {point.translatable
+              ? i18n.t('inspect.needs', [String(point.needs.realistic), String(point.needs.worst)])
+              : i18n.t('inspect.untranslated')}
           </p>
         </div>
       ) : (

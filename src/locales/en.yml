@@ -201,10 +201,11 @@ try:
   reset: Put the text back
 inspect:
   pickAnother: Pick other text
-  noText: This element has no text to try.
+  noText: There's no text here. Pick other text, and click right on the words or numbers, not an icon or the space next to them.
   fitsUpTo: Fits up to $1 characters. It has $2 now.
   fitsAll: Still fits at $1 characters.
   needs: A translation needs about $1 to $2.
+  untranslated: Numbers stay the same in a translation.
   verdict:
     fits: Room for a translation
     atRisk: May not fit a translation

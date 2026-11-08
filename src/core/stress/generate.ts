@@ -326,12 +326,20 @@ export function stressText(text: string, options: TextStressOptions): string {
   return stressParts([text], options)[0] ?? text;
 }
 
+/** The characters a letter-free text grows by: its digits, so a count reads as a bigger count. */
+function ownCharacters(text: string): string {
+  return /\d/.test(text) ? text.replace(/\D/g, '') : text.replace(/\s/g, '');
+}
+
 /**
  * Resizes a string to about `target` characters for breaking-point search:
  * longer by appending translation filler, shorter by cutting from the end.
  * Exact to the character by default (a length slider, a search); with
  * `wholeWords`, growth stops at the nearest whole word, for text people read.
  * Callers should measure the result with `textLength`.
+ *
+ * Text with letters grows by its own words, and its numbers stay as they are.
+ * Text without any letters (a count, a price) grows by its own digits.
  */
 export function resizeParts(
   parts: readonly string[],
@@ -344,18 +352,22 @@ export function resizeParts(
   const pieces = parts.map(toPiece);
 
   if (target > length) {
-    const letterPieces = pieces.filter((piece) => piece.letters);
-    if (letterPieces.length === 0) return [...parts];
+    const words = pieces.some((piece) => piece.letters);
+    const grows = (piece: Piece) => (words ? piece.letters : piece.length > 0);
+    const growing = pieces.filter(grows);
+    if (growing.length === 0) return [...parts];
     const random = createRandom(hashString(parts.join(''), seed >>> 0));
-    const contents = letterPieces.map((piece) => piece.content).join(' ');
-    const unspaced = isUnspaced(contents);
-    const filler = selfFiller(contents, unspaced, random);
+    const contents = growing.map((piece) => piece.content).join(' ');
+    const unspaced = !words || isUnspaced(contents);
+    const filler = words
+      ? selfFiller(contents, unspaced, random)
+      : new Filler(characterSource(ownCharacters(contents)), random);
     const shares = allocate(
       target - length,
-      pieces.map((piece) => (piece.letters ? Math.max(1, piece.length) : 0)),
+      pieces.map((piece) => (grows(piece) ? Math.max(1, piece.length) : 0)),
     );
     return pieces.map((piece, index) =>
-      piece.letters
+      grows(piece)
         ? piece.lead +
           (wholeWords ? growWords : grow)(
             piece.content,

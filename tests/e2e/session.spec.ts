@@ -339,6 +339,20 @@ test.describe('demo page', () => {
     await view.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(view).toBeHidden();
     await expect.poll(() => tried.textContent()).toBe('Add to cart');
+
+    // Numbers count as text too: a price, like a count next to an icon.
+    await panel.getByRole('button', { name: 'Try your own text' }).click();
+    const price = demo.locator('article.card .price').first();
+    const priceBox = await price.boundingBox();
+    if (!priceBox) throw new Error('The demo price has no box');
+    await demo.mouse.click(priceBox.x + priceBox.width / 2, priceBox.y + priceBox.height / 2);
+    await expect(view).toContainText('$129');
+    await expect(view).toContainText('Numbers stay the same in a translation.');
+    await expect(field).toHaveValue('$129');
+    await field.fill('$12,345.99');
+    await expect.poll(() => price.textContent()).toBe('$12,345.99');
+    await view.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect.poll(() => price.textContent()).toBe('$129');
   });
 });
 

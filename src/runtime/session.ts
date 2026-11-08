@@ -465,6 +465,7 @@ export class PageSession {
         fitsUpTo: result.fitsUpTo,
         maxTested: result.maxTested,
         needs: result.needs,
+        translatable: result.translatable,
         verdict: result.verdict,
         breaksAs: result.breaksAs,
       },

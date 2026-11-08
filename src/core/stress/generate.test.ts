@@ -202,6 +202,18 @@ describe('resizeParts', () => {
     }
   });
 
+  it('grows text without letters by its own digits, and keeps numbers next to words', () => {
+    for (const target of [3, 7, 12]) {
+      const [count = ''] = resizeParts(['42'], target, 1);
+      expect(count).toMatch(/^42\d+$/);
+      expect(textLength([count])).toBe(target);
+      const [price = ''] = resizeParts(['$129'], target + 4, 1, { wholeWords: true });
+      expect(price).toMatch(/^\$129\d+$/);
+      expect(textLength([price])).toBe(target + 4);
+    }
+    expect(resizeParts(['Save ', '42'], 20, 1)[1]).toBe('42');
+  });
+
   it('returns the original pieces at the original length', () => {
     expect(resizeParts(['Save ', 'changes'], 12, 1)).toEqual(['Save ', 'changes']);
   });

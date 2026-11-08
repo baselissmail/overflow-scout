@@ -24,13 +24,14 @@ export interface TextEdit {
 export type TextValue = { length: number } | { text: string };
 
 /**
- * Writes text into an element and measures whether it still fits (Inspect's
- * length slider and presets, plan §5.3). The element keeps its text nodes:
- * a length resizes each part in proportion; a given text goes into the first
- * part with letters and the other parts with letters are emptied.
+ * Writes text into an element and measures whether it still fits (plan §5.3).
+ * The element keeps its text nodes: a length resizes each part in proportion;
+ * a given text goes into the first part with letters and the other parts with
+ * letters are emptied, so numbers and symbols around the words stay. In text
+ * without letters (a count, a price), the given text replaces all of it.
  *
  * The text stays on the page so people can see it, until `undo`. Returns
- * null when the element has no text to change.
+ * null when the element has no text at all.
  */
 export function tryText(
   element: Element,
@@ -39,14 +40,15 @@ export function tryText(
 ): TextEdit | null {
   const nodes = growableText(element, options);
   const originals = nodes.map((node) => node.data);
-  const first = originals.findIndex(hasLetters);
+  const replaced = originals.some(hasLetters) ? hasLetters : (text: string) => text.trim() !== '';
+  const first = originals.findIndex(replaced);
   if (first === -1) return null;
 
   const values =
     'length' in value
       ? resizeParts(originals, Math.max(1, value.length), options.seed ?? 1)
       : originals.map((original, index) =>
-          index === first ? value.text : hasLetters(original) ? '' : original,
+          index === first ? value.text : replaced(original) ? '' : original,
         );
   nodes.forEach((node, index) => {
     const next = values[index] ?? '';

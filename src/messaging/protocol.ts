@@ -181,6 +181,8 @@ export const pickedElementSchema = z.object({
       fitsUpTo: z.nullable(count),
       maxTested: count,
       needs: z.object({ realistic: count, worst: count }),
+      /** False for numbers and symbols, which translations leave as they are. */
+      translatable: z.boolean(),
       verdict: z.enum(['fits', 'at-risk', 'will-break', 'broken']),
       breaksAs: z.nullable(findingKindSchema),
     }),
