@@ -9,3 +9,6 @@ pnpm-lock.yaml
 
 # Vendored third-party skills (pinned, reviewed; see .claude/skills/README.md)
 .claude/skills/
+
+# Written by release-please on each release; reformatting it would fail CI after every release
+CHANGELOG.md
