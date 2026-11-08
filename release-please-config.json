@@ -10,32 +10,11 @@
     }
   },
   "changelog-sections": [
-    {
-      "type": "feat",
-      "section": "Features"
-    },
-    {
-      "type": "fix",
-      "section": "Fixes"
-    },
-    {
-      "type": "perf",
-      "section": "Performance"
-    },
-    {
-      "type": "docs",
-      "section": "Documentation",
-      "hidden": true
-    },
-    {
-      "type": "test",
-      "section": "Tests",
-      "hidden": true
-    },
-    {
-      "type": "chore",
-      "section": "Maintenance",
-      "hidden": true
-    }
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "docs", "section": "Documentation", "hidden": true },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "chore", "section": "Maintenance", "hidden": true }
   ]
 }
